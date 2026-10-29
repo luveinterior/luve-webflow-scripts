@@ -425,11 +425,6 @@
     });
   }
   function overlayOut() {
-    setTimeout(function () {
-      try {
-        gsap.globalTimeline.resume();
-      } catch (e) {}
-    }, 180);
     var l = loaderEl();
     if (!l) return;
     l.style.transition = "opacity .55s cubic-bezier(.65,0,.35,1)";
@@ -553,11 +548,6 @@
       .then(function () {
         L.stage = "init";
         webflowReinit(doc);
-        // hold the new page's entrance animations until the overlay starts
-        // lifting, so reveals don't run (and flicker) underneath it
-        try {
-          gsap.globalTimeline.pause();
-        } catch (e) {}
         L.start();
         marquees(true);
         heroEntrance();
@@ -620,6 +610,14 @@
             setTimeout(res, 1200);
           }),
         ]);
+      })
+      .then(function () {
+        // let the new page's entrance animations put elements in their
+        // start state (hidden / offset) while the overlay still covers it —
+        // otherwise they'd jump visibly as the overlay fades ("flash")
+        return new Promise(function (res) {
+          setTimeout(res, 160);
+        });
       })
       .then(function () {
         L.stage = "done";
