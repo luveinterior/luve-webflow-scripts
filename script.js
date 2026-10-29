@@ -45,6 +45,7 @@
 // 41. Process FAQ — Native Accordion + Image Crossfade
 // 42. Back-to-Top — Round Button on Phones + Reliable Scroll
 // 43. Project Page — More Section Header + Hide Empty Size
+// 44. Enquiry Panel — Keep Sticky Hero While Page Is Locked
 // 00. Page Transitions (Barba-style) — 喺最頂，包住成個 script（window.__luveRun）
 //
 // =============================================================================
@@ -379,6 +380,11 @@
     });
   }
   function overlayOut() {
+    setTimeout(function () {
+      try {
+        gsap.globalTimeline.resume();
+      } catch (e) {}
+    }, 180);
     var l = loaderEl();
     if (!l) return;
     l.style.transition = "opacity .55s cubic-bezier(.65,0,.35,1)";
@@ -503,6 +509,11 @@
       .then(function () {
         L.stage = "init";
         webflowReinit(doc);
+        // hold the new page's entrance animations until the overlay starts
+        // lifting, so reveals don't run (and flicker) underneath it
+        try {
+          gsap.globalTimeline.pause();
+        } catch (e) {}
         L.start();
         // Webflow background videos: autoplay without the page's own video module
         document.querySelectorAll("video[autoplay]").forEach(function (v) {
@@ -4781,6 +4792,9 @@ ScrollTrigger.batch(".projects-gallery-item", {
       stripImgEls[index].getAttribute("src") || stripImgEls[index].src;
     lbImg.alt = stripImgEls[index].alt || "";
     lbCounter.textContent = index + 1 + " / " + stripImgEls.length;
+    lbToken++;
+    lbPreload((index + 1) % stripImgEls.length);
+    lbPreload((index - 1 + stripImgEls.length) % stripImgEls.length);
     lb.classList.add("is-open");
     if (window.lenis) window.lenis.stop();
     gsap.to(dragHint, { autoAlpha: 0, duration: 0.15 });
@@ -4804,25 +4818,55 @@ ScrollTrigger.batch(".projects-gallery-item", {
     });
   }
 
+  // next / previous: count moves at once, swap only when the photo has loaded
+  // (fast clicks used to show the old photo until the new one arrived)
+  var lbToken = 0,
+    lbCache = {};
+  function lbSrc(i) {
+    return stripImgEls[i].getAttribute("src") || stripImgEls[i].src;
+  }
+  function lbPreload(i) {
+    var u = lbSrc(i);
+    if (!lbCache[u]) {
+      var im = new Image();
+      im.decoding = "async";
+      im.src = u;
+      lbCache[u] = (im.decode
+        ? im.decode()
+        : new Promise(function (r) {
+            im.onload = im.onerror = r;
+          })
+      ).catch(function () {});
+    }
+    return lbCache[u];
+  }
   function goTo(dir) {
-    var slideOut = dir > 0 ? -30 : 30;
-    var slideIn = dir > 0 ? 30 : -30;
-    gsap.to(lbImg, {
-      autoAlpha: 0,
-      x: slideOut,
-      duration: 0.18,
-      onComplete: function () {
-        currentLB = (currentLB + dir + stripImgEls.length) % stripImgEls.length;
-        lbImg.src =
-          stripImgEls[currentLB].getAttribute("src") ||
-          stripImgEls[currentLB].src;
-        lbCounter.textContent = currentLB + 1 + " / " + stripImgEls.length;
-        gsap.fromTo(
-          lbImg,
-          { autoAlpha: 0, x: slideIn },
-          { autoAlpha: 1, x: 0, duration: 0.28, ease: "power2.out" }
-        );
-      },
+    var n = stripImgEls.length;
+    currentLB = (currentLB + dir + n) % n;
+    var my = ++lbToken,
+      idx = currentLB;
+    lbCounter.textContent = idx + 1 + " / " + n;
+    var ready = lbPreload(idx);
+    var out = new Promise(function (r) {
+      gsap.to(lbImg, {
+        autoAlpha: 0,
+        x: dir > 0 ? -30 : 30,
+        duration: 0.18,
+        overwrite: true,
+        onComplete: r,
+      });
+    });
+    Promise.all([ready, out]).then(function () {
+      if (my !== lbToken) return; // a newer click took over
+      lbImg.src = lbSrc(idx);
+      lbImg.alt = stripImgEls[idx].alt || "";
+      gsap.fromTo(
+        lbImg,
+        { autoAlpha: 0, x: dir > 0 ? 30 : -30 },
+        { autoAlpha: 1, x: 0, duration: 0.28, ease: "power2.out", overwrite: true }
+      );
+      lbPreload((idx + 1) % n);
+      lbPreload((idx - 1 + n) % n);
     });
   }
 
@@ -7538,6 +7582,20 @@ initPopupHoverReveal({
     )
       w.style.display = "none";
   });
+})();
+
+
+// =====================================================
+// 44. Enquiry Panel — Keep Sticky Hero While Page Is Locked
+// 功能：開 Get in Touch 時 html 同 body 都 overflow:hidden，body 變咗
+//       scroll container，Project 頁 sticky hero 圖會走位、下半變空白。
+//       body 改用 overflow:clip（一樣鎖住但唔會變 scroll container）。
+// =====================================================
+(function () {
+  var css = document.createElement("style");
+  css.textContent =
+    "html.enq-lock body.enq-lock{overflow:visible!important;overflow:clip!important}";
+  document.head.appendChild(css);
 })();
 
 }; // end window.__luveRun
