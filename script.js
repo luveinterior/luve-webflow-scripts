@@ -7638,7 +7638,9 @@ initPopupHoverReveal({
 (function () {
   var css = document.createElement("style");
   css.textContent =
-    "html.enq-lock body.enq-lock{overflow:visible!important;overflow:clip!important}";
+    "html.enq-lock body.enq-lock{overflow:visible!important;overflow:clip!important}" +
+    // side menu: text can't be highlighted (hover / cursor effects unchanged)
+    ".side-bar,.side-bar *,.side-bar-2,.side-bar-2 *{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}";
   document.head.appendChild(css);
 })();
 
