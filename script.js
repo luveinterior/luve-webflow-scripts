@@ -176,7 +176,23 @@
     })
   );
 
+  // Home awards marquee (ss-marquee library) — it only starts itself on
+  // DOMContentLoaded, so start / stop it by hand around a swap
+  function marquees(start) {
+    try {
+      document.querySelectorAll("[ss-marquee]").forEach(function (el) {
+        if (start) {
+          if (window.ssMarquee && !el.ssMarquee) el.ssMarquee = new window.ssMarquee(el);
+        } else if (el.ssMarquee && el.ssMarquee.destroy) {
+          el.ssMarquee.destroy();
+          el.ssMarquee = null;
+        }
+      });
+    } catch (e) {}
+  }
+
   function cleanup() {
+    marquees(false);
     L.items.forEach(function (it) {
       try {
         if (it.k === "ev") oRem.call(it.t, it.type, it.fn, it.opt);
@@ -358,6 +374,35 @@
     } catch (e) {}
   }
 
+  // ── new page entrance: the big first-screen photo/video settles from a
+  //    gentle zoom while the overlay lifts (OH-style), instead of just appearing
+  function heroEntrance() {
+    try {
+      var vw = window.innerWidth,
+        vh = window.innerHeight,
+        best = null,
+        bestA = 0;
+      document.querySelectorAll("img, video").forEach(function (m) {
+        var r = m.getBoundingClientRect();
+        var w = Math.min(r.right, vw) - Math.max(r.left, 0),
+          h = Math.min(r.bottom, vh) - Math.max(r.top, 0);
+        var a = w > 0 && h > 0 ? w * h : 0;
+        if (a > bestA) {
+          bestA = a;
+          best = m;
+        }
+      });
+      if (!best || bestA < vw * vh * 0.35) return; // no hero on this page
+      var box = best.parentElement;
+      if (box && getComputedStyle(box).overflow === "visible") box.style.overflow = "hidden";
+      gsap.fromTo(
+        best,
+        { scale: 1.14, transformOrigin: "50% 50%" },
+        { scale: 1, duration: 1.8, ease: "expo.out", delay: 0.05 }
+      );
+    } catch (e) {}
+  }
+
   // ── overlay（用返全站 .page-loader，Brand Light）──
   function loaderEl() {
     return document.querySelector(".page-loader");
@@ -474,8 +519,7 @@
         var doc = new DOMParser().parseFromString(r[0], "text/html");
         if (
           !doc.body ||
-          doc.documentElement.getAttribute("data-wf-site") !== docEl.getAttribute("data-wf-site") ||
-          doc.querySelector("[ss-marquee]") // Home awards marquee needs its own page load
+          doc.documentElement.getAttribute("data-wf-site") !== docEl.getAttribute("data-wf-site")
         ) {
           location.href = url; // → normal page load
           return;
@@ -515,6 +559,8 @@
           gsap.globalTimeline.pause();
         } catch (e) {}
         L.start();
+        marquees(true);
+        heroEntrance();
         // Webflow background videos: autoplay without the page's own video module
         document.querySelectorAll("video[autoplay]").forEach(function (v) {
           try {
@@ -4107,7 +4153,7 @@ function initSmartLoader() {
   // --- 判斷 ---
   // 頁面轉場（Section 00）換頁後重新啟動：遮罩由 Section 00 自己淡出
   if (window.__luveLife && window.__luveLife.gen > 0) {
-    loader.style.display = "none";
+    // nothing — Section 00 lifts the overlay itself after the new page is ready
   } else try {
     const isInternal = sessionStorage.getItem("internal-transition");
     if (isInternal) {
