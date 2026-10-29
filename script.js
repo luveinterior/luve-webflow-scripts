@@ -297,7 +297,14 @@
       var src = s.getAttribute("src");
       if (src) {
         var abs = new URL(src, location.href).href;
-        if (!loaded.has(abs) && abs.indexOf("luve-webflow-scripts") < 0 && !/csb\.app/.test(abs))
+        // never re-run Webflow's own bundle (a different page bundle would
+        // start a second Webflow runtime) or the site script itself
+        if (
+          !loaded.has(abs) &&
+          abs.indexOf("luve-webflow-scripts") < 0 &&
+          !/csb\.app/.test(abs) &&
+          !/website-files\.com\/[^/]+\/js\/webflow/.test(abs)
+        )
           ext.push(abs);
         s.remove();
       } else inline.push(s);
@@ -511,8 +518,11 @@
         var y = opt.pop && typeof opt.y === "number" ? opt.y : 0,
           hash = new URL(url, location.href).hash;
         return new Promise(function (res) {
-          requestAnimationFrame(function () {
-            requestAnimationFrame(function () {
+          // two frames (or 120ms if the tab isn't painting)
+          var done = false,
+            step = function () {
+              if (done) return;
+              done = true;
               try {
                 ScrollTrigger.refresh();
               } catch (e) {}
@@ -523,8 +533,11 @@
                 else window.scrollTo(0, y);
               }
               res();
-            });
+            };
+          requestAnimationFrame(function () {
+            requestAnimationFrame(step);
           });
+          setTimeout(step, 120);
         });
       })
       .then(function () {
