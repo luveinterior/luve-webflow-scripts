@@ -424,11 +424,25 @@
     return true;
   }
 
-  var busy = false;
+  var busy = false,
+    busyAt = 0;
+  L.debug = function () {
+    return { busy: busy, stage: L.stage, since: busy ? Date.now() - busyAt : 0 };
+  };
   function go(url, opt) {
     opt = opt || {};
-    if (busy) return;
+    // never stay locked: a stuck transition (> 8s) falls back to a normal load
+    if (busy) {
+      if (Date.now() - busyAt > 8000) location.href = url;
+      return;
+    }
     busy = true;
+    busyAt = Date.now();
+    L.stage = "fetch";
+    var myNav = (L.nav = (L.nav || 0) + 1);
+    setTimeout(function () {
+      if (busy && L.nav === myNav && L.stage !== "done") location.href = url;
+    }, 10000);
     var html = getHTML(url);
     if (!opt.pop)
       try {
@@ -443,6 +457,7 @@
     } catch (e) {}
     Promise.all([html, overlayIn()])
       .then(function (r) {
+        L.stage = "parse";
         var doc = new DOMParser().parseFromString(r[0], "text/html");
         if (
           !doc.body ||
@@ -462,9 +477,12 @@
   }
 
   function render(doc, url, opt) {
+    L.stage = "cleanup";
     cleanup();
     L.gen++;
+    L.stage = "head";
     var newHeadScripts = syncHead(doc);
+    L.stage = "body";
     docEl.style.scrollBehavior = "auto";
     window.scrollTo(0, 0);
     var ext = swapBody(doc);
@@ -476,6 +494,7 @@
         });
       }, Promise.resolve())
       .then(function () {
+        L.stage = "init";
         webflowReinit(doc);
         L.start();
         // Webflow background videos: autoplay without the page's own video module
@@ -509,6 +528,7 @@
         });
       })
       .then(function () {
+        L.stage = "done";
         overlayOut();
         busy = false;
         // late images change the page height → keep ScrollTrigger in sync
