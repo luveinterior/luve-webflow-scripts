@@ -174,19 +174,6 @@
       return s.src;
     })
   );
-  function wfBundle(doc) {
-    return [].slice
-      .call(doc.querySelectorAll("script[src]"))
-      .map(function (s) {
-        return s.getAttribute("src");
-      })
-      .filter(function (u) {
-        return /website-files\.com\/[^/]+\/js\/webflow/.test(u);
-      })
-      .sort()
-      .join("|");
-  }
-  var currentBundle = wfBundle(document);
 
   function cleanup() {
     L.items.forEach(function (it) {
@@ -459,10 +446,10 @@
         var doc = new DOMParser().parseFromString(r[0], "text/html");
         if (
           !doc.body ||
-          wfBundle(doc) !== currentBundle ||
-          doc.documentElement.getAttribute("data-wf-site") !== docEl.getAttribute("data-wf-site")
+          doc.documentElement.getAttribute("data-wf-site") !== docEl.getAttribute("data-wf-site") ||
+          doc.querySelector("[ss-marquee]") // Home awards marquee needs its own page load
         ) {
-          location.href = url; // different Webflow modules → normal page load
+          location.href = url; // → normal page load
           return;
         }
         if (!opt.pop) history.pushState({ luve: 1, y: 0 }, "", url);
@@ -491,6 +478,14 @@
       .then(function () {
         webflowReinit(doc);
         L.start();
+        // Webflow background videos: autoplay without the page's own video module
+        document.querySelectorAll("video[autoplay]").forEach(function (v) {
+          try {
+            v.muted = true;
+            var p = v.play();
+            if (p && p.catch) p.catch(function () {});
+          } catch (e) {}
+        });
         try {
           sessionStorage.removeItem("internal-transition");
         } catch (e) {}
