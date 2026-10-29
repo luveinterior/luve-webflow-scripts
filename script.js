@@ -541,6 +541,30 @@
         });
       })
       .then(function () {
+        // wait (max 1.2s) for the images on screen, so the page fades in complete
+        L.stage = "images";
+        var vh = window.innerHeight;
+        var waits = [].slice
+          .call(document.images)
+          .filter(function (im) {
+            var r = im.getBoundingClientRect();
+            return !im.complete && r.bottom > 0 && r.top < vh && r.width > 40;
+          })
+          .map(function (im) {
+            im.loading = "eager";
+            return new Promise(function (res) {
+              im.addEventListener("load", res, { once: true });
+              im.addEventListener("error", res, { once: true });
+            });
+          });
+        return Promise.race([
+          Promise.all(waits),
+          new Promise(function (res) {
+            setTimeout(res, 1200);
+          }),
+        ]);
+      })
+      .then(function () {
         L.stage = "done";
         overlayOut();
         busy = false;
