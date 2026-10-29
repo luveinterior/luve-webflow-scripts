@@ -111,6 +111,8 @@
   L.oAdd = oAdd;
 
   var docEl = document.documentElement;
+  var htmlBase = docEl.className,
+    htmlStyleBase = docEl.getAttribute("style") || "";
   function persistent(t) {
     return t === window || t === document || t === docEl || t === document.body;
   }
@@ -213,9 +215,22 @@
     [].slice.call(document.head.childNodes).forEach(function (n) {
       if (!headBase.has(n) && n.nodeName === "STYLE") n.remove();
     });
-    docEl.classList.remove("lenis", "lenis-smooth", "lenis-stopped", "lenis-scrolling");
-    docEl.style.overflow = "";
+    // html classes / styles back to how the first page started
+    var ios = docEl.classList.contains("ios-safe");
+    docEl.className = htmlBase;
+    if (ios) docEl.classList.add("ios-safe");
+    docEl.setAttribute("style", htmlStyleBase);
     docEl.style.backgroundColor = "#f0e8dd";
+    // one-time guards inside the site script → allow the next page to init again
+    ["__LUVE_MENU_SYSTEM_BOUND__", "__MENU_STATE__", "__LUVE_COMPACT_LOGO__", "__LUVE_PX"].forEach(
+      function (k) {
+        try {
+          delete window[k];
+        } catch (e) {
+          window[k] = undefined;
+        }
+      }
+    );
   }
 
   // ── page-specific <head> styles（Projects / Process / Contact…）──
