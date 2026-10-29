@@ -56,8 +56,7 @@
 //       淡入 Brand Light 遮罩 → 換走 <body> 內容 → 重新啟動
 //       全站 script（window.__luveRun）→ 遮罩淡出。
 //       jQuery / Webflow / GSAP / Lenis / 字體全部唔使再下載。
-// 範圍：暫時只喺 staging（*.webflow.io）啟用；正式網站照舊。
-//       想正式網站都用：將 ENABLE 條件改成 true。
+// 範圍：全站（staging + luveinterior.com），包括 Digital Card 同 Furniture。
 // 安全網：任何一步出錯、或者下一頁用唔同嘅 Webflow 模組，
 //         就自動改用普通轉頁（location.href）。
 // =====================================================
@@ -66,7 +65,6 @@
 
   var SRC = (document.currentScript && document.currentScript.src) || "";
   var ENABLE =
-    /\.webflow\.io$/.test(location.hostname) &&
     !!(window.fetch && window.DOMParser && history.pushState && window.Promise);
 
   var L = (window.__luveLife = { gen: 0, items: [], enabled: ENABLE, src: SRC });
@@ -130,7 +128,7 @@
         continue;
       }
       if (/jquery/i.test(f)) continue;
-      if (SRC && f.indexOf(SRC) > -1) return true;
+      if ((SRC && f.indexOf(SRC) > -1) || f.indexOf("luve-webflow-scripts") > -1) return true;
       return f.indexOf(location.origin + "/") > -1 && !/\.js[?:]/.test(f);
     }
     return false;
@@ -316,7 +314,10 @@
         var abs = new URL(src, location.href).href;
         // never re-run Webflow's own bundle (a different page bundle would
         // start a second Webflow runtime) or the site script itself
-        if (
+        // page scripts kept in our GitHub (e.g. Digital Card) run on every visit
+        var ours = abs.indexOf("luve-webflow-scripts") > -1 && !/\/script(\.min)?\.js/.test(abs);
+        if (ours) ext.push(abs);
+        else if (
           !loaded.has(abs) &&
           abs.indexOf("luve-webflow-scripts") < 0 &&
           !/csb\.app/.test(abs) &&
@@ -444,7 +445,8 @@
       cache.set(
         k,
         fetch(k, { credentials: "same-origin" }).then(function (r) {
-          if (!r.ok || !/text\/html/.test(r.headers.get("content-type") || ""))
+          // 401 = Webflow password page (e.g. Furniture) — still a normal HTML page
+          if ((!r.ok && r.status !== 401) || !/text\/html/.test(r.headers.get("content-type") || ""))
             throw new Error("not html");
           return r.text();
         })
@@ -471,8 +473,6 @@
     }
     if (u.origin !== location.origin || !/^https?:$/.test(u.protocol)) return false;
     if (/\.(pdf|vcf|jpe?g|png|webp|gif|zip|mp4)$/i.test(u.pathname)) return false;
-    if (/^\/(card|401)(\/|$)/.test(u.pathname)) return false;
-    if (/^\/(card)(\/|$)/.test(location.pathname)) return false;
     if (u.pathname === location.pathname && u.search === location.search) return false;
     return true;
   }
