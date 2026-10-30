@@ -7719,9 +7719,11 @@ initPopupHoverReveal({
         "top:" + (window.scrollY + vh - 160) + "px;background:" + bg +
         ";opacity:0;transition:opacity .5s ease .25s";
       document.body.appendChild(strip);
-      requestAnimationFrame(function () {
-        if (strip) strip.style.opacity = "1";
-      });
+      var st = strip;
+      strip.getBoundingClientRect(); // commit opacity:0 so the fade runs
+      setTimeout(function () {
+        st.style.opacity = "1";
+      }, 20);
     } else if (!open && strip) {
       strip.remove();
       strip = null;
