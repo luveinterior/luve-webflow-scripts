@@ -7834,12 +7834,12 @@ initPopupHoverReveal({
     IN(".careers-thanks") + "{font-size:14px!important;line-height:1.4!important;font-weight:500!important;font-style:normal!important;letter-spacing:0!important;margin:0!important}" +
     // New Client choice chips
     ".nc-choice-group{border:0;margin:0!important}" +
-    ".nc-q{font-size:14px;line-height:1.35;color:" + DARK + ";margin:2px 2px 10px}" +
+    ".nc-q{font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:14px;line-height:1.35;color:" + DARK + ";margin:2px 2px 10px}" +
     ".nc-choice-group.is-req .nc-q:after{content:' *'}" +
     ".nc-chips{display:flex;flex-wrap:wrap;gap:8px}" +
     ".nc-chips .w-radio{position:relative;display:inline-flex;align-items:center;margin:0!important;padding:0!important}" +
     ".nc-chips .w-radio input{position:absolute!important;opacity:0!important;width:1px!important;height:1px!important;margin:0!important;pointer-events:none}" +
-    ".nc-chips .w-form-label{display:inline-flex;align-items:center;height:40px;padding:0 16px;border-radius:999px;background:" + FIELD + ";color:" + DARK + ";font-size:14px;line-height:1;cursor:pointer;transition:background-color .2s ease,color .2s ease;-webkit-tap-highlight-color:transparent;margin:0!important}" +
+    ".nc-chips .w-form-label{display:inline-flex;align-items:center;height:40px;padding:0 16px;border-radius:999px;background:" + FIELD + ";color:" + DARK + ";font-size:14px;line-height:1;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;cursor:pointer;transition:background-color .2s ease,color .2s ease;-webkit-tap-highlight-color:transparent;margin:0!important}" +
     "@media (hover:hover){.nc-chips .w-form-label:hover{background:" + FIELD_FOCUS + "}}" +
     ".nc-chips input:checked+.w-form-label{background:" + DARK + ";color:" + LIGHT + "}" +
     ".nc-chips input:focus-visible+.w-form-label{outline:2px solid " + DARK + ";outline-offset:2px}" +
@@ -7868,7 +7868,7 @@ initPopupHoverReveal({
     ".ct-arrow{appearance:none;-webkit-appearance:none;background:none;border:0;padding:0;width:42px;height:42px;align-items:center;justify-content:flex-start;color:" + DARK + ";cursor:pointer;margin-right:auto;-webkit-tap-highlight-color:transparent}" +
     // submit button: LUVÉ logo loader inside the pill
     ".btn-wrapper.is-contact{position:relative}" +
-    ".btn-wrapper.is-contact .ct-loader{position:absolute;left:50%;top:50%;height:13px;width:auto;transform:translate(-50%,-50%);opacity:0;pointer-events:none;transition:opacity .25s ease}" +
+    ".btn-wrapper.is-contact .ct-loader{color:" + LIGHT + ";position:absolute;left:50%;top:50%;height:13px;width:auto;transform:translate(-50%,-50%);opacity:0;pointer-events:none;transition:opacity .25s ease}" +
     ".btn-wrapper.is-contact.ct-loading{pointer-events:none}" +
     ".btn-wrapper.is-contact.ct-loading .btn-text,.btn-wrapper.is-contact.ct-loading .btn-arrow{opacity:0!important;transition:opacity .2s ease}" +
     ".btn-wrapper.is-contact.ct-loading .ct-loader{opacity:1}" +
@@ -7914,10 +7914,10 @@ initPopupHoverReveal({
     // ---------- desktop ----------
     "@media (min-width:992px){" +
     ALL.split(",").map((s) => "html body .contact-body-form>" + s).join(",") + "{" +
-    "background:" + CARD_DESKTOP + "!important;border:0!important;border-radius:14px!important;padding:30px 32px 26px!important;height:auto!important;" +
+    "background:" + CARD_DESKTOP + "!important;border:0!important;border-radius:14px!important;padding:30px 32px 26px!important;height:auto!important;bottom:auto!important;" +
     "max-height:calc(100vh - 160px);max-height:calc(100svh - 160px);overflow-y:auto;box-sizing:border-box;box-shadow:0 30px 70px -40px rgba(48,30,18,.4);scrollbar-width:thin}" +
-    IN(".form-description-text") + "," + IN(".careers-form-slogan") + "," + IN(".careers-form-intro") + "{font-size:15px!important}" +
     IN(".form-intromessage") + "," + IN(".careers-form-intro-wrapper") + "{margin:0 0 8px!important}" +
+    IN(".form-description-text") + "," + IN(".careers-form-slogan") + "," + IN(".careers-form-intro") + "{font-size:16px!important;font-weight:500!important}" +
     ".ct-steps .ct-step-head{margin:10px 0 6px}" +
     // the list: chosen form name bold, others lighter
     ".contact-body-formlink [class*='-contact-link']{transition:opacity .35s ease,font-weight .2s ease}" +
