@@ -362,12 +362,7 @@
     try {
       W.ready();
     } catch (e) {}
-    // Turnstile is already loaded after a transition, so Webflow's forms wait
-    // for a jQuery "ready" event that never comes; fire it so each form gets
-    // its Turnstile check (otherwise SUBMIT stays disabled).
-    try {
-      if (window.turnstile && window.jQuery) window.jQuery(document).trigger("ready");
-    } catch (e) {}
+
     ["ix2", "ix3"].forEach(function (m) {
       try {
         var x = W.require(m);
@@ -8221,10 +8216,45 @@ initPopupHoverReveal({
 // 46. Forms — Cloudflare Turnstile Fixes (all pages)
 // 功能：(1) Turnstile 喺 form 最尾加咗一格，搞亂咗 GET IN TOUCH
 //       「最後一格 = BACK / NEXT 按鈕列」嘅樣式 → 將按鈕列放返最尾。
-//       (2) 經 page transition 入嚟嘅頁，Webflow 唔會再啟動 Turnstile
-//       （等緊一個已經發生咗嘅 ready），所以 SUBMIT 一直撳唔到 → 補返。
+//       (2) Webflow 有時冇幫 form 啟動 Turnstile（例如經 page transition
+//       入嚟，或者 form 一開頭收埋），SUBMIT 會一直撳唔到 → form 一出現
+//       而冇 Turnstile 就自己補返，攞到 token 就開返 SUBMIT。
 // =====================================================
 (function initTurnstileFixes() {
+  const ensure = (form) => {
+    if (!window.turnstile || !window.jQuery || form.dataset.ctTs) return;
+    if (form.querySelector('input[name="cf-turnstile-response"]')) return;
+    const key = form.getAttribute("data-turnstile-sitekey");
+    if (!key) return;
+    form.dataset.ctTs = "1";
+    const $ = window.jQuery;
+    const data = $.data(form, ".w-form");
+    const box = document.createElement("div");
+    form.appendChild(box);
+    const btn = $(form).find(':input[type="submit"]');
+    try {
+      window.turnstile.render(box, {
+        sitekey: key,
+        callback: (token) => {
+          if (data) data.turnstileToken = token;
+          btn.prop("disabled", false).removeClass("w-form-loading");
+          $(form).closest(".w-form").removeClass("w-form-loading");
+        },
+        "error-callback": () => {
+          $(form).closest(".w-form").removeClass("w-form-loading");
+        },
+      });
+    } catch (e) {}
+  };
+  const io = new IntersectionObserver(
+    (entries) =>
+      entries.forEach((en) => {
+        if (en.isIntersecting) setTimeout(() => ensure(en.target), 1200);
+      }),
+    { rootMargin: "200px" }
+  );
+  document.querySelectorAll("form[data-turnstile-sitekey]").forEach((f) => io.observe(f));
+
   document.querySelectorAll("[data-enq-form]").forEach((form) => {
     if (form.dataset.ctNavKeep) return;
     form.dataset.ctNavKeep = "1";
