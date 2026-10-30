@@ -7771,7 +7771,11 @@ initPopupHoverReveal({
     "background:" + LIGHT + "!important;border-radius:14px;padding:26px 22px 20px!important;max-height:100%;overflow-y:auto;" +
     "height:auto!important;box-sizing:border-box;box-shadow:0 24px 60px -24px rgba(48,30,18,.45);scrollbar-width:none}" +
     "html body .contact-body-form>div::-webkit-scrollbar{display:none}" +
-    ".ct-card-title{display:block;font-family:var(--_typography---h4-font-family,inherit);font-size:30px;line-height:1.05;letter-spacing:-.01em;color:" + DARK + ";margin:0 0 12px}" +
+    ".ct-card-title{display:block;font-family:var(--_typography---h4-font-family,inherit);font-size:24px;line-height:1.1;letter-spacing:-.01em;color:" + DARK + ";margin:0 0 12px}" +
+    // all intro / note texts in the cards share one size
+    "html body .contact-body-form .form-description-text,html body .contact-body-form .careers-form-slogan,html body .contact-body-form .careers-form-intro," +
+    "html body .contact-body-form .careers-thanks{font-size:14px!important;line-height:1.4!important;font-weight:500!important;font-style:normal!important;letter-spacing:0!important}" +
+    "html body .contact-body-form .careers-form-intro-wrapper{display:flex;justify-content:space-between;align-items:baseline}" +
     // old < BACK row button goes; text stays
     "html body .contact-body-form .form-close-btn{display:none!important}" +
     // intro text only on the first step
@@ -7782,7 +7786,15 @@ initPopupHoverReveal({
     "html body .contact-body-form textarea{border:0!important;border-radius:9px!important;background-color:rgba(121,94,73,.08)!important;box-shadow:none!important}" +
     "html body .contact-body-form .form-input:focus,html body .contact-body-form .form-select:focus,html body .contact-body-form .enq-input:focus," +
     "html body .contact-body-form textarea:focus{background-color:rgba(121,94,73,.13)!important;outline:none!important}" +
-    "html body .contact-body-form .form-input:focus+.floating-label,html body .contact-body-form .form-input:not(:placeholder-shown)+.floating-label{background-color:transparent!important;top:6px!important;transform:scale(.8)!important}" +
+    // floating labels: rest in the middle of the box, move to the top-left
+    // corner (small) once the box is focused or filled — never over the text
+    "html body .contact-body-form .input-group .form-input{height:56px!important;min-height:56px!important;padding:20px 16px 6px!important;line-height:1.3!important;font-size:16px!important}" +
+    "html body .contact-body-form .input-group textarea.form-input{height:104px!important;min-height:104px!important;padding:26px 16px 10px!important;resize:none}" +
+    "html body .contact-body-form .input-group .floating-label{position:absolute!important;left:16px!important;right:16px;top:50%!important;transform:translateY(-50%)!important;margin:0!important;padding:0!important;background:none!important;font-size:14px!important;line-height:1.2;pointer-events:none;transition:top .2s ease,font-size .2s ease,transform .2s ease}" +
+    "html body .contact-body-form .input-group textarea.form-input+.floating-label{top:18px!important;transform:none!important}" +
+    "html body .contact-body-form .input-group .form-input:focus+.floating-label,html body .contact-body-form .input-group .form-input:not(:placeholder-shown)+.floating-label{top:8px!important;transform:none!important;font-size:11px!important;background:none!important;padding:0!important}" +
+    "html body .contact-body-form .input-group .field-help-text{position:static!important;transform:none!important;font-size:12px!important;line-height:1.35;margin:6px 2px 0!important}" +
+    "html body .contact-body-form .input-group .field-error-msg{position:static!important;margin:4px 2px 0!important}" +
     "html body .contact-body-form .enq-input{height:46px!important;min-height:46px!important;margin:0!important}" +
     "html body .contact-body-form .enq-field-label{margin:0!important}" +
     // compact spacing so each step fits the screen without scrolling
@@ -7802,7 +7814,7 @@ initPopupHoverReveal({
     // steps for the three simple forms
     ".ct-steps [data-ct-step]{display:none!important}" +
     ".ct-steps.ct-s1 [data-ct-step='1'],.ct-steps.ct-s2 [data-ct-step='2'],.ct-steps.ct-s3 [data-ct-step='3']{display:block!important}" +
-    ".ct-steps.ct-s3 [data-ct-step='3'].btn-wrapper{display:flex!important}" +
+    ".ct-steps.ct-s2 [data-ct-step='2'].btn-wrapper,.ct-steps.ct-s3 [data-ct-step='3'].btn-wrapper{display:flex!important}" +
     ".ct-steps.ct-s1 .ct-step-head[data-ct-step='1'],.ct-steps.ct-s2 .ct-step-head[data-ct-step='2'],.ct-steps.ct-s3 .ct-step-head[data-ct-step='3']{display:flex!important}" +
     ".ct-step-head,.ct-btn{font-family:'Helvetica Neue',Helvetica,Arial,sans-serif!important}" +
     ".ct-steps .ct-step-head{display:flex;justify-content:space-between;align-items:baseline;margin:6px 0 14px;color:" + DARK + ";font-size:15px;font-weight:600;letter-spacing:.02em;text-transform:uppercase}" +
@@ -7817,10 +7829,12 @@ initPopupHoverReveal({
     ".ct-arrow{appearance:none;-webkit-appearance:none;background:none;border:0;padding:0;width:42px;height:42px;display:none;align-items:center;justify-content:flex-start;color:" + DARK + ";cursor:pointer;-webkit-tap-highlight-color:transparent}" +
     ".ct-steps.ct-s1 .ct-nav .ct-arrow{display:inline-flex}" +
     ".ct-steps:not(.ct-s1) .ct-nav .is-back{display:inline-flex}.ct-steps.ct-s1 .ct-nav .is-back{display:none}" +
-    ".ct-steps.ct-s3 .ct-nav .is-next{display:none}" +
+    ".ct-steps.ct-last .ct-nav .is-next{display:none}" +
     ".ct-steps .ct-nav .btn-wrapper.is-contact{margin:0 0 0 auto!important}" +
     // reCAPTCHA box is 304px wide; shrink a touch so it fits the card
-    "html body .contact-body-form .g-recaptcha{transform:scale(.9);transform-origin:left top;height:70px;margin:4px 0 6px}" +
+    "html body .contact-body-form .g-recaptcha{transform:scale(.9);transform-origin:left top;margin:0 0 -8px}" +
+    "html.ct-no-captcha body .contact-body-form .g-recaptcha,html.ct-no-captcha body .contact-body-form [data-enq-recaptcha-wrap]{display:none!important}" +
+    ".ct-steps form{row-gap:12px!important;gap:12px!important}" +
     // New Client (enquiry component): arrow sits where BACK would be on step 1
     ".new-client-form.ct-first .ct-arrow{display:inline-flex}" +
     ".new-client-form .ct-arrow{margin-right:auto}" +
@@ -7876,7 +7890,14 @@ initPopupHoverReveal({
     });
   })();
 
-  // ---- Media / General / Careers: split into 3 steps ----
+  // Webflow only loads reCAPTCHA when it is switched on in Site settings
+  // (after moving to Cloudflare Turnstile it is not), so the forms then need
+  // 2 steps: details → content + Submit.
+  const hasCaptcha = !!document.querySelector('script[src*="recaptcha/api.js"]');
+  document.documentElement.classList.toggle("ct-no-captcha", !hasCaptcha);
+  const LAST = hasCaptcha ? 3 : 2;
+
+  // ---- Media / General / Careers: split into steps ----
   const CONTACT_FIELDS = /^(Name|Organization-Publication|Email|Phone-No)$/;
   const HEADS = {
     ".media-enquiry-form": ["Your details", "Your enquiry", "Send"],
@@ -7899,16 +7920,16 @@ initPopupHoverReveal({
         el.matches(".careers-thanks, .g-recaptcha, .w-form-formrecaptcha, .w-embed, .btn-wrapper") ||
         el.querySelector(".g-recaptcha")
       )
-        step = 3;
+        step = LAST;
       if (el.matches(".btn-wrapper.is-contact")) submitBtn = el;
       el.setAttribute("data-ct-step", String(step));
     });
     // step titles + counts
-    heads.forEach((h, i) => {
+    heads.slice(0, LAST).forEach((h, i) => {
       const head = document.createElement("div");
       head.className = "ct-step-head";
       head.setAttribute("data-ct-step", String(i + 1));
-      head.innerHTML = "<span>" + h + "</span><b>0" + (i + 1) + "/03</b>";
+      head.innerHTML = "<span>" + h + "</span><b>0" + (i + 1) + "/0" + LAST + "</b>";
       const firstOfStep = form.querySelector('[data-ct-step="' + (i + 1) + '"]:not(.ct-step-head)');
       form.insertBefore(head, firstOfStep || null);
     });
@@ -7934,8 +7955,9 @@ initPopupHoverReveal({
     const show = (n, animate) => {
       const apply = () => {
         step = n;
-        card.classList.remove("ct-s1", "ct-s2", "ct-s3");
+        card.classList.remove("ct-s1", "ct-s2", "ct-s3", "ct-last");
         card.classList.add("ct-s" + n);
+        card.classList.toggle("ct-last", n === LAST);
         card.classList.toggle("ct-later", n > 1);
         card.scrollTop = 0;
       };
@@ -7959,7 +7981,7 @@ initPopupHoverReveal({
       return ok;
     };
     nextBtn.addEventListener("click", () => {
-      if (stepValid()) show(Math.min(3, step + 1), true);
+      if (stepValid()) show(Math.min(LAST, step + 1), true);
     });
     backBtn.addEventListener("click", () => show(Math.max(1, step - 1), true));
 
@@ -7969,7 +7991,7 @@ initPopupHoverReveal({
         if (submitBtn && submitBtn.parentNode !== nav) nav.appendChild(submitBtn);
         show(step, false);
       } else {
-        card.classList.remove("ct-steps", "ct-s1", "ct-s2", "ct-s3", "ct-later", "ct-fading");
+        card.classList.remove("ct-steps", "ct-s1", "ct-s2", "ct-s3", "ct-last", "ct-later", "ct-fading");
         if (submitBtn && home.parentNode) home.parentNode.insertBefore(submitBtn, home.nextSibling);
       }
     };
