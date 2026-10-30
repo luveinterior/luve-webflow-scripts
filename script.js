@@ -46,6 +46,7 @@
 // 42. Back-to-Top — Round Button on Phones + Reliable Scroll
 // 43. Project Page — More Section Header + Hide Empty Size
 // 44. Enquiry Panel — Keep Sticky Hero While Page Is Locked
+// 45. Contact Page — Mobile Form Cards + One Step at a Time
 // 00. Page Transitions (Barba-style) — 喺最頂，包住成個 script（window.__luveRun）
 //
 // =============================================================================
@@ -1573,48 +1574,64 @@ if (FAQ_ITEMS.length) {
   });
 
   // Mobile/Tablet (< 992px)
+  // 撳 form 名 → 4 個 form 名淡出 → 揀咗嗰份 form（card）淡入；
+  // card 入面 step 1 個返回箭咀 → 淡返出去 4 個 form 名。
+  // Card 樣式同分 step 喺 Section 45。
   mm.add("(max-width: 991px)", () => {
     const wrapper = document.querySelector(wrapperSelector);
+    const list = document.querySelector(".contact-body-formlink");
+    let current = null;
+    let busy = false;
 
     if (wrapper) {
-      gsap.set(wrapper, { xPercent: 100, display: "block" });
+      gsap.set(wrapper, { xPercent: 0, display: "flex", autoAlpha: 0 });
+      wrapper.style.pointerEvents = "none";
     }
 
     const openMobileForm = (targetSelector) => {
-      document.body.classList.add("no-scroll");
-      allForms.forEach((s) => gsap.set(s, { display: "none" }));
-
       const target = document.querySelector(targetSelector);
-      if (target) gsap.set(target, { display: "block", autoAlpha: 1 });
-
-      if (wrapper) gsap.set(wrapper, { willChange: "transform" });
-
-      // [修改] 開啟：1.0s + expo.out
-      gsap.to(wrapper, {
-        xPercent: 0,
-        duration: 1.0,
-        ease: "expo.out",
+      if (!target || !wrapper || busy) return;
+      busy = true;
+      document.body.classList.add("no-scroll");
+      allForms.forEach((sel) => gsap.set(sel, { display: "none" }));
+      if (window.__luveContactStepsReset) window.__luveContactStepsReset(target);
+      const tl = gsap.timeline({
         onComplete: () => {
-          if (wrapper) gsap.set(wrapper, { willChange: "auto" });
+          busy = false;
         },
       });
+      if (list) tl.to(list, { autoAlpha: 0, duration: 0.4, ease: "power2.out" });
+      tl.add(() => {
+        wrapper.style.pointerEvents = "auto";
+        gsap.set(target, { display: "block" });
+      });
+      tl.to(wrapper, { autoAlpha: 1, duration: 0.45, ease: "power2.out" });
+      tl.fromTo(
+        target,
+        { autoAlpha: 0, y: 16 },
+        { autoAlpha: 1, y: 0, duration: 0.7, ease: "power3.out" },
+        "<0.05"
+      );
+      current = target;
     };
 
     const closeMobileForm = () => {
-      if (wrapper) gsap.set(wrapper, { willChange: "transform" });
-
-      // [修改] 關閉：1.5s + expo.inOut (或者 keep expo.out 都可以)
-      // 建議用 0.7s 稍快一點
-      gsap.to(wrapper, {
-        xPercent: 100,
-        duration: 1.5,
-        ease: "expo.inOut", // 收埋時用 inOut 會有一種「抽走」的感覺
+      if (!wrapper || busy) return;
+      busy = true;
+      const tl = gsap.timeline({
         onComplete: () => {
+          if (current) gsap.set(current, { display: "none" });
+          current = null;
+          wrapper.style.pointerEvents = "none";
           document.body.classList.remove("no-scroll");
-          if (wrapper) gsap.set(wrapper, { willChange: "auto" });
+          busy = false;
         },
       });
+      if (current) tl.to(current, { autoAlpha: 0, y: 10, duration: 0.35, ease: "power2.in" });
+      tl.to(wrapper, { autoAlpha: 0, duration: 0.35, ease: "power2.out" }, "<0.1");
+      if (list) tl.to(list, { autoAlpha: 1, duration: 0.5, ease: "power2.out" });
     };
+    window.__luveContactClose = closeMobileForm;
 
     const links = {
       ".new-client-contact-link": ".new-client-form",
@@ -1634,8 +1651,18 @@ if (FAQ_ITEMS.length) {
     });
 
     document.querySelectorAll(".form-close-btn").forEach((btn) => {
-      btn.onclick = closeMobileForm;
+      btn.onclick = (e) => {
+        e.preventDefault();
+        closeMobileForm();
+      };
     });
+
+    return () => {
+      window.__luveContactClose = null;
+      if (list) gsap.set(list, { clearProps: "opacity,visibility" });
+      if (wrapper) wrapper.style.pointerEvents = "";
+      document.body.classList.remove("no-scroll");
+    };
   });
 
   // ---------------------------------------------------
@@ -7704,6 +7731,243 @@ initPopupHoverReveal({
     attributes: true,
     attributeFilter: ["class"],
   });
+})();
+
+// =====================================================
+// 45. Contact Page — Mobile Form Cards + One Step at a Time
+// 功能：手機 / 平板（< 992px）Contact page 四份 form 變成浮喺相上面嘅 card
+//       （參考圖：圓角淺色 card、實色輸入框、冇邊框）。顏色用網站原本配色。
+//       New Client Form（Enquiry component）本身有 step；Media / General /
+//       Careers 分 3 個 step：聯絡資料 → 內容 → reCAPTCHA + Submit。
+//       一次淨係顯示一個 step，唔使 scroll；撳 NEXT 淡出再淡入下一個 step。
+//       每份 form 第一個 step 用返回箭咀（brand dark）返去 4 個 form 名。
+//       電腦版完全唔郁。開／收動畫喺 Section 05。
+// =====================================================
+(function initContactCards() {
+  if (!document.body.classList.contains("body-contact")) return;
+  const MQ = "(max-width: 991px)";
+  const DARK = "#795e49";
+  const LIGHT = "#f0e8dd";
+  const CARDS = [
+    { sel: ".new-client-form", title: "New Client Form" },
+    { sel: ".media-enquiry-form", title: "Media Enquiry" },
+    { sel: ".general-enquiry-form", title: "General Enquiry" },
+    { sel: ".careers-form", title: "Careers" },
+  ];
+  const ARROW =
+    '<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg>';
+
+  const css = document.createElement("style");
+  css.textContent =
+    ".ct-card-title,.ct-nav,.ct-step-head,.ct-arrow{display:none}" +
+    "@media " + MQ + "{" +
+    // overlay: transparent, photo shows through with a soft brand tint
+    "html body .contact-body-form{position:fixed!important;inset:0!important;width:100%!important;height:100vh!important;height:100svh!important;" +
+    "padding:92px 14px calc(14px + env(safe-area-inset-bottom,0px))!important;background:rgba(121,94,73,.22)!important;overflow:hidden!important;" +
+    "flex-direction:column;justify-content:flex-end;align-items:stretch;box-sizing:border-box}" +
+    // the card
+    "html body .contact-body-form>.new-client-form,html body .contact-body-form>.media-enquiry-form," +
+    "html body .contact-body-form>.general-enquiry-form,html body .contact-body-form>.careers-form{" +
+    "background:" + LIGHT + "!important;border-radius:14px;padding:26px 22px 20px!important;max-height:100%;overflow-y:auto;" +
+    "height:auto!important;box-sizing:border-box;box-shadow:0 24px 60px -24px rgba(48,30,18,.45);scrollbar-width:none}" +
+    "html body .contact-body-form>div::-webkit-scrollbar{display:none}" +
+    ".ct-card-title{display:block;font-family:var(--_typography---h4-font-family,inherit);font-size:34px;line-height:1.05;letter-spacing:-.01em;color:" + DARK + ";margin:0 0 14px}" +
+    // old < BACK row button goes; text stays
+    "html body .contact-body-form .form-close-btn{display:none!important}" +
+    // intro text only on the first step
+    ".ct-later .form-intromessage,.ct-later .careers-form-intro-wrapper,.ct-later .careers-form-intro{display:none!important}" +
+    "html body .contact-body-form .form-intromessage{margin-bottom:8px}" +
+    // filled input boxes (no border), like the reference
+    "html body .contact-body-form .form-input,html body .contact-body-form .form-select,html body .contact-body-form .enq-input," +
+    "html body .contact-body-form textarea{border:0!important;border-radius:9px!important;background-color:rgba(121,94,73,.08)!important;box-shadow:none!important}" +
+    "html body .contact-body-form .form-input:focus,html body .contact-body-form .form-select:focus,html body .contact-body-form .enq-input:focus," +
+    "html body .contact-body-form textarea:focus{background-color:rgba(121,94,73,.13)!important;outline:none!important}" +
+    "html body .contact-body-form .form-input:focus+.floating-label,html body .contact-body-form .form-input:not(:placeholder-shown)+.floating-label{background-color:transparent!important;top:6px!important;transform:scale(.8)!important}" +
+    "html body .contact-body-form .enq-input{height:48px!important}" +
+    "html body .contact-body-form .new-client-form [data-enq-panel]{padding:0!important;background:transparent!important;height:auto!important;max-height:none!important;overflow:visible!important}" +
+    "html body .contact-body-form .new-client-form [data-enq-step] label{margin-bottom:10px}" +
+    // steps for the three simple forms
+    ".ct-steps [data-ct-step]{display:none!important}" +
+    ".ct-steps.ct-s1 [data-ct-step='1'],.ct-steps.ct-s2 [data-ct-step='2'],.ct-steps.ct-s3 [data-ct-step='3']{display:block!important}" +
+    ".ct-steps.ct-s3 [data-ct-step='3'].btn-wrapper{display:flex!important}" +
+    ".ct-steps .ct-step-head{display:flex;justify-content:space-between;align-items:baseline;margin:6px 0 14px;color:" + DARK + ";font-size:15px;font-weight:600;letter-spacing:.02em;text-transform:uppercase}" +
+    ".ct-steps .ct-step-head b{font-weight:600}" +
+    ".ct-steps .ct-nav{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:18px}" +
+    ".ct-steps form{transition:opacity .25s ease}" +
+    ".ct-steps.ct-fading form{opacity:0}" +
+    ".ct-btn{appearance:none;-webkit-appearance:none;display:inline-flex;align-items:center;justify-content:center;height:42px;padding:0 18px;border-radius:999px;" +
+    "border:1px solid " + DARK + ";font:500 14px/1 inherit;letter-spacing:1px;text-transform:uppercase;cursor:pointer;-webkit-tap-highlight-color:transparent}" +
+    ".ct-btn.is-next{background:" + DARK + ";color:" + LIGHT + ";margin-left:auto}" +
+    ".ct-btn.is-back{background:transparent;color:" + DARK + "}" +
+    ".ct-arrow{appearance:none;-webkit-appearance:none;background:none;border:0;padding:0;width:42px;height:42px;display:none;align-items:center;justify-content:flex-start;color:" + DARK + ";cursor:pointer;-webkit-tap-highlight-color:transparent}" +
+    ".ct-steps.ct-s1 .ct-nav .ct-arrow{display:inline-flex}" +
+    ".ct-steps:not(.ct-s1) .ct-nav .is-back{display:inline-flex}.ct-steps.ct-s1 .ct-nav .is-back{display:none}" +
+    ".ct-steps.ct-s3 .ct-nav .is-next{display:none}" +
+    ".ct-steps .ct-nav .btn-wrapper.is-contact{margin:0 0 0 auto!important}" +
+    // reCAPTCHA box is 304px wide; shrink a touch so it fits the card
+    "html body .contact-body-form .g-recaptcha{transform:scale(.9);transform-origin:left top;height:70px;margin:4px 0 6px}" +
+    // New Client (enquiry component): arrow sits where BACK would be on step 1
+    ".new-client-form.ct-first .ct-arrow{display:inline-flex}" +
+    ".new-client-form .ct-arrow{margin-right:auto}" +
+    "}";
+  document.head.appendChild(css);
+
+  const mq = window.matchMedia(MQ);
+  const goBack = (e) => {
+    if (e) e.preventDefault();
+    if (window.__luveContactClose) window.__luveContactClose();
+  };
+  const makeArrow = () => {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "ct-arrow";
+    b.setAttribute("aria-label", "Back to all forms");
+    b.innerHTML = ARROW;
+    b.addEventListener("click", goBack);
+    return b;
+  };
+
+  // titles on every card
+  CARDS.forEach((c) => {
+    const card = document.querySelector(c.sel);
+    if (!card || card.querySelector(".ct-card-title")) return;
+    const t = document.createElement("div");
+    t.className = "ct-card-title";
+    t.textContent = c.title;
+    card.insertBefore(t, card.firstChild);
+  });
+
+  // ---- New Client Form: enquiry component steps ----
+  (function newClient() {
+    const card = document.querySelector(".new-client-form");
+    if (!card) return;
+    const next = card.querySelector('[data-enq-action="next"]');
+    const back = card.querySelector('[data-enq-action="back"]');
+    if (!next || !back) return;
+    const nav = next.parentElement;
+    if (!nav.querySelector(".ct-arrow")) nav.insertBefore(makeArrow(), nav.firstChild);
+    const first = card.querySelector('[data-enq-step="contact"]');
+    const sync = () => {
+      const onFirst = !first || !first.hidden;
+      card.classList.toggle("ct-first", onFirst && back.hidden);
+      card.classList.toggle("ct-later", !onFirst);
+    };
+    sync();
+    new MutationObserver(sync).observe(card, {
+      attributes: true,
+      attributeFilter: ["hidden"],
+      subtree: true,
+    });
+  })();
+
+  // ---- Media / General / Careers: split into 3 steps ----
+  const CONTACT_FIELDS = /^(Name|Organization-Publication|Email|Phone-No)$/;
+  const HEADS = {
+    ".media-enquiry-form": ["Your details", "Your enquiry", "Send"],
+    ".general-enquiry-form": ["Your details", "Your message", "Send"],
+    ".careers-form": ["Your details", "About you", "Send"],
+  };
+  const steppers = [];
+  Object.keys(HEADS).forEach((sel) => {
+    const card = document.querySelector(sel);
+    const form = card && card.querySelector("form");
+    if (!form || form.querySelector(".ct-nav")) return;
+    const heads = HEADS[sel];
+    let submitBtn = null;
+    [...form.children].forEach((el) => {
+      if (el.matches("input[type='submit']")) return;
+      let step = 2;
+      const f = el.querySelector("input,textarea,select");
+      if (f && CONTACT_FIELDS.test(f.name || "")) step = 1;
+      if (
+        el.matches(".careers-thanks, .g-recaptcha, .w-form-formrecaptcha, .w-embed, .btn-wrapper") ||
+        el.querySelector(".g-recaptcha")
+      )
+        step = 3;
+      if (el.matches(".btn-wrapper.is-contact")) submitBtn = el;
+      el.setAttribute("data-ct-step", String(step));
+    });
+    // step titles + counts
+    heads.forEach((h, i) => {
+      const head = document.createElement("div");
+      head.className = "ct-step-head";
+      head.setAttribute("data-ct-step", String(i + 1));
+      head.innerHTML = "<span>" + h + "</span><b>0" + (i + 1) + "/03</b>";
+      const firstOfStep = form.querySelector('[data-ct-step="' + (i + 1) + '"]:not(.ct-step-head)');
+      form.insertBefore(head, firstOfStep || null);
+    });
+    // nav: arrow (step 1) / BACK (step 2+) and NEXT; Submit joins it on step 3
+    const nav = document.createElement("div");
+    nav.className = "ct-nav";
+    const backBtn = document.createElement("button");
+    backBtn.type = "button";
+    backBtn.className = "ct-btn is-back";
+    backBtn.textContent = "Back";
+    const nextBtn = document.createElement("button");
+    nextBtn.type = "button";
+    nextBtn.className = "ct-btn is-next";
+    nextBtn.textContent = "Next";
+    nav.appendChild(makeArrow());
+    nav.appendChild(backBtn);
+    nav.appendChild(nextBtn);
+    form.appendChild(nav);
+    const home = document.createComment("ct-submit-home");
+    if (submitBtn) submitBtn.parentNode.insertBefore(home, submitBtn);
+
+    let step = 1;
+    const show = (n, animate) => {
+      const apply = () => {
+        step = n;
+        card.classList.remove("ct-s1", "ct-s2", "ct-s3");
+        card.classList.add("ct-s" + n);
+        card.classList.toggle("ct-later", n > 1);
+        card.scrollTop = 0;
+      };
+      if (!animate) return apply();
+      card.classList.add("ct-fading");
+      setTimeout(() => {
+        apply();
+        requestAnimationFrame(() => card.classList.remove("ct-fading"));
+        setTimeout(() => card.classList.remove("ct-fading"), 60);
+      }, 260);
+    };
+    const stepValid = () => {
+      let ok = true;
+      form
+        .querySelectorAll('[data-ct-step="' + step + '"] input[required], [data-ct-step="' + step + '"] textarea[required], [data-ct-step="' + step + '"] select[required]')
+        .forEach((f) => {
+          f.dispatchEvent(new Event("blur"));
+          const g = f.closest(".input-group, .form-select-wrapper");
+          if (!f.value.trim() || f.classList.contains("is-error") || (g && g.classList.contains("has-error"))) ok = false;
+        });
+      return ok;
+    };
+    nextBtn.addEventListener("click", () => {
+      if (stepValid()) show(Math.min(3, step + 1), true);
+    });
+    backBtn.addEventListener("click", () => show(Math.max(1, step - 1), true));
+
+    const setMode = () => {
+      if (mq.matches) {
+        card.classList.add("ct-steps");
+        if (submitBtn && submitBtn.parentNode !== nav) nav.appendChild(submitBtn);
+        show(step, false);
+      } else {
+        card.classList.remove("ct-steps", "ct-s1", "ct-s2", "ct-s3", "ct-later", "ct-fading");
+        if (submitBtn && home.parentNode) home.parentNode.insertBefore(submitBtn, home.nextSibling);
+      }
+    };
+    setMode();
+    mq.addEventListener("change", setMode);
+    steppers.push({ card, reset: () => mq.matches && show(1, false) });
+  });
+
+  // Section 05 calls this before a card opens: always start at step 1
+  window.__luveContactStepsReset = (card) => {
+    steppers.forEach((s) => {
+      if (s.card === card) s.reset();
+    });
+  };
 })();
 
 }; // end window.__luveRun
