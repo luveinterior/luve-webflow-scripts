@@ -3558,6 +3558,9 @@ document.fonts.ready.then(() => {
     // 剔除 Footer
     if (el.closest(".footer-section")) return false;
 
+    // 剔除 Page Loader slogan（Section 26 自己做 reveal；再拆一次會播兩次，即「跳半下再閃」）
+    if (el.closest(".page-loader")) return false;
+
     // 剔除 Testimonials Aside（自己有獨立 hover reveal）
     if (el.closest(".testimonials-aside-wrap")) return false;
 
@@ -7367,22 +7370,23 @@ initPopupHoverReveal({
         ".lfq-m-img{display:none}" +
         "@media (max-width:767px){" +
         "html body .lfq .lfq-pics{display:none!important}" +
-        ".lfq-m-img{position:relative!important;inset:auto!important;display:block!important;width:100%!important;max-width:100%!important;height:auto!important;padding:0!important;aspect-ratio:4/5;max-height:70vh;object-fit:cover;margin:0 0 20px;opacity:0;transition:opacity .8s cubic-bezier(.65,0,.35,1) .15s}" +
+        ".lfq-m-img{position:relative!important;inset:auto!important;display:block!important;width:100%!important;max-width:100%!important;height:auto!important;padding:0!important;aspect-ratio:16/9;object-fit:cover;margin:0 0 20px;opacity:0;transition:opacity .8s cubic-bezier(.65,0,.35,1) .15s}" +
         ".lfq-row.is-open .lfq-m-img{opacity:1}" +
         "}";
       document.head.appendChild(mcss);
     }
     rows.forEach(function (r) {
-      var src = r.querySelector(".lfq-row-img");
+      // landscape "Mobile Image (Horizontal)" CMS field; falls back to the cover
+      var src = r.querySelector(".lfq-row-img-m") || r.querySelector(".lfq-row-img");
       var inner = r.querySelector(".lfq-in");
       if (!src || !inner || inner.querySelector(".lfq-m-img")) return;
       var m = document.createElement("img");
       m.className = "lfq-m-img";
       m.alt = src.alt || "";
       m.loading = "lazy";
-      m.src = src.currentSrc || src.src;
-      if (src.srcset) {
-        m.srcset = src.srcset;
+      m.src = src.getAttribute("src") || src.currentSrc;
+      if (src.getAttribute("srcset")) {
+        m.srcset = src.getAttribute("srcset");
         m.sizes = "90vw";
       }
       inner.insertBefore(m, inner.firstChild);
@@ -7677,7 +7681,19 @@ initPopupHoverReveal({
   css.textContent =
     "html.enq-lock body.enq-lock{overflow:visible!important;overflow:clip!important}" +
     // side menu: text can't be highlighted (hover / cursor effects unchanged)
-    ".side-bar,.side-bar *,.side-bar-2,.side-bar-2 *{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}";
+    ".side-bar,.side-bar *,.side-bar-2,.side-bar-2 *{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}" +
+    // Phones/tablets: browsers measure 100vh differently (iPhone Chrome keeps a
+    // bottom toolbar inside 100vh; iPhone Safari draws its floating toolbar over
+    // the page). Lay content out inside the always-visible height (100svh)
+    // and let backgrounds run past the bottom edge so nothing shows through.
+    "@supports (height:100svh){@media (max-width:991px){" +
+    // side menu: background covers the whole screen, links/contacts stay in view
+    "html body .side-menu-bg,html body .side-bar,html body .side-bar-2{height:calc(100lvh + 120px)!important}" +
+    "html body .side-bar,html body .side-bar-2{padding-bottom:calc(100lvh - 100svh + 120px)!important}" +
+    "}" +
+    // Home hero: keep the project names + bars above the visible bottom edge
+    "@media (max-width:479px){html body .home-wrapper .slide-nav-wrapper{bottom:calc(110vh - 100svh + 3%)!important}}" +
+    "}";
   document.head.appendChild(css);
 })();
 
