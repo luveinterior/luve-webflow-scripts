@@ -7797,7 +7797,8 @@ initPopupHoverReveal({
     // ---------- fields ----------
     IN(".form-input") + "," + IN(".form-select") + "{border:0!important;border-radius:9px!important;background-color:" + FIELD + "!important;box-shadow:none!important;color:" + DARK + ";transition:background-color .35s " + EASE + "}" +
     IN(".form-input:focus") + "," + IN(".form-select:focus") + "{background-color:" + FIELD_FOCUS + "!important;outline:none!important}" +
-    IN(".input-group") + "{position:relative;margin:0!important}" +
+    IN(".input-group") + "{position:relative;margin:0!important;height:auto!important}" +
+    IN("form>*") + "{flex:0 0 auto!important}" +
     IN(".input-group .form-input") + "{height:56px!important;min-height:56px!important;padding:20px 16px 6px!important;line-height:1.3!important;font-size:16px!important;margin:0!important}" +
     IN(".input-group textarea.form-input") + "{height:104px!important;min-height:104px!important;padding:26px 16px 10px!important;resize:none}" +
     // floating label: rests in the box, moves to the top-left corner (smaller)
