@@ -7771,7 +7771,7 @@ initPopupHoverReveal({
     "background:" + LIGHT + "!important;border-radius:14px;padding:26px 22px 20px!important;max-height:100%;overflow-y:auto;" +
     "height:auto!important;box-sizing:border-box;box-shadow:0 24px 60px -24px rgba(48,30,18,.45);scrollbar-width:none}" +
     "html body .contact-body-form>div::-webkit-scrollbar{display:none}" +
-    ".ct-card-title{display:block;font-family:var(--_typography---h4-font-family,inherit);font-size:34px;line-height:1.05;letter-spacing:-.01em;color:" + DARK + ";margin:0 0 14px}" +
+    ".ct-card-title{display:block;font-family:var(--_typography---h4-font-family,inherit);font-size:30px;line-height:1.05;letter-spacing:-.01em;color:" + DARK + ";margin:0 0 12px}" +
     // old < BACK row button goes; text stays
     "html body .contact-body-form .form-close-btn{display:none!important}" +
     // intro text only on the first step
@@ -7783,20 +7783,35 @@ initPopupHoverReveal({
     "html body .contact-body-form .form-input:focus,html body .contact-body-form .form-select:focus,html body .contact-body-form .enq-input:focus," +
     "html body .contact-body-form textarea:focus{background-color:rgba(121,94,73,.13)!important;outline:none!important}" +
     "html body .contact-body-form .form-input:focus+.floating-label,html body .contact-body-form .form-input:not(:placeholder-shown)+.floating-label{background-color:transparent!important;top:6px!important;transform:scale(.8)!important}" +
-    "html body .contact-body-form .enq-input{height:48px!important}" +
+    "html body .contact-body-form .enq-input{height:46px!important;min-height:46px!important;margin:0!important}" +
+    "html body .contact-body-form .enq-field-label{margin:0!important}" +
+    // compact spacing so each step fits the screen without scrolling
+    "html body .contact-body-form .form-intromessage,html body .contact-body-form .careers-form-intro-wrapper{margin:0 0 8px!important;padding:0!important}" +
+    "html body .contact-body-form .form-description-text,html body .contact-body-form .careers-form-intro{margin:0!important}" +
+    "html body .contact-body-form .w-form{margin-bottom:0!important}" +
+    "html body .contact-body-form form{padding-bottom:0!important;margin-bottom:0!important}" +
+    "html body .contact-body-form .new-client-form [data-enq-form]>div:first-child{padding-top:6px!important}" +
+    "html body .contact-body-form .new-client-form [data-enq-step]{margin:0!important}" +
+    "html body .contact-body-form .new-client-form .enq-step-head{margin-bottom:10px!important}" +
+    "html body .contact-body-form .new-client-form [data-enq-step] label{margin:0!important;gap:6px!important}" +
+    "html body .contact-body-form .new-client-form [data-enq-step]>div{gap:12px!important;padding-top:4px!important}" +
+    "html body .contact-body-form .new-client-form .enq-privacy-note{margin:12px 0 0!important}" +
+    "html body .contact-body-form .new-client-form .ct-enq-nav{margin-top:14px!important;padding-bottom:0!important}" +
     "html body .contact-body-form .new-client-form [data-enq-panel]{padding:0!important;background:transparent!important;height:auto!important;max-height:none!important;overflow:visible!important}" +
     "html body .contact-body-form .new-client-form [data-enq-step] label{margin-bottom:10px}" +
     // steps for the three simple forms
     ".ct-steps [data-ct-step]{display:none!important}" +
     ".ct-steps.ct-s1 [data-ct-step='1'],.ct-steps.ct-s2 [data-ct-step='2'],.ct-steps.ct-s3 [data-ct-step='3']{display:block!important}" +
     ".ct-steps.ct-s3 [data-ct-step='3'].btn-wrapper{display:flex!important}" +
+    ".ct-steps.ct-s1 .ct-step-head[data-ct-step='1'],.ct-steps.ct-s2 .ct-step-head[data-ct-step='2'],.ct-steps.ct-s3 .ct-step-head[data-ct-step='3']{display:flex!important}" +
+    ".ct-step-head,.ct-btn{font-family:'Helvetica Neue',Helvetica,Arial,sans-serif!important}" +
     ".ct-steps .ct-step-head{display:flex;justify-content:space-between;align-items:baseline;margin:6px 0 14px;color:" + DARK + ";font-size:15px;font-weight:600;letter-spacing:.02em;text-transform:uppercase}" +
     ".ct-steps .ct-step-head b{font-weight:600}" +
     ".ct-steps .ct-nav{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:18px}" +
     ".ct-steps form{transition:opacity .25s ease}" +
     ".ct-steps.ct-fading form{opacity:0}" +
     ".ct-btn{appearance:none;-webkit-appearance:none;display:inline-flex;align-items:center;justify-content:center;height:42px;padding:0 18px;border-radius:999px;" +
-    "border:1px solid " + DARK + ";font:500 14px/1 inherit;letter-spacing:1px;text-transform:uppercase;cursor:pointer;-webkit-tap-highlight-color:transparent}" +
+    "border:1px solid " + DARK + ";font-size:14px;font-weight:500;line-height:1;letter-spacing:1px;text-transform:uppercase;cursor:pointer;-webkit-tap-highlight-color:transparent}" +
     ".ct-btn.is-next{background:" + DARK + ";color:" + LIGHT + ";margin-left:auto}" +
     ".ct-btn.is-back{background:transparent;color:" + DARK + "}" +
     ".ct-arrow{appearance:none;-webkit-appearance:none;background:none;border:0;padding:0;width:42px;height:42px;display:none;align-items:center;justify-content:flex-start;color:" + DARK + ";cursor:pointer;-webkit-tap-highlight-color:transparent}" +
@@ -7845,6 +7860,7 @@ initPopupHoverReveal({
     const back = card.querySelector('[data-enq-action="back"]');
     if (!next || !back) return;
     const nav = next.parentElement;
+    nav.classList.add("ct-enq-nav");
     if (!nav.querySelector(".ct-arrow")) nav.insertBefore(makeArrow(), nav.firstChild);
     const first = card.querySelector('[data-enq-step="contact"]');
     const sync = () => {
