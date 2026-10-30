@@ -7371,7 +7371,7 @@ initPopupHoverReveal({
         "@media (max-width:767px){" +
         "html body .lfq .lfq-pics{display:none!important}" +
         ".lfq-m-img{position:relative!important;inset:auto!important;display:block!important;width:100%!important;max-width:100%!important;height:auto!important;padding:0!important;aspect-ratio:16/9;object-fit:cover;margin:0 0 20px;opacity:0;transition:opacity .8s cubic-bezier(.65,0,.35,1) .15s}" +
-        ".lfq-row.is-open .lfq-m-img{opacity:1}" +
+        ".lfq-row.is-open .lfq-m-img.is-ready{opacity:1}" +
         "}";
       document.head.appendChild(mcss);
     }
@@ -7383,12 +7383,18 @@ initPopupHoverReveal({
       var m = document.createElement("img");
       m.className = "lfq-m-img";
       m.alt = src.alt || "";
-      m.loading = "lazy";
-      m.src = src.getAttribute("src") || src.currentSrc;
+      m.decoding = "async";
+      // fade in only once the photo has arrived (first open used to pop in)
+      var ready = function () {
+        m.classList.add("is-ready");
+      };
+      m.addEventListener("load", ready);
       if (src.getAttribute("srcset")) {
-        m.srcset = src.getAttribute("srcset");
         m.sizes = "90vw";
+        m.srcset = src.getAttribute("srcset");
       }
+      m.src = src.getAttribute("src") || src.currentSrc;
+      if (m.complete && m.naturalWidth) ready();
       inner.insertBefore(m, inner.firstChild);
     });
 
@@ -7692,9 +7698,39 @@ initPopupHoverReveal({
     "html body .side-bar,html body .side-bar-2{padding-bottom:calc(100lvh - 100svh + 120px)!important}" +
     "}" +
     // Home hero: keep the project names + bars above the visible bottom edge
-    "@media (max-width:479px){html body .home-wrapper .slide-nav-wrapper{bottom:calc(110vh - 100svh + 3%)!important}}" +
+    "@media (max-width:479px){html body .home-wrapper .slide-nav-wrapper{bottom:calc(110vh - 100svh)!important;padding-bottom:calc(1.75rem + env(safe-area-inset-bottom,0px))!important}}" +
     "}";
   document.head.appendChild(css);
+
+  // iPhone Safari draws the page itself (not fixed layers) under its floating
+  // bottom toolbar, so the photo showed through below the open side menu.
+  // While the menu is open, place an ordinary in-page beige strip there.
+  var strip = null;
+  var syncStrip = function () {
+    var open = document.body.classList.contains("side-menu-open");
+    if (open && !strip && window.innerWidth <= 991) {
+      var bar = document.querySelector(".side-bar");
+      var bg = bar ? getComputedStyle(bar).backgroundColor : "#cfbea6";
+      strip = document.createElement("div");
+      strip.setAttribute("aria-hidden", "true");
+      var vh = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+      strip.style.cssText =
+        "position:absolute;left:0;right:0;z-index:29999;pointer-events:none;height:320px;" +
+        "top:" + (window.scrollY + vh - 160) + "px;background:" + bg +
+        ";opacity:0;transition:opacity .5s ease .25s";
+      document.body.appendChild(strip);
+      requestAnimationFrame(function () {
+        if (strip) strip.style.opacity = "1";
+      });
+    } else if (!open && strip) {
+      strip.remove();
+      strip = null;
+    }
+  };
+  new MutationObserver(syncStrip).observe(document.body, {
+    attributes: true,
+    attributeFilter: ["class"],
+  });
 })();
 
 }; // end window.__luveRun
