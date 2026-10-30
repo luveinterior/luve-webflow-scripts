@@ -7228,9 +7228,7 @@ initPopupHoverReveal({
 // 功能：Home（is-home / is-cta）、Process（is-process）、Profile（is-cta /
 //       is-profile）同 Process FAQ section（is-faq）嘅 btn-wrapper 改成同 GET IN TOUCH / MENU 一樣大細
 //       （電腦版 34px 高、12px 字；手機版 26px 高、10px 字）。
-//       顏色跟後面嘅深淺：用 section 37 同一個方法量度掣後面嘅真實像素，
-//       後面深色 → 淺色掣 + 啡色字（class "is-on-dark"，hover 轉啡色）；
-//       後面淺色 → 保持啡色掣 + 淺色字。
+//       （按背景自動轉色已移除：掣一律保持原本顏色）
 //       另外手機版掣唔會闊過畫面，避免 Process page 可以左右碌。
 // =====================================================
 (function initCtaPills() {
@@ -7249,55 +7247,6 @@ initPopupHoverReveal({
   `;
   document.head.appendChild(style);
 
-  const start = () => {
-    const buttons = [...document.querySelectorAll(SEL)];
-    if (!buttons.length) return;
-    const skip = (btn) => (e) =>
-      btn.contains(e) ||
-      !!(e.closest &&
-        e.closest(
-          ".nav-mini-logo, .nav-top-fade, .cursor, [data-enq-trigger-mask], .floating-burger-btn, .anchor-scroll, .nav-bar"
-        ));
-    const check = (btn) => {
-      const PX = window.__LUVE_PX;
-      if (!PX || btn.matches(":hover")) return;
-      const r = btn.getBoundingClientRect();
-      if (!r.width || r.bottom < 0 || r.top > innerHeight) return;
-      const l = PX.behind(r, skip(btn));
-      if (l === null) return setTimeout(() => check(btn), 600); // photo still loading
-      const dark = btn.classList.contains("is-on-dark");
-      const next = l < 0.3 ? true : l > 0.38 ? false : dark;
-      if (next === dark) return;
-      btn.classList.toggle("is-on-dark", next);
-      if (btn.__ctaSetIdle) btn.__ctaSetIdle(0.45);
-    };
-    const visible = new Set();
-    const io = new IntersectionObserver((entries) =>
-      entries.forEach((en) => {
-        if (en.isIntersecting) {
-          visible.add(en.target);
-          check(en.target);
-        } else visible.delete(en.target);
-      })
-    );
-    buttons.forEach((b) => io.observe(b));
-    // backgrounds can move under the button (parallax), so re-check the
-    // visible ones a few times a second while scrolling
-    let last = 0;
-    window.addEventListener(
-      "scroll",
-      () => {
-        const now = performance.now();
-        if (now - last < 250) return;
-        last = now;
-        visible.forEach(check);
-      },
-      { passive: true }
-    );
-    window.addEventListener("resize", () => visible.forEach(check));
-  };
-  if (document.readyState === "complete") setTimeout(start, 300);
-  else window.addEventListener("load", () => setTimeout(start, 300));
 })();
 
 // =====================================================
@@ -7713,22 +7662,44 @@ initPopupHoverReveal({
       var bg = bar ? getComputedStyle(bar).backgroundColor : "#cfbea6";
       strip = document.createElement("div");
       strip.setAttribute("aria-hidden", "true");
-      var vh = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+      // starts exactly where the fixed menu ends, so it only fills the
+      // band under Safari's toolbar and never shows over the page
       strip.style.cssText =
-        "position:absolute;left:0;right:0;z-index:29999;pointer-events:none;height:320px;" +
-        "top:" + (window.scrollY + vh - 160) + "px;background:" + bg +
-        ";opacity:0;transition:opacity .5s ease .25s";
+        "position:absolute;left:0;right:0;z-index:29999;pointer-events:none;height:240px;" +
+        "top:" + (window.scrollY + window.innerHeight) + "px;background:" + bg +
+        ";opacity:0;transition:opacity .35s ease .3s";
       document.body.appendChild(strip);
       var st = strip;
       strip.getBoundingClientRect(); // commit opacity:0 so the fade runs
       setTimeout(function () {
         st.style.opacity = "1";
       }, 20);
-    } else if (!open && strip) {
+    } else if (strip && document.body.classList.contains("nav-menu-closing")) {
+      // menu is closing: fade the band out together with it
+      strip.style.transition = "opacity .25s ease";
+      strip.style.opacity = "0";
+    }
+    if (!open && strip) {
       strip.remove();
       strip = null;
     }
   };
+  // any tap that starts closing the menu fades the band out with it
+  document.addEventListener(
+    "click",
+    function (e) {
+      if (!strip || !e.target || !e.target.closest) return;
+      if (
+        e.target.closest(
+          ".class-nav-burger, .w-nav-button, [data-side-menu-close], .floating-burger-btn, .side-menu-bg, .side-bar a, .side-bar-2 a"
+        )
+      ) {
+        strip.style.transition = "opacity .25s ease";
+        strip.style.opacity = "0";
+      }
+    },
+    true
+  );
   new MutationObserver(syncStrip).observe(document.body, {
     attributes: true,
     attributeFilter: ["class"],
