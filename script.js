@@ -7738,14 +7738,16 @@ initPopupHoverReveal({
 // =====================================================
 // 45. Contact Page — Form Cards, One Step at a Time, Submit Loader + Success
 // 功能：Contact page 四份 form（New Client / Media / General / Careers）：
-//       • 參考圖 card 樣式：實色輸入框、floating label（撳落去彈上左上角）
+//       • Card 標題、step 標題列（01/04 + 進度線）、BACK / NEXT、成功畫面
+//         全部係 Webflow Designer 入面嘅元素（class 開頭 ct- / nc-），
+//         字款、大細、顏色喺 Designer 改；呢度只負責排版同動作。
+//         step 標題文字：.ct-step-head 嘅 data-ct-heads（用 | 分隔）。
 //       • 一次淨係顯示一個 step（唔使 scroll），撳 NEXT 淡出再淡入
-//       • 手機 / 平板（< 992px）：card 浮喺相上面；step 1 用返回箭咀返去 form 名
+//       • 手機 / 平板（< 992px）：card 置中浮喺相上面；step 1 同成功畫面
+//         用返回箭咀返去 4 個 form 名
 //       • 電腦版（≥ 992px）：撳邊份 form，左邊嗰個名變粗，其他變淺
-//       • SUBMIT：粒掣入面出 LUVÉ logo loading，成功後淡入 success 畫面
-//         （剔號、標題、一句說明、SUBMIT AGAIN）
-//       New Client Form 係 Contact page 自己嘅 Webflow form（唔再用
-//       GET IN TOUCH 個 Enquiry component）。開／收動畫喺 Section 05。
+//       • SUBMIT：粒掣入面出 LUVÉ logo loading，成功後淡入成功畫面
+//       開／收動畫喺 Section 05。
 // =====================================================
 (function initContactCards() {
   if (!document.body.classList.contains("body-contact")) return;
@@ -7754,9 +7756,11 @@ initPopupHoverReveal({
   const LIGHT = "#f0e8dd";
   const CARD_DESKTOP = "#f8f4ee";
   const FIELD = "rgba(121,94,73,.08)";
-  const FIELD_FOCUS = "rgba(121,94,73,.13)";
+  const FIELD_FOCUS = "rgba(121,94,73,.14)";
+  const EASE = "cubic-bezier(.65,0,.35,1)";
 
   const CONTACT_FIELDS = /^(Name|Organization-Publication|Email|Phone|Phone-No)$/;
+  // fallbacks only — the Designer elements carry the real text
   const FORMS = [
     {
       sel: ".new-client-form",
@@ -7770,54 +7774,38 @@ initPopupHoverReveal({
         return 4;
       },
     },
-    {
-      sel: ".media-enquiry-form",
-      title: "Media Enquiry",
-      heads: ["Your details", "Your enquiry"],
-      done: "Our communications team will be in touch with you soon.",
-    },
-    {
-      sel: ".general-enquiry-form",
-      title: "General Enquiry",
-      heads: ["Your details", "Your message"],
-      done: "We will get back to you shortly.",
-    },
-    {
-      sel: ".careers-form",
-      title: "Careers",
-      heads: ["Your details", "About you"],
-      done: "We have received your application and will be in touch.",
-    },
+    { sel: ".media-enquiry-form", title: "Media Enquiry", heads: ["Your details", "Your enquiry"], done: "Our communications team will be in touch with you soon." },
+    { sel: ".general-enquiry-form", title: "General Enquiry", heads: ["Your details", "Your message"], done: "We will get back to you shortly." },
+    { sel: ".careers-form", title: "Careers", heads: ["Your details", "About you"], done: "We have received your application and will be in touch." },
   ];
 
   const ARROW =
     '<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg>';
-  // LUVÉ wordmark (same paths as the nav logo), letters in reading order
-  const LOGO =
-    '<svg class="ct-loader" viewBox="20 60 794 196" aria-hidden="true" focusable="false"><g fill="currentColor">' +
-    '<path d="M22.3,246.48h22.82V74.12h-22.82v-4.64h92.12v4.64h-25.35v172.36h32.39c49.86,0,61.13-22.19,61.13-52.12v-5.16h5.07v61.93H22.3v-4.64Z"/>' +
-    '<path d="M206.73,69.84h88.74v4.64h-22.82v113.53c0,33.03,8.17,58.31,49.3,58.31,27.33,0,50.42-17.03,50.42-52.12v-98.05c0-14.96-4.51-21.67-18.87-21.67h-8.17v-4.64h78.6v4.64h-30.15c-10.14,0-14.65,6.71-14.65,21.67v96.5c0,37.93-22.54,62.96-74.37,62.96-45.92,0-76.06-24.25-76.06-64.25v-116.88h-21.97v-4.64Z"/>' +
-    '<path d="M423.93,69.84h94.65v4.64h-27.33l52.4,129.01,41.41-102.95c1.97-5.16,3.38-11.61,3.38-16.51,0-6.19-4.23-9.55-13.8-9.55h-7.33v-4.64h53.81v4.64h-4.51c-7.61,0-13.8,2.32-25.35,30.45l-61.97,150.68h-11.27l-74.09-181.13h-20v-4.64Z"/>' +
-    '<path d="M654.23,246.84h22.82V74.48h-55.92v-4.64h190.58v51.35h-5.07v-3.61c0-23.48-18.87-43.09-52.4-43.09h-33.24v78.95h19.44c18.31,0,27.89-9.55,27.89-34.06v-2.84h5.07v81.53h-5.07v-5.93c0-18.32-9.58-34.06-27.89-34.06h-19.44v88.76h40.57c46.2,0,52.96-35.09,52.96-49.8v-3.61h5.07v58.05h-165.36v-4.64ZM750.86,23.4c6.76-12.39,7.61-14.19,16.06-14.19,7.89,0,10.7,2.58,10.7,6.45,0,1.81-2.25,5.93-6.76,10.32l-36.9,35.86h-3.66l20.56-38.44Z"/>' +
-    "</g></svg>";
   const CHECK =
     '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5 10 17.5 19 7"/></svg>';
+  // LUVÉ wordmark (nav logo paths, É accent included), letters in reading order
+  const LOGO = '<svg class="ct-loader" viewBox="20 6 794 248" aria-hidden="true" focusable="false"><g fill="currentColor"><path d="M22.3,246.48h22.82V74.12h-22.82v-4.64h92.12v4.64h-25.35v172.36h32.39c49.86,0,61.13-22.19,61.13-52.12v-5.16h5.07v61.93H22.3v-4.64Z"/><path d="M206.73,69.84h88.74v4.64h-22.82v113.53c0,33.03,8.17,58.31,49.3,58.31,27.33,0,50.42-17.03,50.42-52.12v-98.05c0-14.96-4.51-21.67-18.87-21.67h-8.17v-4.64h78.6v4.64h-30.15c-10.14,0-14.65,6.71-14.65,21.67v96.5c0,37.93-22.54,62.96-74.37,62.96-45.92,0-76.06-24.25-76.06-64.25v-116.88h-21.97v-4.64Z"/><path d="M423.93,69.84h94.65v4.64h-27.33l52.4,129.01,41.41-102.95c1.97-5.16,3.38-11.61,3.38-16.51,0-6.19-4.23-9.55-13.8-9.55h-7.33v-4.64h53.81v4.64h-4.51c-7.61,0-13.8,2.32-25.35,30.45l-61.97,150.68h-11.27l-74.09-181.13h-20v-4.64Z"/><path d="M654.23,246.84h22.82V74.48h-55.92v-4.64h190.58v51.35h-5.07v-3.61c0-23.48-18.87-43.09-52.4-43.09h-33.24v78.95h19.44c18.31,0,27.89-9.55,27.89-34.06v-2.84h5.07v81.53h-5.07v-5.93c0-18.32-9.58-34.06-27.89-34.06h-19.44v88.76h40.57c46.2,0,52.96-35.09,52.96-49.8v-3.61h5.07v58.05h-165.36v-4.64ZM750.86,23.4c6.76-12.39,7.61-14.19,16.06-14.19,7.89,0,10.7,2.58,10.7,6.45,0,1.81-2.25,5.93-6.76,10.32l-36.9,35.86h-3.66l20.56-38.44Z"/></g></svg>';
 
-  const ALL = FORMS.map((f) => f.sel).join(",");
-  const IN = (s) => FORMS.map((f) => "html body " + f.sel + " " + s).join(",");
+  const ALL = FORMS.map((f) => f.sel);
+  const IN = (s) => ALL.map((f) => "html body " + f + " " + s).join(",");
+  const CARD = (s) => ALL.map((f) => "html body .contact-body-form>" + f + (s || "")).join(",");
 
   const css = document.createElement("style");
   css.textContent =
-    ".ct-card-title,.ct-nav,.ct-arrow{display:none}" +
-    // ---------- shared (all sizes): fields, steps, buttons, success ----------
-    IN(".form-input") + "," + IN(".form-select") + "{border:0!important;border-radius:9px!important;background-color:" + FIELD + "!important;box-shadow:none!important;color:" + DARK + "}" +
+    // the old New Client form (kept in the Designer as a backup) never shows
+    "html body .new-client-form .new-client-form-block{display:none!important}" +
+    // ---------- fields ----------
+    IN(".form-input") + "," + IN(".form-select") + "{border:0!important;border-radius:9px!important;background-color:" + FIELD + "!important;box-shadow:none!important;color:" + DARK + ";transition:background-color .35s " + EASE + "}" +
     IN(".form-input:focus") + "," + IN(".form-select:focus") + "{background-color:" + FIELD_FOCUS + "!important;outline:none!important}" +
     IN(".input-group") + "{position:relative;margin:0!important}" +
     IN(".input-group .form-input") + "{height:56px!important;min-height:56px!important;padding:20px 16px 6px!important;line-height:1.3!important;font-size:16px!important;margin:0!important}" +
     IN(".input-group textarea.form-input") + "{height:104px!important;min-height:104px!important;padding:26px 16px 10px!important;resize:none}" +
-    IN(".input-group .floating-label") + "{position:absolute!important;left:16px!important;right:16px;top:28px!important;transform:translateY(-50%)!important;margin:0!important;padding:0!important;background:none!important;font-size:14px!important;line-height:1.2;color:rgba(121,94,73,.75);pointer-events:none;transition:top .2s ease,font-size .2s ease,transform .2s ease}" +
+    // floating label: rests in the box, moves to the top-left corner (smaller)
+    // once the box is focused or filled. Font / colour: .floating-label in Designer.
+    IN(".input-group .floating-label") + "{position:absolute!important;left:16px!important;right:16px;top:28px!important;transform:translateY(-50%)!important;margin:0!important;padding:0!important;background:none!important;pointer-events:none;transform-origin:left top;transition:top .3s " + EASE + ",font-size .3s " + EASE + ",transform .3s " + EASE + "}" +
     IN(".input-group textarea.form-input+.floating-label") + "{top:18px!important;transform:none!important}" +
-    IN(".input-group .form-input:focus+.floating-label") + "," + IN(".input-group .form-input:not(:placeholder-shown)+.floating-label") + "{top:8px!important;transform:none!important;font-size:11px!important}" +
+    IN(".input-group .form-input:focus+.floating-label") + "," + IN(".input-group .form-input:not(:placeholder-shown)+.floating-label") + "," + IN(".input-group.is-filled .floating-label") +
+    "{top:8px!important;transform:none!important;font-size:11px!important}" +
     IN(".input-group .field-help-text") + "{position:static!important;transform:none!important;opacity:.7;font-size:12px!important;line-height:1.35;margin:6px 2px 0!important}" +
     IN(".field-error-msg") + "," + IN(".select-field-error-msg") + "{position:static!important;margin:4px 2px 0!important;font-size:12px}" +
     IN(".form-select-wrapper") + "{margin:0!important}" +
@@ -7826,129 +7814,110 @@ initPopupHoverReveal({
     IN("form") + "{display:flex;flex-direction:column;gap:12px!important;padding-bottom:0!important;margin:0!important}" +
     IN(".w-embed p") + "," + IN(".nc-privacy") + "{margin:0!important;font-size:12px!important;line-height:1.45!important;opacity:.7}" +
     IN(".w-embed a") + "," + IN(".nc-privacy a") + "{color:inherit;text-decoration:underline;text-underline-offset:2px}" +
-    IN(".careers-thanks") + "{font-size:14px!important;line-height:1.4!important;font-weight:500!important;font-style:normal!important;letter-spacing:0!important;margin:0!important}" +
-    // New Client choice chips
+    IN(".careers-thanks") + "{margin:0!important}" +
+    // ---------- New Client choice chips (text style: .nc-choice-text) ----------
     ".nc-choice-group{border:0;margin:0!important}" +
-    ".nc-q{font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:14px;line-height:1.35;color:" + DARK + ";margin:2px 2px 10px}" +
     ".nc-choice-group.is-req .nc-q:after{content:' *'}" +
-    ".nc-chips{display:flex;flex-wrap:wrap;gap:8px}" +
-    ".nc-chips .w-radio{position:relative;display:inline-flex;align-items:center;margin:0!important;padding:0!important}" +
+    ".nc-chips{-webkit-user-select:none;user-select:none}" +
+    ".nc-chips .w-radio{position:relative;display:inline-flex;align-items:center;margin:0!important;padding:0!important;-webkit-user-select:none;user-select:none}" +
     ".nc-chips .w-radio input{position:absolute!important;opacity:0!important;width:1px!important;height:1px!important;margin:0!important;pointer-events:none}" +
-    ".nc-chips .w-form-label{display:inline-flex;align-items:center;height:40px;padding:0 16px;border-radius:999px;background:" + FIELD + ";color:" + DARK + ";font-size:14px;line-height:1;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;cursor:pointer;transition:background-color .2s ease,color .2s ease;-webkit-tap-highlight-color:transparent;margin:0!important}" +
-    "@media (hover:hover){.nc-chips .w-form-label:hover{background:" + FIELD_FOCUS + "}}" +
-    ".nc-chips input:checked+.w-form-label{background:" + DARK + ";color:" + LIGHT + "}" +
+    ".nc-chips .w-form-label{display:inline-flex;align-items:center;height:40px;padding:0 16px;border-radius:999px;background-color:" + FIELD + ";cursor:pointer;margin:0!important;" +
+    "-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent;transition:background-color .4s " + EASE + ",color .4s " + EASE + "}" +
+    "@media (hover:hover){.nc-chips .w-form-label:hover{background-color:" + FIELD_FOCUS + "}}" +
+    ".nc-chips input:checked+.w-form-label{background-color:" + DARK + ";color:" + LIGHT + "}" +
     ".nc-chips input:focus-visible+.w-form-label{outline:2px solid " + DARK + ";outline-offset:2px}" +
     ".nc-choice-group .select-field-error-msg{display:none}" +
     ".nc-choice-group.has-error .select-field-error-msg{display:block!important;opacity:1!important;transform:none!important;color:#d9534f;font-weight:700}" +
     ".nc-others{display:none!important}.nc-has-others .nc-others{display:block!important}" +
-    // one shared step header + progress line
-    ".ct-steps .ct-step-head{display:block!important;margin:0 0 4px;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;color:" + DARK + "}" +
-    ".ct-step-head .ct-step-row{display:flex;justify-content:space-between;align-items:baseline;font-size:13px;font-weight:700;letter-spacing:.06em;text-transform:uppercase}" +
-    ".ct-step-head .ct-bar{position:relative;height:2px;margin-top:10px;background:rgba(121,94,73,.15);overflow:hidden;border-radius:2px}" +
-    ".ct-step-head .ct-bar i{position:absolute;left:0;top:0;bottom:0;width:0;background:" + DARK + ";transition:width .5s cubic-bezier(.22,1,.36,1)}" +
+    // ---------- steps ----------
+    ".ct-steps .ct-step-head{display:block!important;margin:0 0 4px}" +
+    ".ct-bar-fill{transition:width .6s " + EASE + "}" +
     ".ct-steps [data-ct-step]{display:none!important}" +
     ".ct-steps.ct-s1 [data-ct-step='1'],.ct-steps.ct-s2 [data-ct-step='2'],.ct-steps.ct-s3 [data-ct-step='3'],.ct-steps.ct-s4 [data-ct-step='4']{display:block!important}" +
-    ".ct-steps form{transition:opacity .25s ease}" +
+    ".ct-steps form{transition:opacity .28s " + EASE + "}" +
     ".ct-steps.ct-fading form{opacity:0}" +
     ".ct-steps .ct-nav{display:flex!important;justify-content:flex-end;align-items:center;gap:12px;margin-top:6px}" +
-    ".ct-btn{appearance:none;-webkit-appearance:none;display:inline-flex;align-items:center;justify-content:center;height:42px;padding:0 20px;border-radius:999px;" +
-    "border:1px solid " + DARK + ";font-family:'Helvetica Neue',Helvetica,Arial,sans-serif!important;font-size:14px;font-weight:500;line-height:1;letter-spacing:1px;text-transform:uppercase;cursor:pointer;transition:background-color .25s ease,color .25s ease;-webkit-tap-highlight-color:transparent}" +
-    ".ct-btn.is-next{background:" + DARK + ";color:" + LIGHT + "}" +
-    "@media (hover:hover){.ct-btn.is-next:hover{background:#5f4939}.ct-btn.is-back:hover{background:" + FIELD + "}}" +
-    ".ct-btn.is-back{background:transparent;color:" + DARK + ";margin-right:auto}" +
-    ".ct-steps.ct-s1 .ct-nav .is-back{display:none}" +
-    ".ct-steps.ct-last .ct-nav .is-next{display:none}" +
+    ".ct-btn{cursor:pointer;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent;transition:background-color .35s " + EASE + ",color .35s " + EASE + "}" +
+    "@media (hover:hover){.ct-btn.is-next:hover{background-color:#5f4939}.ct-btn.is-back:hover{background-color:" + FIELD + "}}" +
+    ".ct-btn.is-back{margin-right:auto}" +
+    ".ct-steps.ct-s1 .ct-nav .is-back{display:none!important}" +
+    ".ct-steps.ct-last .ct-nav .is-next{display:none!important}" +
     ".ct-steps .ct-nav .btn-wrapper.is-contact{margin:0!important;display:none!important}" +
     ".ct-steps.ct-last .ct-nav .btn-wrapper.is-contact{display:flex!important}" +
-    ".ct-arrow{appearance:none;-webkit-appearance:none;background:none;border:0;padding:0;width:42px;height:42px;align-items:center;justify-content:flex-start;color:" + DARK + ";cursor:pointer;margin-right:auto;-webkit-tap-highlight-color:transparent}" +
-    // submit button: LUVÉ logo loader inside the pill
+    ".ct-arrow{cursor:pointer;-webkit-tap-highlight-color:transparent}" +
+    // ---------- SUBMIT: LUVÉ logo loader inside the pill ----------
     ".btn-wrapper.is-contact{position:relative}" +
-    ".btn-wrapper.is-contact .ct-loader{color:" + LIGHT + ";position:absolute;left:50%;top:50%;height:13px;width:auto;transform:translate(-50%,-50%);opacity:0;pointer-events:none;transition:opacity .25s ease}" +
+    ".btn-wrapper.is-contact .ct-loader{position:absolute;left:50%;top:50%;height:17px;width:auto;color:" + LIGHT + ";transform:translate(-50%,-50%);opacity:0;pointer-events:none;transition:opacity .3s " + EASE + "}" +
     ".btn-wrapper.is-contact.ct-loading{pointer-events:none}" +
-    ".btn-wrapper.is-contact.ct-loading .btn-text,.btn-wrapper.is-contact.ct-loading .btn-arrow{opacity:0!important;transition:opacity .2s ease}" +
+    ".btn-wrapper.is-contact .btn-text,.btn-wrapper.is-contact .btn-arrow{transition:opacity .25s " + EASE + "}" +
+    ".btn-wrapper.is-contact.ct-loading .btn-text,.btn-wrapper.is-contact.ct-loading .btn-arrow{opacity:0!important}" +
     ".btn-wrapper.is-contact.ct-loading .ct-loader{opacity:1}" +
     ".ct-loader path{animation:ct-logo 1.2s ease-in-out infinite;opacity:.25}" +
     ".ct-loader path:nth-child(2){animation-delay:.15s}.ct-loader path:nth-child(3){animation-delay:.3s}.ct-loader path:nth-child(4){animation-delay:.45s}" +
     "@keyframes ct-logo{0%,100%{opacity:.25}35%{opacity:1}}" +
-    // success screen (layout like the reference: icon, title, one line, button)
-    ALL.split(",").map((s) => "html body " + s + " .w-form-done").join(",") +
-    "{background:transparent!important;padding:28px 0 8px!important;text-align:center;flex-direction:column;align-items:center;gap:0}" +
-    ALL.split(",").map((s) => "html body " + s + " .w-form-done>div:not(.ct-done)").join(",") + "{display:none!important}" +
-    ".ct-done{display:flex!important;flex-direction:column;align-items:center;text-align:center;color:" + DARK + "}" +
-    ".ct-done-icon{display:flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:50%;background:" + DARK + ";color:" + LIGHT + ";margin-bottom:18px}" +
-    ".ct-done-title{font-family:'Bauer Bodoni','Bodoni 72',Didot,serif;font-size:32px;line-height:1.1;margin:0 0 10px}" +
-    ".ct-done-text{font-size:15px;line-height:1.45;max-width:30ch;margin:0 0 24px}" +
+    // ---------- success screen (text style: .ct-done-title / .ct-done-text) ----------
+    IN(".w-form-done") + "{position:relative;background:transparent!important;padding:28px 0 8px!important;text-align:center;flex-direction:column;align-items:center;justify-content:center}" +
     ".w-form-done .reload-form-btn{margin:0 auto!important}" +
+    ".ct-done-back{display:none;position:absolute;left:0;bottom:8px}" +
     ".ct-success .form-intromessage,.ct-success .careers-form-intro-wrapper,.ct-success .careers-form-intro,.ct-success .ct-step-head{display:none!important}" +
     ".ct-later .form-intromessage,.ct-later .careers-form-intro-wrapper,.ct-later .careers-form-intro{display:none!important}" +
-    // intro text: one size everywhere, tight gap before the step header
-    IN(".form-description-text") + "," + IN(".careers-form-slogan") + "," + IN(".careers-form-intro") + "{line-height:1.4!important;margin:0!important}" +
+    IN(".form-description-text") + "," + IN(".careers-form-slogan") + "," + IN(".careers-form-intro") + "{margin:0!important}" +
     IN(".form-intromessage") + "," + IN(".careers-form-intro-wrapper") + "{margin:0 0 6px!important;padding:0!important}" +
     "html body .contact-body-form .form-close-btn{display:none!important}" +
-    // ---------- phones / tablets ----------
+    // ---------- phones / tablets: card centred, a steady height ----------
     "@media " + MQ + "{" +
     "html body .contact-body-form{position:fixed!important;inset:0!important;width:100%!important;height:100vh!important;height:100svh!important;" +
     "padding:92px 14px calc(14px + env(safe-area-inset-bottom,0px))!important;background:rgba(121,94,73,.22)!important;overflow:hidden!important;" +
-    "flex-direction:column;justify-content:flex-end;align-items:stretch;box-sizing:border-box}" +
-    ALL.split(",").map((s) => "html body .contact-body-form>" + s).join(",") + "{" +
-    "background:" + LIGHT + "!important;border:0!important;border-radius:14px;padding:24px 20px 18px!important;max-height:100%;overflow-y:auto;" +
-    "height:auto!important;box-sizing:border-box;box-shadow:0 24px 60px -24px rgba(48,30,18,.45);scrollbar-width:none}" +
+    "flex-direction:column;justify-content:center;align-items:stretch;box-sizing:border-box}" +
+    CARD() + "{background:" + LIGHT + "!important;border:0!important;border-radius:14px;padding:24px 20px 18px!important;" +
+    "min-height:min(640px,100%);max-height:100%;overflow-y:auto;height:auto!important;box-sizing:border-box;box-shadow:0 24px 60px -24px rgba(48,30,18,.45);scrollbar-width:none}" +
+    CARD('[style*="display: block"]') + "{display:flex!important;flex-direction:column}" +
     "html body .contact-body-form>div::-webkit-scrollbar{display:none}" +
-    ".ct-card-title{display:block;font-family:var(--_typography---h4-font-family,inherit);font-size:24px;line-height:1.1;letter-spacing:-.01em;color:" + DARK + ";margin:0 0 10px}" +
-    IN(".form-description-text") + "," + IN(".careers-form-slogan") + "," + IN(".careers-form-intro") + "," + IN(".careers-thanks") +
-    "{font-size:14px!important;font-weight:500!important;font-style:normal!important;letter-spacing:0!important}" +
+    IN(".w-form") + "{flex:1 1 auto;display:flex;flex-direction:column}" +
+    IN("form") + "{flex:1 1 auto;gap:10px!important}" +
+    IN(".w-form-done") + "{flex:1 1 auto}" +
+    ".ct-steps .ct-nav{margin-top:auto;padding-top:6px}" +
     "html body .contact-body-form .careers-form-intro-wrapper{display:flex;justify-content:space-between;align-items:baseline}" +
     IN(".form-intromessage") + "," + IN(".careers-form-intro-wrapper") + "{margin:0 0 4px!important}" +
     ".ct-steps .ct-step-head{margin:6px 0 2px}" +
-    IN("form") + "{gap:10px!important}" +
-    ".ct-steps .ct-nav .ct-arrow{display:none}" +
-    ".ct-steps.ct-s1 .ct-nav .ct-arrow{display:inline-flex}" +
+    ".ct-steps.ct-s1 .ct-nav .ct-arrow{display:inline-flex!important}" +
     ".ct-steps.ct-s1 .ct-nav .is-next{margin-left:auto}" +
-    ".ct-done-title{font-size:28px}" +
+    ".ct-done-back{display:inline-flex!important}" +
+    ".ct-nav .btn-wrapper.is-contact .btn-text{font-size:12px!important}" +
     "}" +
     // ---------- desktop ----------
     "@media (min-width:992px){" +
-    ALL.split(",").map((s) => "html body .contact-body-form>" + s).join(",") + "{" +
-    "background:" + CARD_DESKTOP + "!important;border:0!important;border-radius:14px!important;padding:30px 32px 26px!important;height:auto!important;bottom:auto!important;" +
+    CARD() + "{background:" + CARD_DESKTOP + "!important;border:0!important;border-radius:14px!important;padding:30px 32px 26px!important;height:auto!important;bottom:auto!important;" +
     "max-height:calc(100vh - 160px);max-height:calc(100svh - 160px);overflow-y:auto;box-sizing:border-box;box-shadow:0 30px 70px -40px rgba(48,30,18,.4);scrollbar-width:thin}" +
     IN(".form-intromessage") + "," + IN(".careers-form-intro-wrapper") + "{margin:0 0 8px!important}" +
-    IN(".form-description-text") + "," + IN(".careers-form-slogan") + "," + IN(".careers-form-intro") + "{font-size:16px!important;font-weight:500!important}" +
     ".ct-steps .ct-step-head{margin:10px 0 6px}" +
-    // the list: chosen form name bold, others lighter
-    ".contact-body-formlink [class*='-contact-link']{transition:opacity .35s ease,font-weight .2s ease}" +
+    // the list: chosen name looks bolder (stroke eases in, no re-wrap), others lighter
+    ".contact-body-formlink [class*='-contact-link']{white-space:nowrap;width:max-content;max-width:100%;-webkit-text-stroke:0 currentColor;" +
+    "transition:opacity .6s " + EASE + ",-webkit-text-stroke-width .6s " + EASE + "}" +
     ".contact-body-formlink.ct-has-active [class*='-contact-link']{opacity:.4}" +
-    ".contact-body-formlink.ct-has-active [class*='-contact-link'].ct-link-active{opacity:1;font-weight:700}" +
-    "@media (hover:hover){.contact-body-formlink.ct-has-active [class*='-contact-link']:hover{opacity:.75}.contact-body-formlink.ct-has-active [class*='-contact-link'].ct-link-active:hover{opacity:1}}" +
+    ".contact-body-formlink.ct-has-active [class*='-contact-link'].ct-link-active{opacity:1;-webkit-text-stroke-width:.7px}" +
+    "@media (hover:hover){.contact-body-formlink.ct-has-active [class*='-contact-link']:hover{opacity:.8}}" +
     "}";
   document.head.appendChild(css);
 
   const mq = window.matchMedia(MQ);
-  const goBack = (e) => {
-    if (e) e.preventDefault();
-    if (window.__luveContactClose) window.__luveContactClose();
-  };
-  const makeArrow = () => {
-    const b = document.createElement("button");
-    b.type = "button";
-    b.className = "ct-arrow";
-    b.setAttribute("aria-label", "Back to all forms");
-    b.innerHTML = ARROW;
-    b.addEventListener("click", goBack);
-    return b;
-  };
   const pad = (n) => (n < 10 ? "0" + n : "" + n);
+  const el = (tag, cls, html) => {
+    const e = document.createElement(tag);
+    e.className = cls;
+    if (html) e.innerHTML = html;
+    return e;
+  };
+  const closeToList = (after) => {
+    if (window.__luveContactClose) window.__luveContactClose();
+    if (after) setTimeout(after, 900);
+  };
 
-  // ---- desktop: chosen form name bold, the others lighter ----
+  // ---- desktop: chosen form name bolder, the others lighter ----
   (function activeLinks() {
     const list = document.querySelector(".contact-body-formlink");
     if (!list) return;
-    const map = {
-      ".new-client-contact-link": ".new-client-form",
-      ".media-contact-link": ".media-enquiry-form",
-      ".general-contact-link": ".general-enquiry-form",
-      ".careers-contact-link": ".careers-form",
-    };
-    const links = Object.keys(map)
+    const links = [".new-client-contact-link", ".media-contact-link", ".general-contact-link", ".careers-contact-link"]
       .map((s) => document.querySelector(s))
       .filter(Boolean);
     const set = (a) => {
@@ -7956,10 +7925,10 @@ initPopupHoverReveal({
       list.classList.add("ct-has-active");
     };
     links.forEach((a) => a.addEventListener("click", () => set(a)));
-    set(document.querySelector(".new-client-contact-link"));
+    set(links[0]);
   })();
 
-  // ---- New Client: question labels, chip layout, "Others" detail field ----
+  // ---- New Client: chips, "Others" detail field ----
   (function newClientExtras() {
     const card = document.querySelector(".new-client-form");
     const form = card && card.querySelector(".nc-form-block form");
@@ -7985,57 +7954,59 @@ initPopupHoverReveal({
     form.addEventListener("reset", () => setTimeout(sync, 0));
   })();
 
-  // ---- every form: title, steps, nav, loader, success ----
+  // ---- every form: steps, nav, loader, success ----
   const steppers = [];
   FORMS.forEach((cfg) => {
     const card = document.querySelector(cfg.sel);
-    const form = card && card.querySelector(".w-form form");
-    if (!form || form.querySelector(".ct-nav")) return;
+    const form = card && card.querySelector(".w-form:not(.new-client-form-block) form");
+    if (!form || form.dataset.ctReady) return;
+    form.dataset.ctReady = "1";
     const block = form.closest(".w-form");
-    const LAST = cfg.heads.length;
 
-    if (!card.querySelector(".ct-card-title")) {
-      const t = document.createElement("div");
-      t.className = "ct-card-title";
-      t.textContent = cfg.title;
-      card.insertBefore(t, card.firstChild);
+    // iPhone Safari only moves the floating label when the box has a
+    // placeholder, so every box gets an invisible one
+    form.querySelectorAll(".input-group .form-input").forEach((i) => {
+      if (!i.getAttribute("placeholder")) i.setAttribute("placeholder", " ");
+    });
+
+    if (!card.querySelector(".ct-card-title")) card.insertBefore(el("div", "ct-card-title", cfg.title), card.firstChild);
+
+    // step header: Designer element, or a fallback
+    let head = form.querySelector(".ct-step-head");
+    if (!head) {
+      head = el("div", "ct-step-head", '<div class="ct-step-row"><div class="ct-step-title"></div><div class="ct-step-count"></div></div><div class="ct-bar"><div class="ct-bar-fill"></div></div>');
+      form.insertBefore(head, form.firstChild);
     }
+    const heads = (head.getAttribute("data-ct-heads") || "").split("|").map((s) => s.trim()).filter(Boolean);
+    const HEADS = heads.length ? heads : cfg.heads;
+    const LAST = HEADS.length;
+    const hTitle = head.querySelector(".ct-step-title");
+    const hCount = head.querySelector(".ct-step-count");
+    const hFill = head.querySelector(".ct-bar-fill");
+
+    // nav: Designer element, or a fallback
+    let nav = form.querySelector(".ct-nav");
+    if (!nav) {
+      nav = el("div", "ct-nav", '<a href="#" class="ct-arrow" aria-label="Back to all forms"></a><a href="#" class="ct-btn is-back">Back</a><a href="#" class="ct-btn is-next">Next</a>');
+      form.insertBefore(nav, form.querySelector("input[type='submit']"));
+    }
+    const arrow = nav.querySelector(".ct-arrow");
+    const backBtn = nav.querySelector(".is-back");
+    const nextBtn = nav.querySelector(".is-next");
+    if (arrow && !arrow.querySelector("svg")) arrow.innerHTML = ARROW;
 
     // which step each field belongs to
     let submitBtn = null;
-    [...form.children].forEach((el) => {
-      if (el.matches("input[type='submit']")) return;
-      const f = el.querySelector("input,textarea,select");
+    [...form.children].forEach((c) => {
+      if (c === head || c === nav || c.matches("input[type='submit']")) return;
+      const f = c.querySelector("input,textarea,select");
       const name = (f && (f.getAttribute("data-name") || f.name)) || "";
       let step;
-      if (cfg.step) step = el.matches(".btn-wrapper, .w-embed, p, .careers-thanks") ? LAST : cfg.step(el, name);
+      if (cfg.step) step = c.matches(".btn-wrapper, .w-embed, p, .careers-thanks") ? LAST : cfg.step(c, name);
       else step = f && CONTACT_FIELDS.test(f.name || "") ? 1 : LAST;
-      if (el.matches(".btn-wrapper.is-contact")) submitBtn = el;
-      el.setAttribute("data-ct-step", String(Math.min(step, LAST)));
+      if (c.matches(".btn-wrapper.is-contact")) submitBtn = c;
+      c.setAttribute("data-ct-step", String(Math.min(step, LAST)));
     });
-
-    // one header for all steps: title, 01/04, progress line
-    const head = document.createElement("div");
-    head.className = "ct-step-head";
-    head.innerHTML = '<div class="ct-step-row"><span></span><b></b></div><div class="ct-bar"><i></i></div>';
-    form.insertBefore(head, form.firstChild);
-
-    // nav: arrow (phones, step 1) / BACK and NEXT; SUBMIT joins it on the last step
-    const nav = document.createElement("div");
-    nav.className = "ct-nav";
-    const backBtn = document.createElement("button");
-    backBtn.type = "button";
-    backBtn.className = "ct-btn is-back";
-    backBtn.textContent = "Back";
-    const nextBtn = document.createElement("button");
-    nextBtn.type = "button";
-    nextBtn.className = "ct-btn is-next";
-    nextBtn.textContent = "Next";
-    nav.appendChild(makeArrow());
-    nav.appendChild(backBtn);
-    nav.appendChild(nextBtn);
-    const realSubmit = form.querySelector("input[type='submit']");
-    form.insertBefore(nav, realSubmit || null);
     if (submitBtn) nav.appendChild(submitBtn);
 
     let step = 1;
@@ -8047,9 +8018,9 @@ initPopupHoverReveal({
         card.classList.add("ct-s" + n);
         card.classList.toggle("ct-last", n === LAST);
         card.classList.toggle("ct-later", n > 1);
-        head.querySelector("span").textContent = cfg.heads[n - 1];
-        head.querySelector("b").textContent = pad(n) + "/" + pad(LAST);
-        head.querySelector("i").style.width = (n / LAST) * 100 + "%";
+        if (hTitle) hTitle.textContent = HEADS[n - 1];
+        if (hCount) hCount.textContent = pad(n) + "/" + pad(LAST);
+        if (hFill) hFill.style.width = (n / LAST) * 100 + "%";
         card.scrollTop = 0;
       };
       if (!animate) return apply();
@@ -8058,7 +8029,7 @@ initPopupHoverReveal({
         apply();
         requestAnimationFrame(() => card.classList.remove("ct-fading"));
         setTimeout(() => card.classList.remove("ct-fading"), 60);
-      }, 260);
+      }, 280);
     };
 
     const stepValid = () => {
@@ -8076,12 +8047,24 @@ initPopupHoverReveal({
       });
       return ok;
     };
-    nextBtn.addEventListener("click", () => {
-      if (stepValid()) show(Math.min(LAST, step + 1), true);
-    });
-    backBtn.addEventListener("click", () => show(Math.max(1, step - 1), true));
+    if (nextBtn)
+      nextBtn.addEventListener("click", (e) => {
+        e.preventDefault();
+        if (stepValid()) show(Math.min(LAST, step + 1), true);
+      });
+    if (backBtn)
+      backBtn.addEventListener("click", (e) => {
+        e.preventDefault();
+        show(Math.max(1, step - 1), true);
+      });
+    if (arrow)
+      arrow.addEventListener("click", (e) => {
+        e.preventDefault();
+        closeToList();
+      });
 
     // ---- SUBMIT: logo loader in the pill, wait for Cloudflare Turnstile ----
+    const realSubmit = form.querySelector("input[type='submit']");
     let sending = false;
     let waiting = false;
     let submitted = false;
@@ -8089,6 +8072,7 @@ initPopupHoverReveal({
     form.addEventListener("submit", () => (submitted = true), true);
     const loaderOff = () => {
       sending = false;
+      waiting = false;
       block.classList.remove("ct-sending");
       if (submitBtn) submitBtn.classList.remove("ct-loading");
     };
@@ -8104,16 +8088,16 @@ initPopupHoverReveal({
           }
           if (!stepValid()) return; // the site's validation shows the errors
           sending = true;
+          submitted = false;
           startedAt = Date.now();
           block.classList.add("ct-sending");
           submitBtn.classList.add("ct-loading");
-          submitted = false;
           setTimeout(() => {
             if (sending && !submitted && !waiting) loaderOff();
           }, 600);
           if (realSubmit && realSubmit.disabled) {
-            waiting = true;
             // Turnstile is still checking the visitor: wait, then send
+            waiting = true;
             e.preventDefault();
             e.stopImmediatePropagation();
             const t0 = Date.now();
@@ -8123,7 +8107,6 @@ initPopupHoverReveal({
                 return realSubmit.click();
               }
               if (Date.now() - t0 > 15000) {
-                waiting = false;
                 loaderOff();
                 const fail = block.querySelector(".w-form-fail");
                 if (fail) fail.style.display = "block";
@@ -8138,17 +8121,30 @@ initPopupHoverReveal({
       );
     }
 
-    // Webflow shows .w-form-done straight away; hold the form until the
-    // loader has played a moment, then fade the form out and the message in.
+    // success screen: Designer element (.ct-done), or a fallback
     const done = block.querySelector(".w-form-done");
     const fail = block.querySelector(".w-form-fail");
-    if (done && !done.querySelector(".ct-done")) {
-      const d = document.createElement("div");
-      d.className = "ct-done";
-      d.innerHTML =
-        '<div class="ct-done-icon">' + CHECK + '</div><div class="ct-done-title">Thank you</div><p class="ct-done-text"></p>';
-      d.querySelector(".ct-done-text").textContent = cfg.done;
-      done.insertBefore(d, done.firstChild);
+    const again = done && done.querySelector(".reload-form-btn");
+    if (done) {
+      let d = done.querySelector(".ct-done");
+      if (!d) {
+        d = el("div", "ct-done", '<div class="ct-done-icon"></div><div class="ct-done-title">Thank you</div><p class="ct-done-text"></p>');
+        d.querySelector(".ct-done-text").textContent = cfg.done;
+        done.insertBefore(d, done.firstChild);
+      }
+      const icon = d.querySelector(".ct-done-icon");
+      if (icon && !icon.querySelector("svg")) icon.innerHTML = CHECK;
+      // phones: return arrow back to the 4 form names (the form resets behind it)
+      if (!done.querySelector(".ct-done-back")) {
+        const b = el("a", "ct-arrow ct-done-back", ARROW);
+        b.href = "#";
+        b.setAttribute("aria-label", "Back to all forms");
+        b.addEventListener("click", (e) => {
+          e.preventDefault();
+          closeToList(() => again && again.click());
+        });
+        done.appendChild(b);
+      }
     }
     const reveal = () => {
       const wait = Math.max(0, 1100 - (Date.now() - startedAt));
@@ -8164,7 +8160,7 @@ initPopupHoverReveal({
           gsap.set(form, { clearProps: "opacity,visibility" });
         });
         tl.fromTo(
-          done.querySelectorAll(".ct-done-icon, .ct-done-title, .ct-done-text, .reload-form-btn"),
+          done.querySelectorAll(".ct-done > *, .reload-form-btn, .ct-done-back"),
           { autoAlpha: 0, y: 12 },
           { autoAlpha: 1, y: 0, duration: 0.7, ease: "power3.out", stagger: 0.08 }
         );
@@ -8189,7 +8185,6 @@ initPopupHoverReveal({
     }
 
     // SUBMIT AGAIN: back to step 1 with a soft fade (Section "Form Reset" clears the fields)
-    const again = done && done.querySelector(".reload-form-btn");
     if (again)
       again.addEventListener("click", () => {
         setTimeout(() => {
