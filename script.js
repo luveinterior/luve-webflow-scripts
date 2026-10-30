@@ -46,7 +46,8 @@
 // 42. Back-to-Top — Round Button on Phones + Reliable Scroll
 // 43. Project Page — More Section Header + Hide Empty Size
 // 44. Enquiry Panel — Keep Sticky Hero While Page Is Locked
-// 45. Contact Page — Mobile Form Cards + One Step at a Time
+// 45. Contact Page — Form Cards, One Step at a Time, Submit Loader + Success
+// 46. Forms — Cloudflare Turnstile Fixes (all pages)
 // 00. Page Transitions (Barba-style) — 喺最頂，包住成個 script（window.__luveRun）
 //
 // =============================================================================
@@ -360,6 +361,12 @@
     } catch (e) {}
     try {
       W.ready();
+    } catch (e) {}
+    // Turnstile is already loaded after a transition, so Webflow's forms wait
+    // for a jQuery "ready" event that never comes; fire it so each form gets
+    // its Turnstile check (otherwise SUBMIT stays disabled).
+    try {
+      if (window.turnstile && window.jQuery) window.jQuery(document).trigger("ready");
     } catch (e) {}
     ["ix2", "ix3"].forEach(function (m) {
       try {
@@ -7734,110 +7741,189 @@ initPopupHoverReveal({
 })();
 
 // =====================================================
-// 45. Contact Page — Mobile Form Cards + One Step at a Time
-// 功能：手機 / 平板（< 992px）Contact page 四份 form 變成浮喺相上面嘅 card
-//       （參考圖：圓角淺色 card、實色輸入框、冇邊框）。顏色用網站原本配色。
-//       New Client Form（Enquiry component）本身有 step；Media / General /
-//       Careers 分 3 個 step：聯絡資料 → 內容 → reCAPTCHA + Submit。
-//       一次淨係顯示一個 step，唔使 scroll；撳 NEXT 淡出再淡入下一個 step。
-//       每份 form 第一個 step 用返回箭咀（brand dark）返去 4 個 form 名。
-//       電腦版完全唔郁。開／收動畫喺 Section 05。
+// 45. Contact Page — Form Cards, One Step at a Time, Submit Loader + Success
+// 功能：Contact page 四份 form（New Client / Media / General / Careers）：
+//       • 參考圖 card 樣式：實色輸入框、floating label（撳落去彈上左上角）
+//       • 一次淨係顯示一個 step（唔使 scroll），撳 NEXT 淡出再淡入
+//       • 手機 / 平板（< 992px）：card 浮喺相上面；step 1 用返回箭咀返去 form 名
+//       • 電腦版（≥ 992px）：撳邊份 form，左邊嗰個名變粗，其他變淺
+//       • SUBMIT：粒掣入面出 LUVÉ logo loading，成功後淡入 success 畫面
+//         （剔號、標題、一句說明、SUBMIT AGAIN）
+//       New Client Form 係 Contact page 自己嘅 Webflow form（唔再用
+//       GET IN TOUCH 個 Enquiry component）。開／收動畫喺 Section 05。
 // =====================================================
 (function initContactCards() {
   if (!document.body.classList.contains("body-contact")) return;
   const MQ = "(max-width: 991px)";
   const DARK = "#795e49";
   const LIGHT = "#f0e8dd";
-  const CARDS = [
-    { sel: ".new-client-form", title: "New Client Form" },
-    { sel: ".media-enquiry-form", title: "Media Enquiry" },
-    { sel: ".general-enquiry-form", title: "General Enquiry" },
-    { sel: ".careers-form", title: "Careers" },
+  const CARD_DESKTOP = "#f8f4ee";
+  const FIELD = "rgba(121,94,73,.08)";
+  const FIELD_FOCUS = "rgba(121,94,73,.13)";
+
+  const CONTACT_FIELDS = /^(Name|Organization-Publication|Email|Phone|Phone-No)$/;
+  const FORMS = [
+    {
+      sel: ".new-client-form",
+      title: "New Client Form",
+      heads: ["Your personal details", "Project details", "Additional information", "Additional information"],
+      done: "We have received your enquiry and will reply within 24–48 hours.",
+      step: (el, name) => {
+        if (CONTACT_FIELDS.test(name)) return 1;
+        if (/^(Project Type|Full Property Address|Size)$/.test(name)) return 2;
+        if (name === "Design Brief") return 3;
+        return 4;
+      },
+    },
+    {
+      sel: ".media-enquiry-form",
+      title: "Media Enquiry",
+      heads: ["Your details", "Your enquiry"],
+      done: "Our communications team will be in touch with you soon.",
+    },
+    {
+      sel: ".general-enquiry-form",
+      title: "General Enquiry",
+      heads: ["Your details", "Your message"],
+      done: "We will get back to you shortly.",
+    },
+    {
+      sel: ".careers-form",
+      title: "Careers",
+      heads: ["Your details", "About you"],
+      done: "We have received your application and will be in touch.",
+    },
   ];
+
   const ARROW =
     '<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg>';
+  // LUVÉ wordmark (same paths as the nav logo), letters in reading order
+  const LOGO =
+    '<svg class="ct-loader" viewBox="20 60 794 196" aria-hidden="true" focusable="false"><g fill="currentColor">' +
+    '<path d="M22.3,246.48h22.82V74.12h-22.82v-4.64h92.12v4.64h-25.35v172.36h32.39c49.86,0,61.13-22.19,61.13-52.12v-5.16h5.07v61.93H22.3v-4.64Z"/>' +
+    '<path d="M206.73,69.84h88.74v4.64h-22.82v113.53c0,33.03,8.17,58.31,49.3,58.31,27.33,0,50.42-17.03,50.42-52.12v-98.05c0-14.96-4.51-21.67-18.87-21.67h-8.17v-4.64h78.6v4.64h-30.15c-10.14,0-14.65,6.71-14.65,21.67v96.5c0,37.93-22.54,62.96-74.37,62.96-45.92,0-76.06-24.25-76.06-64.25v-116.88h-21.97v-4.64Z"/>' +
+    '<path d="M423.93,69.84h94.65v4.64h-27.33l52.4,129.01,41.41-102.95c1.97-5.16,3.38-11.61,3.38-16.51,0-6.19-4.23-9.55-13.8-9.55h-7.33v-4.64h53.81v4.64h-4.51c-7.61,0-13.8,2.32-25.35,30.45l-61.97,150.68h-11.27l-74.09-181.13h-20v-4.64Z"/>' +
+    '<path d="M654.23,246.84h22.82V74.48h-55.92v-4.64h190.58v51.35h-5.07v-3.61c0-23.48-18.87-43.09-52.4-43.09h-33.24v78.95h19.44c18.31,0,27.89-9.55,27.89-34.06v-2.84h5.07v81.53h-5.07v-5.93c0-18.32-9.58-34.06-27.89-34.06h-19.44v88.76h40.57c46.2,0,52.96-35.09,52.96-49.8v-3.61h5.07v58.05h-165.36v-4.64ZM750.86,23.4c6.76-12.39,7.61-14.19,16.06-14.19,7.89,0,10.7,2.58,10.7,6.45,0,1.81-2.25,5.93-6.76,10.32l-36.9,35.86h-3.66l20.56-38.44Z"/>' +
+    "</g></svg>";
+  const CHECK =
+    '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5 10 17.5 19 7"/></svg>';
+
+  const ALL = FORMS.map((f) => f.sel).join(",");
+  const IN = (s) => FORMS.map((f) => "html body " + f.sel + " " + s).join(",");
 
   const css = document.createElement("style");
   css.textContent =
-    ".ct-card-title,.ct-nav,.ct-step-head,.ct-arrow{display:none}" +
+    ".ct-card-title,.ct-nav,.ct-arrow{display:none}" +
+    // ---------- shared (all sizes): fields, steps, buttons, success ----------
+    IN(".form-input") + "," + IN(".form-select") + "{border:0!important;border-radius:9px!important;background-color:" + FIELD + "!important;box-shadow:none!important;color:" + DARK + "}" +
+    IN(".form-input:focus") + "," + IN(".form-select:focus") + "{background-color:" + FIELD_FOCUS + "!important;outline:none!important}" +
+    IN(".input-group") + "{position:relative;margin:0!important}" +
+    IN(".input-group .form-input") + "{height:56px!important;min-height:56px!important;padding:20px 16px 6px!important;line-height:1.3!important;font-size:16px!important;margin:0!important}" +
+    IN(".input-group textarea.form-input") + "{height:104px!important;min-height:104px!important;padding:26px 16px 10px!important;resize:none}" +
+    IN(".input-group .floating-label") + "{position:absolute!important;left:16px!important;right:16px;top:28px!important;transform:translateY(-50%)!important;margin:0!important;padding:0!important;background:none!important;font-size:14px!important;line-height:1.2;color:rgba(121,94,73,.75);pointer-events:none;transition:top .2s ease,font-size .2s ease,transform .2s ease}" +
+    IN(".input-group textarea.form-input+.floating-label") + "{top:18px!important;transform:none!important}" +
+    IN(".input-group .form-input:focus+.floating-label") + "," + IN(".input-group .form-input:not(:placeholder-shown)+.floating-label") + "{top:8px!important;transform:none!important;font-size:11px!important}" +
+    IN(".input-group .field-help-text") + "{position:static!important;transform:none!important;opacity:.7;font-size:12px!important;line-height:1.35;margin:6px 2px 0!important}" +
+    IN(".field-error-msg") + "," + IN(".select-field-error-msg") + "{position:static!important;margin:4px 2px 0!important;font-size:12px}" +
+    IN(".form-select-wrapper") + "{margin:0!important}" +
+    IN(".form-select") + "{height:56px!important;padding:0 16px!important;font-size:15px!important}" +
+    IN(".w-form") + "{margin:0!important}" +
+    IN("form") + "{display:flex;flex-direction:column;gap:12px!important;padding-bottom:0!important;margin:0!important}" +
+    IN(".w-embed p") + "," + IN(".nc-privacy") + "{margin:0!important;font-size:12px!important;line-height:1.45!important;opacity:.7}" +
+    IN(".w-embed a") + "," + IN(".nc-privacy a") + "{color:inherit;text-decoration:underline;text-underline-offset:2px}" +
+    IN(".careers-thanks") + "{font-size:14px!important;line-height:1.4!important;font-weight:500!important;font-style:normal!important;letter-spacing:0!important;margin:0!important}" +
+    // New Client choice chips
+    ".nc-choice-group{border:0;margin:0!important}" +
+    ".nc-q{font-size:14px;line-height:1.35;color:" + DARK + ";margin:2px 2px 10px}" +
+    ".nc-choice-group.is-req .nc-q:after{content:' *'}" +
+    ".nc-chips{display:flex;flex-wrap:wrap;gap:8px}" +
+    ".nc-chips .w-radio{position:relative;display:inline-flex;align-items:center;margin:0!important;padding:0!important}" +
+    ".nc-chips .w-radio input{position:absolute!important;opacity:0!important;width:1px!important;height:1px!important;margin:0!important;pointer-events:none}" +
+    ".nc-chips .w-form-label{display:inline-flex;align-items:center;height:40px;padding:0 16px;border-radius:999px;background:" + FIELD + ";color:" + DARK + ";font-size:14px;line-height:1;cursor:pointer;transition:background-color .2s ease,color .2s ease;-webkit-tap-highlight-color:transparent;margin:0!important}" +
+    "@media (hover:hover){.nc-chips .w-form-label:hover{background:" + FIELD_FOCUS + "}}" +
+    ".nc-chips input:checked+.w-form-label{background:" + DARK + ";color:" + LIGHT + "}" +
+    ".nc-chips input:focus-visible+.w-form-label{outline:2px solid " + DARK + ";outline-offset:2px}" +
+    ".nc-choice-group .select-field-error-msg{display:none}" +
+    ".nc-choice-group.has-error .select-field-error-msg{display:block!important;opacity:1!important;transform:none!important;color:#d9534f;font-weight:700}" +
+    ".nc-others{display:none!important}.nc-has-others .nc-others{display:block!important}" +
+    // one shared step header + progress line
+    ".ct-steps .ct-step-head{display:block!important;margin:0 0 4px;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;color:" + DARK + "}" +
+    ".ct-step-head .ct-step-row{display:flex;justify-content:space-between;align-items:baseline;font-size:13px;font-weight:700;letter-spacing:.06em;text-transform:uppercase}" +
+    ".ct-step-head .ct-bar{position:relative;height:2px;margin-top:10px;background:rgba(121,94,73,.15);overflow:hidden;border-radius:2px}" +
+    ".ct-step-head .ct-bar i{position:absolute;left:0;top:0;bottom:0;width:0;background:" + DARK + ";transition:width .5s cubic-bezier(.22,1,.36,1)}" +
+    ".ct-steps [data-ct-step]{display:none!important}" +
+    ".ct-steps.ct-s1 [data-ct-step='1'],.ct-steps.ct-s2 [data-ct-step='2'],.ct-steps.ct-s3 [data-ct-step='3'],.ct-steps.ct-s4 [data-ct-step='4']{display:block!important}" +
+    ".ct-steps form{transition:opacity .25s ease}" +
+    ".ct-steps.ct-fading form{opacity:0}" +
+    ".ct-steps .ct-nav{display:flex!important;justify-content:flex-end;align-items:center;gap:12px;margin-top:6px}" +
+    ".ct-btn{appearance:none;-webkit-appearance:none;display:inline-flex;align-items:center;justify-content:center;height:42px;padding:0 20px;border-radius:999px;" +
+    "border:1px solid " + DARK + ";font-family:'Helvetica Neue',Helvetica,Arial,sans-serif!important;font-size:14px;font-weight:500;line-height:1;letter-spacing:1px;text-transform:uppercase;cursor:pointer;transition:background-color .25s ease,color .25s ease;-webkit-tap-highlight-color:transparent}" +
+    ".ct-btn.is-next{background:" + DARK + ";color:" + LIGHT + "}" +
+    "@media (hover:hover){.ct-btn.is-next:hover{background:#5f4939}.ct-btn.is-back:hover{background:" + FIELD + "}}" +
+    ".ct-btn.is-back{background:transparent;color:" + DARK + ";margin-right:auto}" +
+    ".ct-steps.ct-s1 .ct-nav .is-back{display:none}" +
+    ".ct-steps.ct-last .ct-nav .is-next{display:none}" +
+    ".ct-steps .ct-nav .btn-wrapper.is-contact{margin:0!important;display:none!important}" +
+    ".ct-steps.ct-last .ct-nav .btn-wrapper.is-contact{display:flex!important}" +
+    ".ct-arrow{appearance:none;-webkit-appearance:none;background:none;border:0;padding:0;width:42px;height:42px;align-items:center;justify-content:flex-start;color:" + DARK + ";cursor:pointer;margin-right:auto;-webkit-tap-highlight-color:transparent}" +
+    // submit button: LUVÉ logo loader inside the pill
+    ".btn-wrapper.is-contact{position:relative}" +
+    ".btn-wrapper.is-contact .ct-loader{position:absolute;left:50%;top:50%;height:13px;width:auto;transform:translate(-50%,-50%);opacity:0;pointer-events:none;transition:opacity .25s ease}" +
+    ".btn-wrapper.is-contact.ct-loading{pointer-events:none}" +
+    ".btn-wrapper.is-contact.ct-loading .btn-text,.btn-wrapper.is-contact.ct-loading .btn-arrow{opacity:0!important;transition:opacity .2s ease}" +
+    ".btn-wrapper.is-contact.ct-loading .ct-loader{opacity:1}" +
+    ".ct-loader path{animation:ct-logo 1.2s ease-in-out infinite;opacity:.25}" +
+    ".ct-loader path:nth-child(2){animation-delay:.15s}.ct-loader path:nth-child(3){animation-delay:.3s}.ct-loader path:nth-child(4){animation-delay:.45s}" +
+    "@keyframes ct-logo{0%,100%{opacity:.25}35%{opacity:1}}" +
+    // success screen (layout like the reference: icon, title, one line, button)
+    ALL.split(",").map((s) => "html body " + s + " .w-form-done").join(",") +
+    "{background:transparent!important;padding:28px 0 8px!important;text-align:center;flex-direction:column;align-items:center;gap:0}" +
+    ALL.split(",").map((s) => "html body " + s + " .w-form-done>div:not(.ct-done)").join(",") + "{display:none!important}" +
+    ".ct-done{display:flex!important;flex-direction:column;align-items:center;text-align:center;color:" + DARK + "}" +
+    ".ct-done-icon{display:flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:50%;background:" + DARK + ";color:" + LIGHT + ";margin-bottom:18px}" +
+    ".ct-done-title{font-family:'Bauer Bodoni','Bodoni 72',Didot,serif;font-size:32px;line-height:1.1;margin:0 0 10px}" +
+    ".ct-done-text{font-size:15px;line-height:1.45;max-width:30ch;margin:0 0 24px}" +
+    ".w-form-done .reload-form-btn{margin:0 auto!important}" +
+    ".ct-success .form-intromessage,.ct-success .careers-form-intro-wrapper,.ct-success .careers-form-intro,.ct-success .ct-step-head{display:none!important}" +
+    ".ct-later .form-intromessage,.ct-later .careers-form-intro-wrapper,.ct-later .careers-form-intro{display:none!important}" +
+    // intro text: one size everywhere, tight gap before the step header
+    IN(".form-description-text") + "," + IN(".careers-form-slogan") + "," + IN(".careers-form-intro") + "{line-height:1.4!important;margin:0!important}" +
+    IN(".form-intromessage") + "," + IN(".careers-form-intro-wrapper") + "{margin:0 0 6px!important;padding:0!important}" +
+    "html body .contact-body-form .form-close-btn{display:none!important}" +
+    // ---------- phones / tablets ----------
     "@media " + MQ + "{" +
-    // overlay: transparent, photo shows through with a soft brand tint
     "html body .contact-body-form{position:fixed!important;inset:0!important;width:100%!important;height:100vh!important;height:100svh!important;" +
     "padding:92px 14px calc(14px + env(safe-area-inset-bottom,0px))!important;background:rgba(121,94,73,.22)!important;overflow:hidden!important;" +
     "flex-direction:column;justify-content:flex-end;align-items:stretch;box-sizing:border-box}" +
-    // the card
-    "html body .contact-body-form>.new-client-form,html body .contact-body-form>.media-enquiry-form," +
-    "html body .contact-body-form>.general-enquiry-form,html body .contact-body-form>.careers-form{" +
-    "background:" + LIGHT + "!important;border-radius:14px;padding:26px 22px 20px!important;max-height:100%;overflow-y:auto;" +
+    ALL.split(",").map((s) => "html body .contact-body-form>" + s).join(",") + "{" +
+    "background:" + LIGHT + "!important;border:0!important;border-radius:14px;padding:24px 20px 18px!important;max-height:100%;overflow-y:auto;" +
     "height:auto!important;box-sizing:border-box;box-shadow:0 24px 60px -24px rgba(48,30,18,.45);scrollbar-width:none}" +
     "html body .contact-body-form>div::-webkit-scrollbar{display:none}" +
-    ".ct-card-title{display:block;font-family:var(--_typography---h4-font-family,inherit);font-size:24px;line-height:1.1;letter-spacing:-.01em;color:" + DARK + ";margin:0 0 12px}" +
-    // all intro / note texts in the cards share one size
-    "html body .contact-body-form .form-description-text,html body .contact-body-form .careers-form-slogan,html body .contact-body-form .careers-form-intro," +
-    "html body .contact-body-form .careers-thanks{font-size:14px!important;line-height:1.4!important;font-weight:500!important;font-style:normal!important;letter-spacing:0!important}" +
+    ".ct-card-title{display:block;font-family:var(--_typography---h4-font-family,inherit);font-size:24px;line-height:1.1;letter-spacing:-.01em;color:" + DARK + ";margin:0 0 10px}" +
+    IN(".form-description-text") + "," + IN(".careers-form-slogan") + "," + IN(".careers-form-intro") + "," + IN(".careers-thanks") +
+    "{font-size:14px!important;font-weight:500!important;font-style:normal!important;letter-spacing:0!important}" +
     "html body .contact-body-form .careers-form-intro-wrapper{display:flex;justify-content:space-between;align-items:baseline}" +
-    // old < BACK row button goes; text stays
-    "html body .contact-body-form .form-close-btn{display:none!important}" +
-    // intro text only on the first step
-    ".ct-later .form-intromessage,.ct-later .careers-form-intro-wrapper,.ct-later .careers-form-intro{display:none!important}" +
-    "html body .contact-body-form .form-intromessage{margin-bottom:8px}" +
-    // filled input boxes (no border), like the reference
-    "html body .contact-body-form .form-input,html body .contact-body-form .form-select,html body .contact-body-form .enq-input," +
-    "html body .contact-body-form textarea{border:0!important;border-radius:9px!important;background-color:rgba(121,94,73,.08)!important;box-shadow:none!important}" +
-    "html body .contact-body-form .form-input:focus,html body .contact-body-form .form-select:focus,html body .contact-body-form .enq-input:focus," +
-    "html body .contact-body-form textarea:focus{background-color:rgba(121,94,73,.13)!important;outline:none!important}" +
-    // floating labels: rest in the middle of the box, move to the top-left
-    // corner (small) once the box is focused or filled — never over the text
-    "html body .contact-body-form .input-group .form-input{height:56px!important;min-height:56px!important;padding:20px 16px 6px!important;line-height:1.3!important;font-size:16px!important}" +
-    "html body .contact-body-form .input-group textarea.form-input{height:104px!important;min-height:104px!important;padding:26px 16px 10px!important;resize:none}" +
-    "html body .contact-body-form .input-group .floating-label{position:absolute!important;left:16px!important;right:16px;top:28px!important;transform:translateY(-50%)!important;margin:0!important;padding:0!important;background:none!important;font-size:14px!important;line-height:1.2;pointer-events:none;transition:top .2s ease,font-size .2s ease,transform .2s ease}" +
-    "html body .contact-body-form .input-group textarea.form-input+.floating-label{top:18px!important;transform:none!important}" +
-    "html body .contact-body-form .input-group .form-input:focus+.floating-label,html body .contact-body-form .input-group .form-input:not(:placeholder-shown)+.floating-label{top:8px!important;transform:none!important;font-size:11px!important;background:none!important;padding:0!important}" +
-    "html body .contact-body-form .input-group .field-help-text{position:static!important;transform:none!important;font-size:12px!important;line-height:1.35;margin:6px 2px 0!important}" +
-    "html body .contact-body-form .input-group .field-error-msg{position:static!important;margin:4px 2px 0!important}" +
-    "html body .contact-body-form .enq-input{height:46px!important;min-height:46px!important;margin:0!important}" +
-    "html body .contact-body-form .enq-field-label{margin:0!important}" +
-    // compact spacing so each step fits the screen without scrolling
-    "html body .contact-body-form .form-intromessage,html body .contact-body-form .careers-form-intro-wrapper{margin:0 0 8px!important;padding:0!important}" +
-    "html body .contact-body-form .form-description-text,html body .contact-body-form .careers-form-intro{margin:0!important}" +
-    "html body .contact-body-form .w-form{margin-bottom:0!important}" +
-    "html body .contact-body-form form{padding-bottom:0!important;margin-bottom:0!important}" +
-    "html body .contact-body-form .new-client-form [data-enq-form]>div:first-child{padding-top:6px!important}" +
-    "html body .contact-body-form .new-client-form [data-enq-step]{margin:0!important}" +
-    "html body .contact-body-form .new-client-form .enq-step-head{margin-bottom:10px!important}" +
-    "html body .contact-body-form .new-client-form [data-enq-step] label{margin:0!important;gap:6px!important}" +
-    "html body .contact-body-form .new-client-form [data-enq-step]>div{gap:12px!important;padding-top:4px!important}" +
-    "html body .contact-body-form .new-client-form .enq-privacy-note{margin:12px 0 0!important}" +
-    "html body .contact-body-form .new-client-form .ct-enq-nav{margin-top:14px!important;padding-bottom:0!important}" +
-    "html body .contact-body-form .new-client-form [data-enq-panel]{padding:0!important;background:transparent!important;height:auto!important;max-height:none!important;overflow:visible!important}" +
-    "html body .contact-body-form .new-client-form [data-enq-step] label{margin-bottom:10px}" +
-    // steps for the three simple forms
-    ".ct-steps [data-ct-step]{display:none!important}" +
-    ".ct-steps.ct-s1 [data-ct-step='1'],.ct-steps.ct-s2 [data-ct-step='2'],.ct-steps.ct-s3 [data-ct-step='3']{display:block!important}" +
-    ".ct-steps.ct-s2 [data-ct-step='2'].btn-wrapper,.ct-steps.ct-s3 [data-ct-step='3'].btn-wrapper{display:flex!important}" +
-    ".ct-steps.ct-s1 .ct-step-head[data-ct-step='1'],.ct-steps.ct-s2 .ct-step-head[data-ct-step='2'],.ct-steps.ct-s3 .ct-step-head[data-ct-step='3']{display:flex!important}" +
-    ".ct-step-head,.ct-btn{font-family:'Helvetica Neue',Helvetica,Arial,sans-serif!important}" +
-    ".ct-steps .ct-step-head{display:flex;justify-content:space-between;align-items:baseline;margin:6px 0 14px;color:" + DARK + ";font-size:15px;font-weight:600;letter-spacing:.02em;text-transform:uppercase}" +
-    ".ct-steps .ct-step-head b{font-weight:600}" +
-    ".ct-steps .ct-nav{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:18px}" +
-    ".ct-steps form{transition:opacity .25s ease}" +
-    ".ct-steps.ct-fading form{opacity:0}" +
-    ".ct-btn{appearance:none;-webkit-appearance:none;display:inline-flex;align-items:center;justify-content:center;height:42px;padding:0 18px;border-radius:999px;" +
-    "border:1px solid " + DARK + ";font-size:14px;font-weight:500;line-height:1;letter-spacing:1px;text-transform:uppercase;cursor:pointer;-webkit-tap-highlight-color:transparent}" +
-    ".ct-btn.is-next{background:" + DARK + ";color:" + LIGHT + ";margin-left:auto}" +
-    ".ct-btn.is-back{background:transparent;color:" + DARK + "}" +
-    ".ct-arrow{appearance:none;-webkit-appearance:none;background:none;border:0;padding:0;width:42px;height:42px;display:none;align-items:center;justify-content:flex-start;color:" + DARK + ";cursor:pointer;-webkit-tap-highlight-color:transparent}" +
+    IN(".form-intromessage") + "," + IN(".careers-form-intro-wrapper") + "{margin:0 0 4px!important}" +
+    ".ct-steps .ct-step-head{margin:6px 0 2px}" +
+    IN("form") + "{gap:10px!important}" +
+    ".ct-steps .ct-nav .ct-arrow{display:none}" +
     ".ct-steps.ct-s1 .ct-nav .ct-arrow{display:inline-flex}" +
-    ".ct-steps:not(.ct-s1) .ct-nav .is-back{display:inline-flex}.ct-steps.ct-s1 .ct-nav .is-back{display:none}" +
-    ".ct-steps.ct-last .ct-nav .is-next{display:none}" +
-    ".ct-steps .ct-nav .btn-wrapper.is-contact{margin:0 0 0 auto!important}" +
-    // reCAPTCHA box is 304px wide; shrink a touch so it fits the card
-    "html body .contact-body-form .g-recaptcha{transform:scale(.9);transform-origin:left top;margin:0 0 -8px}" +
-    "html.ct-no-captcha body .contact-body-form .g-recaptcha,html.ct-no-captcha body .contact-body-form [data-enq-recaptcha-wrap]{display:none!important}" +
-    ".ct-steps form{row-gap:12px!important;gap:12px!important}" +
-    // New Client (enquiry component): arrow sits where BACK would be on step 1
-    ".new-client-form.ct-first .ct-arrow{display:inline-flex}" +
-    ".new-client-form .ct-arrow{margin-right:auto}" +
+    ".ct-steps.ct-s1 .ct-nav .is-next{margin-left:auto}" +
+    ".ct-done-title{font-size:28px}" +
+    "}" +
+    // ---------- desktop ----------
+    "@media (min-width:992px){" +
+    ALL.split(",").map((s) => "html body .contact-body-form>" + s).join(",") + "{" +
+    "background:" + CARD_DESKTOP + "!important;border:0!important;border-radius:14px!important;padding:30px 32px 26px!important;height:auto!important;" +
+    "max-height:calc(100vh - 160px);max-height:calc(100svh - 160px);overflow-y:auto;box-sizing:border-box;box-shadow:0 30px 70px -40px rgba(48,30,18,.4);scrollbar-width:thin}" +
+    IN(".form-description-text") + "," + IN(".careers-form-slogan") + "," + IN(".careers-form-intro") + "{font-size:15px!important}" +
+    IN(".form-intromessage") + "," + IN(".careers-form-intro-wrapper") + "{margin:0 0 8px!important}" +
+    ".ct-steps .ct-step-head{margin:10px 0 6px}" +
+    // the list: chosen form name bold, others lighter
+    ".contact-body-formlink [class*='-contact-link']{transition:opacity .35s ease,font-weight .2s ease}" +
+    ".contact-body-formlink.ct-has-active [class*='-contact-link']{opacity:.4}" +
+    ".contact-body-formlink.ct-has-active [class*='-contact-link'].ct-link-active{opacity:1;font-weight:700}" +
+    "@media (hover:hover){.contact-body-formlink.ct-has-active [class*='-contact-link']:hover{opacity:.75}.contact-body-formlink.ct-has-active [class*='-contact-link'].ct-link-active:hover{opacity:1}}" +
     "}";
   document.head.appendChild(css);
 
@@ -7855,85 +7941,91 @@ initPopupHoverReveal({
     b.addEventListener("click", goBack);
     return b;
   };
+  const pad = (n) => (n < 10 ? "0" + n : "" + n);
 
-  // titles on every card
-  CARDS.forEach((c) => {
-    const card = document.querySelector(c.sel);
-    if (!card || card.querySelector(".ct-card-title")) return;
-    const t = document.createElement("div");
-    t.className = "ct-card-title";
-    t.textContent = c.title;
-    card.insertBefore(t, card.firstChild);
-  });
-
-  // ---- New Client Form: enquiry component steps ----
-  (function newClient() {
-    const card = document.querySelector(".new-client-form");
-    if (!card) return;
-    const next = card.querySelector('[data-enq-action="next"]');
-    const back = card.querySelector('[data-enq-action="back"]');
-    if (!next || !back) return;
-    const nav = next.parentElement;
-    nav.classList.add("ct-enq-nav");
-    if (!nav.querySelector(".ct-arrow")) nav.insertBefore(makeArrow(), nav.firstChild);
-    const first = card.querySelector('[data-enq-step="contact"]');
-    const sync = () => {
-      const onFirst = !first || !first.hidden;
-      card.classList.toggle("ct-first", onFirst && back.hidden);
-      card.classList.toggle("ct-later", !onFirst);
+  // ---- desktop: chosen form name bold, the others lighter ----
+  (function activeLinks() {
+    const list = document.querySelector(".contact-body-formlink");
+    if (!list) return;
+    const map = {
+      ".new-client-contact-link": ".new-client-form",
+      ".media-contact-link": ".media-enquiry-form",
+      ".general-contact-link": ".general-enquiry-form",
+      ".careers-contact-link": ".careers-form",
     };
-    sync();
-    new MutationObserver(sync).observe(card, {
-      attributes: true,
-      attributeFilter: ["hidden"],
-      subtree: true,
-    });
+    const links = Object.keys(map)
+      .map((s) => document.querySelector(s))
+      .filter(Boolean);
+    const set = (a) => {
+      links.forEach((l) => l.classList.toggle("ct-link-active", l === a));
+      list.classList.add("ct-has-active");
+    };
+    links.forEach((a) => a.addEventListener("click", () => set(a)));
+    set(document.querySelector(".new-client-contact-link"));
   })();
 
-  // Webflow only loads reCAPTCHA when it is switched on in Site settings
-  // (after moving to Cloudflare Turnstile it is not), so the forms then need
-  // 2 steps: details → content + Submit.
-  const hasCaptcha = !!document.querySelector('script[src*="recaptcha/api.js"]');
-  document.documentElement.classList.toggle("ct-no-captcha", !hasCaptcha);
-  const LAST = hasCaptcha ? 3 : 2;
+  // ---- New Client: question labels, chip layout, "Others" detail field ----
+  (function newClientExtras() {
+    const card = document.querySelector(".new-client-form");
+    const form = card && card.querySelector(".nc-form-block form");
+    if (!form) return;
+    form.querySelectorAll(".nc-choice-group").forEach((g) => {
+      const kids = [...g.children];
+      if (kids[0]) kids[0].classList.add("nc-q");
+      if (kids[1]) kids[1].classList.add("nc-chips");
+      if (g.querySelector("input[required]")) g.classList.add("is-req");
+      else g.classList.remove("form-checkbox-group"); // optional: skip the site check
+    });
+    const p = form.querySelector("p");
+    if (p && /Privacy Policy/.test(p.textContent)) p.classList.add("nc-privacy");
+    const sync = () => {
+      const o = form.querySelector('input[type="radio"][value="Others"]');
+      form.classList.toggle("nc-has-others", !!(o && o.checked));
+    };
+    form.addEventListener("change", (e) => {
+      sync();
+      const g = e.target.closest && e.target.closest(".nc-choice-group");
+      if (g && g.querySelector("input:checked")) g.classList.remove("has-error");
+    });
+    form.addEventListener("reset", () => setTimeout(sync, 0));
+  })();
 
-  // ---- Media / General / Careers: split into steps ----
-  const CONTACT_FIELDS = /^(Name|Organization-Publication|Email|Phone-No)$/;
-  const HEADS = {
-    ".media-enquiry-form": ["Your details", "Your enquiry", "Send"],
-    ".general-enquiry-form": ["Your details", "Your message", "Send"],
-    ".careers-form": ["Your details", "About you", "Send"],
-  };
+  // ---- every form: title, steps, nav, loader, success ----
   const steppers = [];
-  Object.keys(HEADS).forEach((sel) => {
-    const card = document.querySelector(sel);
-    const form = card && card.querySelector("form");
+  FORMS.forEach((cfg) => {
+    const card = document.querySelector(cfg.sel);
+    const form = card && card.querySelector(".w-form form");
     if (!form || form.querySelector(".ct-nav")) return;
-    const heads = HEADS[sel];
+    const block = form.closest(".w-form");
+    const LAST = cfg.heads.length;
+
+    if (!card.querySelector(".ct-card-title")) {
+      const t = document.createElement("div");
+      t.className = "ct-card-title";
+      t.textContent = cfg.title;
+      card.insertBefore(t, card.firstChild);
+    }
+
+    // which step each field belongs to
     let submitBtn = null;
     [...form.children].forEach((el) => {
       if (el.matches("input[type='submit']")) return;
-      let step = 2;
       const f = el.querySelector("input,textarea,select");
-      if (f && CONTACT_FIELDS.test(f.name || "")) step = 1;
-      if (
-        el.matches(".careers-thanks, .g-recaptcha, .w-form-formrecaptcha, .w-embed, .btn-wrapper") ||
-        el.querySelector(".g-recaptcha")
-      )
-        step = LAST;
+      const name = (f && (f.getAttribute("data-name") || f.name)) || "";
+      let step;
+      if (cfg.step) step = el.matches(".btn-wrapper, .w-embed, p, .careers-thanks") ? LAST : cfg.step(el, name);
+      else step = f && CONTACT_FIELDS.test(f.name || "") ? 1 : LAST;
       if (el.matches(".btn-wrapper.is-contact")) submitBtn = el;
-      el.setAttribute("data-ct-step", String(step));
+      el.setAttribute("data-ct-step", String(Math.min(step, LAST)));
     });
-    // step titles + counts
-    heads.slice(0, LAST).forEach((h, i) => {
-      const head = document.createElement("div");
-      head.className = "ct-step-head";
-      head.setAttribute("data-ct-step", String(i + 1));
-      head.innerHTML = "<span>" + h + "</span><b>0" + (i + 1) + "/0" + LAST + "</b>";
-      const firstOfStep = form.querySelector('[data-ct-step="' + (i + 1) + '"]:not(.ct-step-head)');
-      form.insertBefore(head, firstOfStep || null);
-    });
-    // nav: arrow (step 1) / BACK (step 2+) and NEXT; Submit joins it on step 3
+
+    // one header for all steps: title, 01/04, progress line
+    const head = document.createElement("div");
+    head.className = "ct-step-head";
+    head.innerHTML = '<div class="ct-step-row"><span></span><b></b></div><div class="ct-bar"><i></i></div>';
+    form.insertBefore(head, form.firstChild);
+
+    // nav: arrow (phones, step 1) / BACK and NEXT; SUBMIT joins it on the last step
     const nav = document.createElement("div");
     nav.className = "ct-nav";
     const backBtn = document.createElement("button");
@@ -7947,18 +8039,22 @@ initPopupHoverReveal({
     nav.appendChild(makeArrow());
     nav.appendChild(backBtn);
     nav.appendChild(nextBtn);
-    form.appendChild(nav);
-    const home = document.createComment("ct-submit-home");
-    if (submitBtn) submitBtn.parentNode.insertBefore(home, submitBtn);
+    const realSubmit = form.querySelector("input[type='submit']");
+    form.insertBefore(nav, realSubmit || null);
+    if (submitBtn) nav.appendChild(submitBtn);
 
     let step = 1;
     const show = (n, animate) => {
       const apply = () => {
         step = n;
-        card.classList.remove("ct-s1", "ct-s2", "ct-s3", "ct-last");
+        card.classList.add("ct-steps");
+        for (let i = 1; i <= 4; i++) card.classList.remove("ct-s" + i);
         card.classList.add("ct-s" + n);
         card.classList.toggle("ct-last", n === LAST);
         card.classList.toggle("ct-later", n > 1);
+        head.querySelector("span").textContent = cfg.heads[n - 1];
+        head.querySelector("b").textContent = pad(n) + "/" + pad(LAST);
+        head.querySelector("i").style.width = (n / LAST) * 100 + "%";
         card.scrollTop = 0;
       };
       if (!animate) return apply();
@@ -7969,15 +8065,20 @@ initPopupHoverReveal({
         setTimeout(() => card.classList.remove("ct-fading"), 60);
       }, 260);
     };
+
     const stepValid = () => {
       let ok = true;
-      form
-        .querySelectorAll('[data-ct-step="' + step + '"] input[required], [data-ct-step="' + step + '"] textarea[required], [data-ct-step="' + step + '"] select[required]')
-        .forEach((f) => {
-          f.dispatchEvent(new Event("blur"));
-          const g = f.closest(".input-group, .form-select-wrapper");
-          if (!f.value.trim() || f.classList.contains("is-error") || (g && g.classList.contains("has-error"))) ok = false;
-        });
+      const sel = '[data-ct-step="' + step + '"]';
+      form.querySelectorAll(sel + " input[required]:not([type=radio]), " + sel + " textarea[required], " + sel + " select[required]").forEach((f) => {
+        f.dispatchEvent(new Event("blur"));
+        const g = f.closest(".input-group, .form-select-wrapper");
+        if (!f.value.trim() || f.classList.contains("is-error") || (g && g.classList.contains("has-error"))) ok = false;
+      });
+      form.querySelectorAll(sel + ".nc-choice-group.is-req").forEach((g) => {
+        const on = !!g.querySelector("input:checked");
+        g.classList.toggle("has-error", !on);
+        if (!on) ok = false;
+      });
       return ok;
     };
     nextBtn.addEventListener("click", () => {
@@ -7985,27 +8086,156 @@ initPopupHoverReveal({
     });
     backBtn.addEventListener("click", () => show(Math.max(1, step - 1), true));
 
-    const setMode = () => {
-      if (mq.matches) {
-        card.classList.add("ct-steps");
-        if (submitBtn && submitBtn.parentNode !== nav) nav.appendChild(submitBtn);
-        show(step, false);
-      } else {
-        card.classList.remove("ct-steps", "ct-s1", "ct-s2", "ct-s3", "ct-last", "ct-later", "ct-fading");
-        if (submitBtn && home.parentNode) home.parentNode.insertBefore(submitBtn, home.nextSibling);
-      }
+    // ---- SUBMIT: logo loader in the pill, wait for Cloudflare Turnstile ----
+    let sending = false;
+    let waiting = false;
+    let submitted = false;
+    let startedAt = 0;
+    form.addEventListener("submit", () => (submitted = true), true);
+    const loaderOff = () => {
+      sending = false;
+      block.classList.remove("ct-sending");
+      if (submitBtn) submitBtn.classList.remove("ct-loading");
     };
-    setMode();
-    mq.addEventListener("change", setMode);
-    steppers.push({ card, reset: () => mq.matches && show(1, false) });
+    if (submitBtn) {
+      if (!submitBtn.querySelector(".ct-loader")) submitBtn.insertAdjacentHTML("beforeend", LOGO);
+      submitBtn.addEventListener(
+        "click",
+        (e) => {
+          if (sending) {
+            e.preventDefault();
+            e.stopImmediatePropagation();
+            return;
+          }
+          if (!stepValid()) return; // the site's validation shows the errors
+          sending = true;
+          startedAt = Date.now();
+          block.classList.add("ct-sending");
+          submitBtn.classList.add("ct-loading");
+          submitted = false;
+          setTimeout(() => {
+            if (sending && !submitted && !waiting) loaderOff();
+          }, 600);
+          if (realSubmit && realSubmit.disabled) {
+            waiting = true;
+            // Turnstile is still checking the visitor: wait, then send
+            e.preventDefault();
+            e.stopImmediatePropagation();
+            const t0 = Date.now();
+            const wait = () => {
+              if (!realSubmit.disabled) {
+                waiting = false;
+                return realSubmit.click();
+              }
+              if (Date.now() - t0 > 15000) {
+                waiting = false;
+                loaderOff();
+                const fail = block.querySelector(".w-form-fail");
+                if (fail) fail.style.display = "block";
+                return;
+              }
+              setTimeout(wait, 200);
+            };
+            wait();
+          }
+        },
+        true
+      );
+    }
+
+    // Webflow shows .w-form-done straight away; hold the form until the
+    // loader has played a moment, then fade the form out and the message in.
+    const done = block.querySelector(".w-form-done");
+    const fail = block.querySelector(".w-form-fail");
+    if (done && !done.querySelector(".ct-done")) {
+      const d = document.createElement("div");
+      d.className = "ct-done";
+      d.innerHTML =
+        '<div class="ct-done-icon">' + CHECK + '</div><div class="ct-done-title">Thank you</div><p class="ct-done-text"></p>';
+      d.querySelector(".ct-done-text").textContent = cfg.done;
+      done.insertBefore(d, done.firstChild);
+    }
+    const reveal = () => {
+      const wait = Math.max(0, 1100 - (Date.now() - startedAt));
+      setTimeout(() => {
+        const tl = gsap.timeline();
+        tl.to(form, { autoAlpha: 0, duration: 0.35, ease: "power2.in" });
+        tl.add(() => {
+          form.style.display = "none";
+          card.classList.add("ct-success");
+          card.scrollTop = 0;
+          done.style.display = "flex";
+          loaderOff();
+          gsap.set(form, { clearProps: "opacity,visibility" });
+        });
+        tl.fromTo(
+          done.querySelectorAll(".ct-done-icon, .ct-done-title, .ct-done-text, .reload-form-btn"),
+          { autoAlpha: 0, y: 12 },
+          { autoAlpha: 1, y: 0, duration: 0.7, ease: "power3.out", stagger: 0.08 }
+        );
+      }, wait);
+    };
+    if (done) {
+      new MutationObserver(() => {
+        if (!sending || done.style.display === "none" || done.style.display === "") return;
+        if (block.dataset.ctHolding) return;
+        block.dataset.ctHolding = "1";
+        // keep the form on screen (Webflow just hid it) while the loader plays
+        form.style.display = "";
+        done.style.display = "none";
+        reveal();
+        setTimeout(() => delete block.dataset.ctHolding, 1500);
+      }).observe(done, { attributes: true, attributeFilter: ["style"] });
+    }
+    if (fail) {
+      new MutationObserver(() => {
+        if (fail.style.display && fail.style.display !== "none") loaderOff();
+      }).observe(fail, { attributes: true, attributeFilter: ["style"] });
+    }
+
+    // SUBMIT AGAIN: back to step 1 with a soft fade (Section "Form Reset" clears the fields)
+    const again = done && done.querySelector(".reload-form-btn");
+    if (again)
+      again.addEventListener("click", () => {
+        setTimeout(() => {
+          card.classList.remove("ct-success");
+          if (fail) fail.style.display = "none";
+          show(1, false);
+          gsap.fromTo(form, { autoAlpha: 0, y: 10 }, { autoAlpha: 1, y: 0, duration: 0.6, ease: "power3.out", clearProps: "opacity,visibility,transform" });
+        }, 0);
+      });
+
+    show(1, false);
+    steppers.push({ card, reset: () => !card.classList.contains("ct-success") && show(1, false) });
   });
 
-  // Section 05 calls this before a card opens: always start at step 1
+  // Section 05 calls this before a card opens on phones: always start at step 1
   window.__luveContactStepsReset = (card) => {
     steppers.forEach((s) => {
       if (s.card === card) s.reset();
     });
   };
+})();
+
+// =====================================================
+// 46. Forms — Cloudflare Turnstile Fixes (all pages)
+// 功能：(1) Turnstile 喺 form 最尾加咗一格，搞亂咗 GET IN TOUCH
+//       「最後一格 = BACK / NEXT 按鈕列」嘅樣式 → 將按鈕列放返最尾。
+//       (2) 經 page transition 入嚟嘅頁，Webflow 唔會再啟動 Turnstile
+//       （等緊一個已經發生咗嘅 ready），所以 SUBMIT 一直撳唔到 → 補返。
+// =====================================================
+(function initTurnstileFixes() {
+  document.querySelectorAll("[data-enq-form]").forEach((form) => {
+    if (form.dataset.ctNavKeep) return;
+    form.dataset.ctNavKeep = "1";
+    const keepNavLast = () => {
+      const next = form.querySelector('[data-enq-action="next"]');
+      const nav = next && next.parentElement;
+      if (nav && nav.parentElement === form && form.lastElementChild !== nav) form.appendChild(nav);
+    };
+    keepNavLast();
+    new MutationObserver(keepNavLast).observe(form, { childList: true });
+  });
 })();
 
 }; // end window.__luveRun
