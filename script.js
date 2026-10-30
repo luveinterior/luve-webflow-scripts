@@ -7357,6 +7357,37 @@ initPopupHoverReveal({
       return p;
     });
 
+    // Phones: the shared .lfq-pics sits above the list and scrolls out of
+    // view once an answer opens, so each answer gets its own photo on top
+    // that fades in as the row opens (CSS below only applies ≤767px).
+    if (!document.getElementById("lfq-mobile-css")) {
+      var mcss = document.createElement("style");
+      mcss.id = "lfq-mobile-css";
+      mcss.textContent =
+        ".lfq-m-img{display:none}" +
+        "@media (max-width:767px){" +
+        "html body .lfq .lfq-pics{display:none!important}" +
+        ".lfq-m-img{position:relative!important;inset:auto!important;display:block!important;width:100%!important;max-width:100%!important;height:auto!important;padding:0!important;aspect-ratio:4/5;max-height:70vh;object-fit:cover;margin:0 0 20px;opacity:0;transition:opacity .8s cubic-bezier(.65,0,.35,1) .15s}" +
+        ".lfq-row.is-open .lfq-m-img{opacity:1}" +
+        "}";
+      document.head.appendChild(mcss);
+    }
+    rows.forEach(function (r) {
+      var src = r.querySelector(".lfq-row-img");
+      var inner = r.querySelector(".lfq-in");
+      if (!src || !inner || inner.querySelector(".lfq-m-img")) return;
+      var m = document.createElement("img");
+      m.className = "lfq-m-img";
+      m.alt = src.alt || "";
+      m.loading = "lazy";
+      m.src = src.currentSrc || src.src;
+      if (src.srcset) {
+        m.srcset = src.srcset;
+        m.sizes = "90vw";
+      }
+      inner.insertBefore(m, inner.firstChild);
+    });
+
     var setOpen = function (i) {
       rows.forEach(function (r, k) {
         var on = k === i;
@@ -7364,6 +7395,8 @@ initPopupHoverReveal({
         var q = r.querySelector(".lfq-q");
         if (q) q.setAttribute("aria-expanded", on ? "true" : "false");
       });
+      // keep the last photo showing when everything is closed
+      if (i < 0) return;
       imgs.forEach(function (p, k) {
         if (p) p.classList.toggle("is-on", k === i);
       });
@@ -7385,7 +7418,11 @@ initPopupHoverReveal({
       });
     });
 
-    if (rows.length) setOpen(0);
+    // all questions start closed; the desktop photo column shows the first photo
+    if (rows.length) {
+      setOpen(-1);
+      if (imgs[0]) imgs[0].classList.add("is-on");
+    }
   }
 
   if (document.readyState === "loading") {
