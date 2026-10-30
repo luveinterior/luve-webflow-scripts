@@ -8223,7 +8223,7 @@ initPopupHoverReveal({
 (function initTurnstileFixes() {
   const ensure = (form) => {
     if (!window.turnstile || !window.jQuery || form.dataset.ctTs) return;
-    if (form.querySelector('input[name="cf-turnstile-response"]')) return;
+    if (form.querySelector('input[name="cf-turnstile-response"], iframe[src*="challenges.cloudflare.com"]')) return;
     const key = form.getAttribute("data-turnstile-sitekey");
     if (!key) return;
     form.dataset.ctTs = "1";
@@ -8253,7 +8253,15 @@ initPopupHoverReveal({
       }),
     { rootMargin: "200px" }
   );
-  document.querySelectorAll("form[data-turnstile-sitekey]").forEach((f) => io.observe(f));
+  const forms = document.querySelectorAll("form[data-turnstile-sitekey]");
+  forms.forEach((f) => io.observe(f));
+  // also check the forms that are on screen a little after load / after a
+  // Contact form name is clicked (in case the observer is slow)
+  const sweep = () => forms.forEach((f) => f.offsetParent && ensure(f));
+  setTimeout(sweep, 3500);
+  document.addEventListener("click", (e) => {
+    if (e.target.closest && e.target.closest("[class*='-contact-link'], [data-enq-action='open']")) setTimeout(sweep, 2000);
+  });
 
   document.querySelectorAll("[data-enq-form]").forEach((form) => {
     if (form.dataset.ctNavKeep) return;
