@@ -8688,10 +8688,36 @@ initPopupHoverReveal({
         const list = Array.isArray(t) ? t : [t];
         return list.some((x) => x && x.nodeType === 1 && x.matches && x.matches("[data-enq-step]"));
       };
+      // the two intro sentences only show on step 01 (phones): fade them with
+      // the step so nothing blinks when leaving or coming back to step 01
+      const extraLines = (t) => {
+        const step = (Array.isArray(t) ? t : [t]).find((x) => x && x.matches && x.matches("[data-enq-step]"));
+        const r = step && step.closest("[data-enq-root]");
+        return r ? { root: r, lines: [...r.querySelectorAll(".enq-intro .enq-intro-line-mask:not(:first-child)")] } : { lines: [] };
+      };
       gsap.to = function (targets, vars) {
         if (vars && typeof vars === "object" && !Array.isArray(vars) && isStep(targets)) {
-          if (vars.duration === 0.16) vars = Object.assign({}, vars, { duration: 0.32, ease: "power2.inOut" });
-          else if (vars.duration === 0.28) vars = Object.assign({}, vars, { duration: 0.6, ease: "power3.out" });
+          const x = extraLines(targets);
+          const onFirst = x.root && x.root.getAttribute("data-enq-index") === "0";
+          if (vars.duration === 0.16) {
+            vars = Object.assign({}, vars, { duration: 0.32, ease: "power2.inOut" });
+            if (onFirst && x.lines.length) {
+              targets = (Array.isArray(targets) ? targets : [targets]).concat(x.lines);
+              const done = vars.onComplete;
+              vars.onComplete = function () {
+                if (done) done.apply(this, arguments);
+                gsap.set(x.lines, { clearProps: "opacity" }); // hidden by then; never left invisible
+              };
+            }
+          } else if (vars.duration === 0.28) {
+            vars = Object.assign({}, vars, { duration: 0.6, ease: "power3.out" });
+            if (x.lines.length) {
+              if (onFirst) {
+                gsap.set(x.lines, { opacity: 0 });
+                targets = (Array.isArray(targets) ? targets : [targets]).concat(x.lines);
+              } else gsap.set(x.lines, { clearProps: "opacity" });
+            }
+          }
         }
         return to.apply(gsap, arguments.length > 2 ? [targets, vars].concat([].slice.call(arguments, 2)) : [targets, vars]);
       };
@@ -8788,6 +8814,9 @@ initPopupHoverReveal({
         const gap = parseFloat(getComputedStyle(grid).columnGap) || 12;
         const room = gr.right - (last.right + gap);
         if (!msg.classList.contains("ct-choice-error")) msg.classList.add("ct-choice-error");
+        // the Chinese part on its own line (not just its last character)
+        if (!msg.querySelector("br") && / \(請選擇一項\)/.test(msg.textContent))
+          msg.innerHTML = msg.textContent.replace(/ \(請選擇一項\)/, "<br>(請選擇一項)");
         if (room >= 90) {
           put(msg, "top", Math.round(last.top - g.top) + "px");
           put(msg, "left", Math.round(last.right + gap - g.left) + "px");
