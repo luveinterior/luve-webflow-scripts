@@ -7814,14 +7814,14 @@ initPopupHoverReveal({
     IN(".input-group textarea.form-input+.floating-label") + "{top:18px!important;transform:none!important}" +
     IN(".input-group.is-plain .form-input") + "{padding:14px 16px!important}" +
     IN(".input-group.is-plain .nc-q") + "{margin-bottom:10px}" +
-    IN(".form-input::placeholder") + "{color:rgba(121,94,73,.55);opacity:1}" +
+    IN(".input-group.is-plain .form-input::placeholder") + "{color:rgba(121,94,73,.55)!important;-webkit-text-fill-color:rgba(121,94,73,.55)!important;opacity:1!important;visibility:visible!important}" +
     IN(".input-group .form-input:focus+.floating-label") + "," + IN(".input-group .form-input:not(:placeholder-shown)+.floating-label") + "," + IN(".input-group.is-filled .floating-label") +
     "{top:8px!important;transform:none!important;font-size:11px!important}" +
     IN(".input-group .field-help-text") + "{position:static!important;transform:none!important;opacity:.7;font-size:12px!important;line-height:1.35;margin:6px 2px 0!important}" +
     IN(".field-error-msg") + "," + IN(".select-field-error-msg") + "{position:static!important;margin:4px 2px 0!important;font-size:12px}" +
     IN(".form-select-wrapper") + "{margin:0!important}" +
     IN(".form-select") + "{height:56px!important;padding:0 16px!important;font-size:15px!important}" +
-    IN(".w-form") + "{margin:0!important}" +
+    IN(".w-form") + "{margin:0!important;flex-direction:column!important;align-items:stretch!important}" +
     IN("form") + "{display:flex;flex-direction:column;padding-bottom:0!important;margin:0!important}" +
     IN(".w-embed p") + "," + IN(".nc-privacy") + "{margin:0!important;font-size:12px!important;line-height:1.45!important;opacity:.7}" +
     IN(".w-embed a") + "," + IN(".nc-privacy a") + "{color:inherit;text-decoration:underline;text-underline-offset:2px}" +
@@ -7872,7 +7872,7 @@ initPopupHoverReveal({
     // ---------- success screen (text style: .ct-done-title / .ct-done-text) ----------
     IN(".w-form-done") + "{position:relative;background:transparent!important;padding:28px 0 8px!important;text-align:center;flex-direction:column;align-items:center;justify-content:center}" +
     ".w-form-done .reload-form-btn{margin:0 auto!important}" +
-    IN(".w-form-fail") + "{margin:12px 0 0!important;padding:12px 14px!important;border:1px solid rgba(121,94,73,.3)!important;border-radius:6px!important;background:#f7deda!important;" +
+    IN(".w-form-fail") + "{margin:0!important;padding:12px 14px!important;border:1px solid rgba(121,94,73,.3)!important;border-radius:6px!important;background:#f7deda!important;" +
     "color:" + DARK + "!important;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif!important;font-size:13px!important;font-weight:500!important;line-height:1.4!important}" +
     IN(".w-form-fail *") + "{font:inherit!important;color:inherit!important}" +
     ".ct-done-back{display:none;position:absolute;left:0;bottom:8px}" +
@@ -7893,6 +7893,8 @@ initPopupHoverReveal({
     IN("form") + "{flex:1 1 auto}" +
     IN(".w-form-done") + "{flex:1 1 auto}" +
     ".ct-steps .ct-nav{margin-top:auto;padding-top:6px}" +
+    ".ct-steps.ct-last .ct-nav{margin-top:4px}" +
+    ".ct-failed .w-embed,.ct-failed .nc-privacy{display:none!important}" +
     "html body .contact-body-form .careers-form-intro-wrapper{display:flex;justify-content:space-between;align-items:baseline}" +
     ".ct-steps .ct-step-head{margin:2px 0 4px}" +
     ".ct-steps.ct-s1 .ct-nav .ct-arrow{display:inline-flex!important}" +
@@ -7909,7 +7911,12 @@ initPopupHoverReveal({
     ".ct-tight .input-group textarea.form-input{height:88px!important;min-height:88px!important}" +
     ".ct-tight .input-group.is-plain .form-input{padding-top:12px!important}" +
     ".ct-tight .nc-chips .w-form-label{min-height:42px}" +
-    ".ct-tighter .ct-card-title{display:none!important}" +
+    ".ct-tighter .ct-card-title{margin-bottom:4px!important;font-size:22px!important}" +
+    ".ct-tighter .ct-steps .ct-step-head,.ct-tighter.ct-steps .ct-step-head{margin:0 0 2px!important}" +
+    ".ct-tighter .ct-bar{margin-top:7px!important}" +
+    ".ct-tighter .input-group .form-input,.ct-tighter .form-select{height:46px!important;min-height:46px!important;padding-top:15px!important}" +
+    ".ct-tighter .input-group .floating-label{top:23px!important}" +
+    ".ct-tighter .w-form-fail{padding:9px 12px!important;font-size:12px!important}" +
     ".ct-tighter .form-description-text,.ct-tighter .careers-form-slogan,.ct-tighter .careers-form-intro{line-height:1.3!important}" +
     ".ct-tighter form{row-gap:7px!important;gap:7px!important}" +
     ".ct-tighter .nc-chips{row-gap:6px!important;column-gap:6px!important}" +
@@ -8139,6 +8146,7 @@ initPopupHoverReveal({
         if (hTitle) hTitle.textContent = HEADS[n - 1];
         if (hCount) hCount.textContent = pad(n) + "/" + pad(LAST);
         if (hFill) hFill.style.width = (n / LAST) * 100 + "%";
+        if (n !== LAST && fail && fail.style.display === "block") fail.style.display = "none";
         card.scrollTop = 0;
         fit();
       };
@@ -8196,6 +8204,13 @@ initPopupHoverReveal({
     const realSubmit = form.querySelector("input[type='submit']");
     // Webflow sends the Turnstile answer with the form; SUBMIT only goes once
     // Webflow has switched its submit back on and the answer is filled in
+    form.setAttribute("method", "post");
+    const syncToken = () => {
+      const $ = window.jQuery;
+      const d = $ && $.data(form, ".w-form");
+      const t = [...form.querySelectorAll('input[name="cf-turnstile-response"]')].find((i) => i.value);
+      if (d && t && d.turnstileToken !== t.value) d.turnstileToken = t.value;
+    };
     const tokenReady = () => {
       if (!realSubmit || realSubmit.disabled) return false;
       const t = form.querySelectorAll('input[name="cf-turnstile-response"]');
@@ -8225,6 +8240,7 @@ initPopupHoverReveal({
           if (!stepValid()) return; // the site's validation shows the errors
           sending = true;
           submitted = false;
+          syncToken();
           startedAt = Date.now();
           block.classList.add("ct-sending");
           submitBtn.classList.add("ct-loading");
@@ -8237,12 +8253,18 @@ initPopupHoverReveal({
             e.preventDefault();
             e.stopImmediatePropagation();
             const t0 = Date.now();
+            let renewed = false;
             const wait = () => {
               if (tokenReady()) {
                 waiting = false;
+                syncToken();
                 return realSubmit.click();
               }
-              if (Date.now() - t0 > 20000) {
+              if (!renewed && Date.now() - t0 > 12000 && window.__luveTurnstileRenew) {
+                renewed = true;
+                window.__luveTurnstileRenew(form);
+              }
+              if (Date.now() - t0 > 30000) {
                 loaderOff();
                 const fail = block.querySelector(".w-form-fail");
                 if (fail) fail.style.display = "block";
@@ -8260,6 +8282,7 @@ initPopupHoverReveal({
     // success screen: Designer element (.ct-done), or a fallback
     const done = block.querySelector(".w-form-done");
     const fail = block.querySelector(".w-form-fail");
+    if (fail && fail.parentElement !== form) form.insertBefore(fail, nav);
     const again = done && done.querySelector(".reload-form-btn");
     if (done) {
       let d = done.querySelector(".ct-done");
@@ -8316,7 +8339,10 @@ initPopupHoverReveal({
     }
     if (fail) {
       new MutationObserver(() => {
-        if (fail.style.display && fail.style.display !== "none") loaderOff();
+        const on = !!(fail.style.display && fail.style.display !== "none");
+        card.classList.toggle("ct-failed", on);
+        if (on) loaderOff();
+        setTimeout(fit, 30);
       }).observe(fail, { attributes: true, attributeFilter: ["style"] });
     }
 
@@ -8356,7 +8382,26 @@ initPopupHoverReveal({
 // =====================================================
 (function initTurnstileFixes() {
   const $ = window.jQuery;
-  const renew = (form) => {
+  // keep a short note of why Webflow refused a form (shown in the browser
+  // console as "[LUVÉ form]"), so a failed send can be traced
+  if ($ && !$.__luveFormLog) {
+    $.__luveFormLog = true;
+    const ajax = $.ajax;
+    $.ajax = function (opts) {
+      const req = ajax.apply(this, arguments);
+      try {
+        const url = (opts && opts.url) || "";
+        if (/\/api\/v1\/form\//.test(url) && req && req.fail)
+          req.fail((x) => {
+            const note = { status: x && x.status, response: x && x.responseText && x.responseText.slice(0, 300) };
+            (window.__luveFormLog = window.__luveFormLog || []).push(note);
+            console.warn("[LUVÉ form] Webflow refused the form", note);
+          });
+      } catch (e) {}
+      return req;
+    };
+  }
+  const renew = (window.__luveTurnstileRenew = (form) => {
     if (!window.turnstile || !$) return;
     const input = form.querySelector('input[name="cf-turnstile-response"]');
     const box = input && input.parentElement;
@@ -8367,13 +8412,13 @@ initPopupHoverReveal({
     try {
       window.turnstile.reset(box);
     } catch (e) {}
-  };
+  });
   document.querySelectorAll(".w-form").forEach((block) => {
     const form = block.querySelector("form");
     if (!form || !form.getAttribute("data-turnstile-sitekey") || block.dataset.ctTsWatch) return;
     block.dataset.ctTsWatch = "1";
     [".w-form-done", ".w-form-fail"].forEach((sel) => {
-      const msg = block.querySelector(":scope > " + sel);
+      const msg = block.querySelector(sel);
       if (!msg) return;
       let shown = false;
       new MutationObserver(() => {
@@ -8466,7 +8511,7 @@ initPopupHoverReveal({
     root.dataset.ctPanel = "1";
 
     // (3) step 04 title (the component script names it on start)
-    const STEP4 = "One last thing (optional)";
+    const STEP4 = "One last thing... (optional)";
     const title = () => {
       const t = root.querySelector('[data-enq-step="source"] .enq-step-title');
       if (t && t.textContent !== STEP4) t.textContent = STEP4;
