@@ -7876,6 +7876,24 @@ initPopupHoverReveal({
     "color:" + DARK + "!important;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif!important;font-size:13px!important;font-weight:500!important;line-height:1.4!important}" +
     IN(".w-form-fail *") + "{font:inherit!important;color:inherit!important}" +
     ".ct-done-back{display:none;position:absolute;left:0;bottom:8px}" +
+    // New Client success = the GET IN TOUCH panel's success (same classes;
+    // these are the panel's own rules, which live in its embed)
+    "html body .contact-body-form .w-form-done.ct-enq-done{text-align:left!important;align-items:stretch!important;justify-content:flex-start!important;padding:2px 0 4px!important}" +
+    "html body .contact-body-form .w-form-done.ct-enq-done .reload-form-btn{display:none!important}" +
+    "html body .contact-body-form .w-form-done.ct-enq-done .ct-done-back{position:static!important;margin-top:16px}" +
+    "html body .contact-body-form .w-form-done.ct-enq-done .enq-success-inner{display:flex;width:100%;max-width:680px;flex-direction:column;align-items:flex-start;text-align:left!important}" +
+    "html body .contact-body-form .w-form-done.ct-enq-done .enq-success-kicker{order:1;display:block;width:min(100%,560px);margin:0;color:" + DARK + ";font:700 16px/1.18 'Helvetica Neue',Arial,sans-serif;letter-spacing:normal;text-transform:uppercase}" +
+    "html body .contact-body-form .w-form-done.ct-enq-done .enq-success-copy{order:2;width:min(100%,560px);max-width:none;height:auto!important;margin:18px 0 0;color:" + DARK + ";font:400 16px/1.18 'Helvetica Neue',Arial,sans-serif;line-height:1.3!important;text-align:left!important}" +
+    "html body .contact-body-form .w-form-done.ct-enq-done .enq-success-subtitle-heading{height:auto!important}" +
+    "html body .contact-body-form .w-form-done.ct-enq-done .enq-success-actions{order:4;display:flex;flex-wrap:wrap;gap:12px;margin-top:34px}" +
+    "html body .contact-body-form .w-form-done.ct-enq-done .enq-success-actions>a{position:relative;display:inline-flex;align-items:center;justify-content:center;min-height:42px;padding:12px 32px;border:1px solid " + DARK + ";border-radius:999px;background:" + DARK + ";color:" + LIGHT + ";overflow:hidden;text-decoration:none;font:500 var(--text-small--font-size,14px)/1.2 'Helvetica Neue',Arial,sans-serif;letter-spacing:var(--text-small--letter-spacing,1px);text-transform:uppercase;cursor:pointer!important}" +
+    "html body .contact-body-form .w-form-done.ct-enq-done .enq-success-actions>a[data-enq-success-variant='secondary']{background:" + LIGHT + ";color:" + DARK + "}" +
+    "html body .contact-body-form .w-form-done.ct-enq-done .enq-success-actions>a *{cursor:pointer!important}" +
+    "html body .contact-body-form .w-form-done.ct-enq-done .enq-success-actions>.enq-success-restart{flex:0 0 100%;width:100%}" +
+    "@media (min-width:768px){html body .contact-body-form .w-form-done.ct-enq-done .enq-success-actions{display:grid!important;grid-template-columns:max-content max-content!important;justify-content:start!important;align-items:center!important;gap:12px!important}html body .contact-body-form .w-form-done.ct-enq-done .enq-success-actions>.enq-success-restart{grid-column:1/-1!important;flex:0 0 auto!important;width:100%!important;max-width:none!important;justify-self:stretch!important}}" +
+    "@media (max-width:767px){html body .contact-body-form .w-form-done.ct-enq-done .enq-success-actions>.enq-success-restart{flex:0 0 100%!important;width:100%!important}}" +
+    "@media (max-width:479px){html body .contact-body-form .w-form-done.ct-enq-done .enq-success-actions{width:100%;flex-direction:column;flex-wrap:nowrap!important;margin-top:18px!important}html body .contact-body-form .w-form-done.ct-enq-done .enq-success-actions>a{width:100%;box-sizing:border-box}html body .contact-body-form .w-form-done.ct-enq-done .enq-success-subtitle-heading.is-image-title{font-size:clamp(20px,5.8vw,23px)!important;line-height:1.18!important;white-space:nowrap!important;overflow:visible!important}}" +
+    ".ct-done-icon{flex:0 0 auto!important;aspect-ratio:1/1!important}" +
     ".ct-success .form-intromessage,.ct-success .careers-form-intro-wrapper,.ct-success .careers-form-intro,.ct-success .ct-step-head{display:none!important}" +
     ".ct-later .form-intromessage,.ct-later .careers-form-intro-wrapper,.ct-later .careers-form-intro{display:none!important}" +
     IN(".form-description-text") + "," + IN(".careers-form-slogan") + "," + IN(".careers-form-intro") + "{margin:0!important}" +
@@ -7953,7 +7971,7 @@ initPopupHoverReveal({
   const ctaMotion = (btn, kind) => {
     if (btn.dataset.ctMotion) return;
     btn.dataset.ctMotion = "1";
-    let text = btn.querySelector(".ct-btn-text");
+    let text = btn.querySelector(".ct-btn-text") || btn.querySelector(":scope > span:not(.btn-arrow)");
     if (!text) {
       text = el("span", "ct-btn-text");
       while (btn.firstChild) text.appendChild(btn.firstChild);
@@ -7966,7 +7984,7 @@ initPopupHoverReveal({
       btn.appendChild(dot);
     }
     const primary = kind === "primary";
-    const baseBg = primary ? DARK : "rgba(121,94,73,0)";
+    const baseBg = primary ? DARK : kind === "secondary" ? LIGHT : "rgba(121,94,73,0)";
     const baseTx = primary ? LIGHT : DARK;
     const hoverBg = primary ? LIGHT : DARK;
     const hoverTx = primary ? DARK : LIGHT;
@@ -8287,14 +8305,27 @@ initPopupHoverReveal({
     const fail = block.querySelector(".w-form-fail");
     if (fail && fail.parentElement !== form) form.insertBefore(fail, nav);
     const again = done && done.querySelector(".reload-form-btn");
+    const enqDone = done && done.querySelector(".enq-success-inner");
+    if (enqDone) {
+      done.classList.add("ct-enq-done");
+      enqDone.querySelectorAll(".enq-success-actions > a").forEach((a) =>
+        ctaMotion(a, a.dataset.enqSuccessVariant === "secondary" ? "secondary" : "primary")
+      );
+      const restart = enqDone.querySelector("[data-ct-restart]");
+      if (restart)
+        restart.addEventListener("click", (e) => {
+          e.preventDefault();
+          if (again) again.click();
+        });
+    }
     if (done) {
       let d = done.querySelector(".ct-done");
-      if (!d) {
+      if (!d && !enqDone) {
         d = el("div", "ct-done", '<div class="ct-done-icon"></div><div class="ct-done-title">Thank you</div><p class="ct-done-text"></p>');
         d.querySelector(".ct-done-text").textContent = cfg.done;
         done.insertBefore(d, done.firstChild);
       }
-      const icon = d.querySelector(".ct-done-icon");
+      const icon = d && d.querySelector(".ct-done-icon");
       if (icon && !icon.querySelector("svg")) icon.innerHTML = CHECK;
       // phones: return arrow back to the 4 form names (the form resets behind it)
       if (!done.querySelector(".ct-done-back")) {
@@ -8322,7 +8353,7 @@ initPopupHoverReveal({
           gsap.set(form, { clearProps: "opacity,visibility" });
         });
         tl.fromTo(
-          done.querySelectorAll(".ct-done > *, .reload-form-btn, .ct-done-back"),
+          done.querySelectorAll(enqDone ? ".enq-success-inner > *, .ct-done-back" : ".ct-done > *, .reload-form-btn, .ct-done-back"),
           { autoAlpha: 0, y: 12 },
           { autoAlpha: 1, y: 0, duration: 0.7, ease: "power3.out", stagger: 0.08 }
         );
