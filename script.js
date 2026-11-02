@@ -8553,7 +8553,7 @@ initPopupHoverReveal({
       // phones only (the computer layout stays as it was)
       "@media (max-width:767px){" +
       // "Please select an option" beside the last choice / under the choices
-      "html body [data-enq-form] .select-field-error-msg.ct-choice-error{position:absolute!important;right:auto!important;bottom:auto!important;display:flex!important;align-items:center;justify-content:flex-start;margin:0!important;padding:0 2px!important;text-align:left!important;white-space:normal!important;line-height:1.3!important;transform:none!important}" +
+      "html body [data-enq-form] .select-field-error-msg.ct-choice-error{position:absolute!important;right:auto!important;bottom:auto!important;display:flex!important;align-items:center;justify-content:flex-end;margin:0!important;padding:0!important;text-align:right!important;white-space:normal!important;line-height:1.3!important;transform:none!important}" +
       // steps 02–04: only the first intro line; every step's title at the same place
       "html body [data-enq-root]:not([data-enq-index='0']) .enq-intro{min-height:0!important;height:auto!important}" +
       "html body [data-enq-root]:not([data-enq-index='0']) .enq-intro .enq-intro-line-mask:not(:first-child){display:none!important}" +
@@ -8562,12 +8562,16 @@ initPopupHoverReveal({
       "html body [data-enq-root] [data-enq-step] div>label:has(>input[type='radio']){margin-bottom:0!important}" +
       // privacy note close to the last question
       "html body [data-enq-root] .enq-privacy-note{margin-top:14px!important}" +
-      // only if a step still does not fit above BACK / NEXT
-      "html body [data-enq-root].ct-fit1 [data-enq-form]>div:first-child{padding-top:16px!important}" +
+      // only if a step still does not fit above BACK / NEXT: first the space
+      // inside the questions, then the intro, last the space above the title
+      "html body [data-enq-root].ct-fit1 [data-enq-step] label>.enq-input,html body [data-enq-root].ct-fit1 [data-enq-step] label>textarea{margin-bottom:0!important}" +
+      "html body [data-enq-root].ct-fit1 [data-enq-step]>div>label{margin-bottom:0!important}" +
       "html body [data-enq-root].ct-fit1 .enq-privacy-note{margin-top:10px!important}" +
       "html body [data-enq-root].ct-fit2 .enq-intro{margin-top:8px!important}" +
       "html body [data-enq-root].ct-fit2 .enq-intro .enq-intro-line-mask{margin-top:4px!important}" +
-      "html body [data-enq-root].ct-fit2 [data-enq-form]>div:first-child{padding-top:10px!important}" +
+      "html body [data-enq-root].ct-fit2 [data-enq-form]>div:first-child{padding-top:28px!important}" +
+      "html body [data-enq-root].ct-fit2:not([data-enq-index='0']) [data-enq-form]>div:first-child{padding-top:22px!important}" +
+      "html body [data-enq-root].ct-fit3 [data-enq-form]>div:first-child{padding-top:16px!important}" +
       "}" +
       // logo loader in SUBMIT FORM
       "[data-enq-form] [type='submit']{position:relative}" +
@@ -8674,13 +8678,58 @@ initPopupHoverReveal({
       }).observe(sub, { attributes: true, attributeFilter: ["data-enq-submitting"] });
     }
 
+    // (11) phones: a calmer step change (BACK / NEXT). The panel fades the
+    //      old step out in .16s and the new one in .28s on phones; stretch
+    //      those two fades only, with a softer ease.
+    if (window.gsap && !gsap.__luveEnqSlow) {
+      gsap.__luveEnqSlow = true;
+      const to = gsap.to.bind(gsap);
+      const isStep = (t) => {
+        const list = Array.isArray(t) ? t : [t];
+        return list.some((x) => x && x.nodeType === 1 && x.matches && x.matches("[data-enq-step]"));
+      };
+      gsap.to = function (targets, vars) {
+        if (vars && typeof vars === "object" && !Array.isArray(vars) && isStep(targets)) {
+          if (vars.duration === 0.16) vars = Object.assign({}, vars, { duration: 0.32, ease: "power2.inOut" });
+          else if (vars.duration === 0.28) vars = Object.assign({}, vars, { duration: 0.6, ease: "power3.out" });
+        }
+        return to.apply(gsap, arguments.length > 2 ? [targets, vars].concat([].slice.call(arguments, 2)) : [targets, vars]);
+      };
+    }
+
+    // (10) phones: the Email field selects / highlights like Name and Phone.
+    //      iPhone treats type="email" fields differently (no select-all /
+    //      long-press highlight); a text field with the email keyboard
+    //      behaves normally. The email check stays the same.
+    const touch = window.matchMedia("(hover: none), (max-width: 991px)").matches;
+    const email = form.querySelector('input[type="email"]');
+    if (touch && email) {
+      email.type = "text";
+      email.setAttribute("inputmode", "email");
+      email.setAttribute("autocapitalize", "off");
+      email.setAttribute("autocorrect", "off");
+      email.setAttribute("spellcheck", "false");
+      email.setAttribute("pattern", "[^\\s@]+@[^\\s@]+\\.[^\\s@]+");
+      // same wording as before when the address is not valid
+      const fixMsg = () => {
+        const g = email.closest("label") || email.parentElement;
+        const m = g && g.querySelector(".field-error-msg");
+        if (m && email.value.trim() && email.validity.patternMismatch && m.textContent !== "*Invalid email address")
+          m.textContent = "*Invalid email address";
+      };
+      form.addEventListener("click", (e) => {
+        if (e.target.closest && e.target.closest('[data-enq-action="next"], [type="submit"]')) [20, 120].forEach((t) => setTimeout(fixMsg, t));
+      }, true);
+      email.addEventListener("blur", () => setTimeout(fixMsg, 20));
+    }
+
     // (8) phones: every step fits above the buttons — the privacy note sits
     //     just under the last question and is never covered by BACK / NEXT.
     //     Spacing tightens only as much as that step needs (Others field and
     //     error messages included).
     const panel = root.querySelector("[data-enq-panel]");
     const mqPhone = window.matchMedia("(max-width: 767px)");
-    const FITS = ["ct-fit1", "ct-fit2"];
+    const FITS = ["ct-fit1", "ct-fit2", "ct-fit3"];
     let fitting = false;
     const fit = () => {
       if (fitting) return;
