@@ -7860,7 +7860,7 @@ initPopupHoverReveal({
     // privacy note: the same as in the GET IN TOUCH panel
     IN(".enq-privacy-note") + "{margin:0!important;font-size:12px!important;line-height:1.45!important;opacity:.7}" +
     IN(".enq-privacy-note a") + "{color:inherit}" +
-    ".ct-success .ct-nav,.ct-success>.ct-nav{display:none!important}" +
+    "html body .contact-body-form .ct-success .ct-nav{display:none!important}" +
     IN(".careers-thanks") + "{margin:0!important}" +
     // ---------- New Client choice chips (text style: .nc-choice-text) ----------
     ".nc-choice-group{border:0;margin:0!important}" +
