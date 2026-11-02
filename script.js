@@ -7895,6 +7895,9 @@ initPopupHoverReveal({
     ".ct-steps .ct-nav{margin-top:auto;padding-top:6px}" +
     ".ct-steps.ct-last .ct-nav{margin-top:4px}" +
     ".ct-failed .w-embed,.ct-failed .nc-privacy{display:none!important}" +
+    // the site gives every paragraph height:50%, which stretched the privacy
+    // note on the last step and pushed BACK / SUBMIT down
+    IN("form p") + "{height:auto!important}" +
     "html body .contact-body-form .careers-form-intro-wrapper{display:flex;justify-content:space-between;align-items:baseline}" +
     ".ct-steps .ct-step-head{margin:2px 0 4px}" +
     ".ct-steps.ct-s1 .ct-nav .ct-arrow{display:inline-flex!important}" +
