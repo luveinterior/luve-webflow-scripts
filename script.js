@@ -7863,7 +7863,7 @@ initPopupHoverReveal({
     ".btn-wrapper.is-contact{position:relative}" +
     ".btn-wrapper.is-contact .ct-loader{position:absolute;left:50%;top:50%;height:17px;width:auto;color:" + LIGHT + ";transform:translate(-50%,-57%);opacity:0;pointer-events:none;transition:opacity .3s " + EASE + "}" +
     ".btn-wrapper.is-contact.ct-loading{pointer-events:none}" +
-    ".btn-wrapper.is-contact .btn-text,.btn-wrapper.is-contact .btn-arrow{transition:opacity .25s " + EASE + "}" +
+    ".btn-wrapper.is-contact .btn-text{transition:opacity .25s " + EASE + "}" +
     ".btn-wrapper.is-contact.ct-loading .btn-text,.btn-wrapper.is-contact.ct-loading .btn-arrow{opacity:0!important}" +
     ".btn-wrapper.is-contact.ct-loading .ct-loader{opacity:1}" +
     ".ct-loader path{animation:ct-logo 1.2s ease-in-out infinite;opacity:.25}" +
@@ -7899,6 +7899,21 @@ initPopupHoverReveal({
     ".ct-steps.ct-s1 .ct-nav .is-next{margin-left:auto}" +
     ".ct-done-back{display:inline-flex!important}" +
     ".ct-nav .btn-wrapper.is-contact .btn-text{font-size:12px!important}" +
+    // auto-fit: only when a step would not fit, spacing tightens (then a bit more)
+    ".ct-tight .form-intromessage,.ct-tight .careers-form-intro-wrapper{margin-bottom:4px!important}" +
+    ".ct-tight form{row-gap:9px!important;gap:9px!important}" +
+    ".ct-tight .ct-card-title{margin-bottom:6px!important}" +
+    ".ct-tight .input-group .form-input,.ct-tight .form-select{height:50px!important;min-height:50px!important;padding-top:17px!important}" +
+    ".ct-tight .input-group .floating-label{top:25px!important}" +
+    ".ct-tight .input-group .form-input:focus+.floating-label,.ct-tight .input-group .form-input:not(:placeholder-shown)+.floating-label{top:6px!important}" +
+    ".ct-tight .input-group textarea.form-input{height:88px!important;min-height:88px!important}" +
+    ".ct-tight .input-group.is-plain .form-input{padding-top:12px!important}" +
+    ".ct-tight .nc-chips .w-form-label{min-height:42px}" +
+    ".ct-tighter .ct-card-title{display:none!important}" +
+    ".ct-tighter .form-description-text,.ct-tighter .careers-form-slogan,.ct-tighter .careers-form-intro{line-height:1.3!important}" +
+    ".ct-tighter form{row-gap:7px!important;gap:7px!important}" +
+    ".ct-tighter .nc-chips{row-gap:6px!important;column-gap:6px!important}" +
+    ".ct-tighter .nc-chips .w-form-label{min-height:40px;padding:6px}" +
     "}" +
     // ---------- desktop ----------
     "@media (min-width:992px){" +
@@ -8026,6 +8041,7 @@ initPopupHoverReveal({
 
   // ---- every form: steps, nav, loader, success ----
   const steppers = [];
+  const fits = [];
   FORMS.forEach((cfg) => {
     const card = document.querySelector(cfg.sel);
     const form = card && card.querySelector(".w-form:not(.new-client-form-block) form");
@@ -8097,6 +8113,20 @@ initPopupHoverReveal({
       }
     }).observe(form, { childList: true });
 
+    // phones: if this step is taller than the card, tighten the spacing just
+    // enough so it fits without scrolling (nothing changes when it fits)
+    const fit = () => {
+      card.classList.remove("ct-tight", "ct-tighter");
+      if (!mq.matches || !card.offsetParent) return;
+      const over = () => card.scrollHeight - card.clientHeight > 1;
+      if (!over()) return;
+      card.classList.add("ct-tight");
+      if (over()) card.classList.add("ct-tighter");
+    };
+    window.addEventListener("resize", () => setTimeout(fit, 150));
+    form.addEventListener("change", () => setTimeout(fit, 30));
+    fits.push(fit);
+
     let step = 1;
     const show = (n, animate) => {
       const apply = () => {
@@ -8110,6 +8140,7 @@ initPopupHoverReveal({
         if (hCount) hCount.textContent = pad(n) + "/" + pad(LAST);
         if (hFill) hFill.style.width = (n / LAST) * 100 + "%";
         card.scrollTop = 0;
+        fit();
       };
       if (!animate) return apply();
       if (form.dataset.ctMoving) return;
@@ -8309,6 +8340,8 @@ initPopupHoverReveal({
     steppers.forEach((s) => {
       if (s.card === card) s.reset();
     });
+    // the card is only laid out once it is on screen: check the fit then
+    [80, 400, 900].forEach((t) => setTimeout(() => fits.forEach((f) => f()), t));
   };
 })();
 
@@ -8393,7 +8426,8 @@ initPopupHoverReveal({
       // touch screens: a tap must not leave the old beige hover colour behind
       all(":hover") + "{background-color:" + DARK + "!important}" +
       // pointer over the whole button / choice, text included
-      "html body [data-enq-panel] [data-enq-cta],html body [data-enq-panel] [data-enq-cta] *,html body [data-enq-panel] label:has(input[type='radio']),html body [data-enq-panel] label:has(input[type='radio']) *{cursor:pointer!important}" +
+      ["[data-enq-cta]", "[data-enq-cta] *", "label:has(input[type='radio'])", "label:has(input[type='radio']) *"]
+        .map((x) => "html body [data-enq-modal][aria-hidden] [data-enq-panel] " + x + ",html body [data-enq-root] [data-enq-panel] " + x).join(",") + "{cursor:pointer!important}" +
       // Others detail: fades / folds in only when Others is chosen
       "html body [data-enq-other-wrap].ct-other{display:grid!important;overflow:hidden;max-height:240px;opacity:1;transform:none;" +
       "transition:max-height .5s cubic-bezier(.65,0,.35,1),opacity .4s cubic-bezier(.65,0,.35,1),transform .5s cubic-bezier(.65,0,.35,1),margin-top .5s cubic-bezier(.65,0,.35,1)}" +
@@ -8418,7 +8452,10 @@ initPopupHoverReveal({
       "html.ct-enq-cursor body .cursor{opacity:1!important;visibility:visible!important}" +
       "}" +
       // desktop: privacy note beside the buttons, tops aligned
-      "@media (min-width:992px){html body [data-enq-form]>div:last-child.ct-has-note{align-items:flex-start!important}" +
+      "@media (min-width:992px){html body [data-enq-root][data-enq-index] [data-enq-form]>div:last-child.ct-has-note,html body [data-enq-form]>div:last-child.ct-has-note{" +
+      "position:sticky!important;top:auto!important;right:auto!important;bottom:0!important;left:auto!important;width:100%!important;" +
+      "justify-content:flex-end!important;align-items:flex-start!important;margin:24px 0 0!important;padding:16px 0 max(22px,env(safe-area-inset-bottom))!important;" +
+      "background:linear-gradient(to bottom,rgba(240,232,221,0),var(--light,#f0e8dd) 20%,var(--light,#f0e8dd) 100%)!important}" +
       "html body [data-enq-form]>div:last-child>.enq-privacy-note{margin:0 auto 0 0!important;max-width:300px;padding-right:16px;align-self:flex-start}}";
     document.head.appendChild(css);
   }
