@@ -8553,7 +8553,7 @@ initPopupHoverReveal({
       // phones only (the computer layout stays as it was)
       "@media (max-width:767px){" +
       // "Please select an option" beside the last choice / under the choices
-      "html body [data-enq-form] .select-field-error-msg.ct-choice-error{position:absolute!important;right:auto!important;bottom:auto!important;display:flex!important;align-items:center;justify-content:flex-end;margin:0!important;padding:0!important;text-align:right!important;white-space:normal!important;line-height:1.3!important;transform:none!important}" +
+      "html body [data-enq-form] .select-field-error-msg.ct-choice-error{position:absolute!important;right:auto!important;bottom:auto!important;display:flex!important;max-width:none!important;align-items:center;justify-content:flex-end;margin:0!important;padding:0!important;text-align:right!important;white-space:normal!important;line-height:1.3!important;transform:none!important}" +
       // steps 02–04: only the first intro line; every step's title at the same place
       "html body [data-enq-root]:not([data-enq-index='0']) .enq-intro{min-height:0!important;height:auto!important}" +
       "html body [data-enq-root]:not([data-enq-index='0']) .enq-intro .enq-intro-line-mask:not(:first-child){display:none!important}" +
@@ -8773,7 +8773,7 @@ initPopupHoverReveal({
         if (!mqPhone.matches) {
           if (msg.classList.contains("ct-choice-error")) {
             msg.classList.remove("ct-choice-error");
-            ["top", "left", "width", "height"].forEach((k) => msg.style.removeProperty(k));
+            ["top", "left", "right", "width", "height"].forEach((k) => msg.style.removeProperty(k));
             if (group) group.style.removeProperty("padding-bottom");
           }
           return;
@@ -8791,13 +8791,15 @@ initPopupHoverReveal({
         if (room >= 90) {
           put(msg, "top", Math.round(last.top - g.top) + "px");
           put(msg, "left", Math.round(last.right + gap - g.left) + "px");
-          put(msg, "width", Math.floor(room) + "px");
+          put(msg, "right", "0px");
+          put(msg, "width", "auto");
           put(msg, "height", Math.round(last.height) + "px");
           if (group.style.paddingBottom) group.style.removeProperty("padding-bottom");
         } else {
           put(msg, "top", Math.round(gr.bottom - g.top + 6) + "px");
           put(msg, "left", "0px");
-          put(msg, "width", Math.round(gr.width) + "px");
+          put(msg, "right", "0px");
+          put(msg, "width", "auto");
           put(msg, "height", "auto");
           if (group.style.paddingBottom !== "22px") group.style.setProperty("padding-bottom", "22px");
         }
