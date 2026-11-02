@@ -8676,17 +8676,24 @@ initPopupHoverReveal({
     const panel = root.querySelector("[data-enq-panel]");
     const mqPhone = window.matchMedia("(max-width: 767px)");
     const FITS = ["ct-fit1", "ct-fit2", "ct-fit3"];
+    let fitting = false;
     const fit = () => {
+      if (fitting) return;
+      fitting = true;
+      const before = FITS.filter((c) => root.classList.contains(c)).join(" ");
       root.classList.remove(...FITS);
-      if (!panel || !mqPhone.matches || !panel.getClientRects().length) return;
-      const over = () => panel.scrollHeight - panel.clientHeight > 1;
-      for (const c of FITS) {
-        if (!over()) break;
-        root.classList.add(c);
+      if (panel && mqPhone.matches && panel.getClientRects().length) {
+        const over = () => panel.scrollHeight - panel.clientHeight > 1;
+        for (const c of FITS) {
+          if (!over()) break;
+          root.classList.add(c);
+        }
       }
+      fitting = false;
+      return before;
     };
     const fitSoon = () => [40, 350, 800].forEach((t) => setTimeout(fit, t));
-    new MutationObserver(fitSoon).observe(root, { attributes: true, attributeFilter: ["data-enq-index", "aria-hidden", "class"] });
+    new MutationObserver(fitSoon).observe(root, { attributes: true, attributeFilter: ["data-enq-index", "aria-hidden"] });
     const modal = root.closest("[data-enq-modal]");
     if (modal) new MutationObserver(fitSoon).observe(modal, { attributes: true, attributeFilter: ["aria-hidden"] });
     form.addEventListener("change", fitSoon);
@@ -8731,11 +8738,11 @@ initPopupHoverReveal({
         }
       });
     };
-    let placing = 0;
-    new MutationObserver(() => {
-      cancelAnimationFrame(placing);
-      placing = requestAnimationFrame(placeChoiceErrors);
-    }).observe(form, { childList: true, subtree: true, attributes: true, attributeFilter: ["style", "class"] });
+    const placeSoon = () => [30, 120, 450].forEach((t) => setTimeout(placeChoiceErrors, t));
+    form.addEventListener("click", (e) => {
+      if (e.target.closest && e.target.closest('[data-enq-action="next"], [type="submit"]')) placeSoon();
+    });
+    form.addEventListener("change", placeSoon);
     window.addEventListener("resize", () => setTimeout(placeChoiceErrors, 150));
   });
 
