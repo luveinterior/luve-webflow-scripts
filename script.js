@@ -7932,7 +7932,7 @@ initPopupHoverReveal({
     "@media (max-width:991px){html body .contact-body-form .w-form-done.ct-enq-done{position:static!important}html body .contact-body-form .w-form-done.ct-enq-done .enq-success-img-wrap.is-success-media{height:clamp(150px,24svh,210px)!important;min-height:0!important;aspect-ratio:auto!important}html body .contact-body-form .w-form-done.ct-enq-done .enq-success-img-wrap.is-success-media img{width:100%!important;height:100%!important;object-fit:cover!important}html body .contact-body-form .w-form-done.ct-enq-done .enq-success-copy{font-size:14px!important}html body .contact-body-form .w-form-done.ct-enq-done .ct-done-back{position:absolute!important;top:14px;right:14px;left:auto!important;bottom:auto!important;margin:0!important}}" +
     ".ct-done-icon{flex:0 0 auto!important;aspect-ratio:1/1!important}" +
     ".ct-success .form-intromessage,.ct-success .careers-form-intro-wrapper,.ct-success .careers-form-intro,.ct-success .ct-step-head{display:none!important}" +
-    ".ct-later .form-intromessage,.ct-later .careers-form-intro-wrapper,.ct-later .careers-form-intro{display:none!important}" +
+    "@media (max-width:991px){.ct-later .form-intromessage,.ct-later .careers-form-intro-wrapper,.ct-later .careers-form-intro{display:none!important}}" +
     IN(".form-description-text") + "," + IN(".careers-form-slogan") + "," + IN(".careers-form-intro") + "{margin:0!important}" +
     "html body .contact-body-form .form-close-btn{display:none!important}" +
     // ---------- phones / tablets: card centred, a steady height ----------
@@ -8211,6 +8211,32 @@ initPopupHoverReveal({
       if (!animate) return apply();
       if (form.dataset.ctMoving) return;
       form.dataset.ctMoving = "1";
+      if (!mq.matches) {
+        // computers: the intro, step title and progress bar stay put; only
+        // the questions and buttons change (the title words cross-fade)
+        const parts = () =>
+          [...form.children]
+            .filter((c) => c.matches("[data-ct-step], .ct-nav") && getComputedStyle(c).display !== "none")
+            .concat([hTitle, hCount].filter(Boolean));
+        const out = parts();
+        gsap.killTweensOf(out);
+        gsap.to(out, {
+          autoAlpha: 0,
+          duration: 0.26,
+          ease: "power2.inOut",
+          onComplete: () => {
+            apply();
+            gsap.set(out, { clearProps: "opacity,visibility" });
+            const inn = parts();
+            gsap.fromTo(inn, { autoAlpha: 0, y: 6 }, {
+              autoAlpha: 1, y: 0, duration: 0.5, ease: "power2.out",
+              clearProps: "transform,opacity,visibility",
+              onComplete: () => delete form.dataset.ctMoving,
+            });
+          },
+        });
+        return;
+      }
       gsap.killTweensOf(form);
       gsap.to(form, {
         autoAlpha: 0,
@@ -8573,6 +8599,7 @@ initPopupHoverReveal({
       "html body [data-enq-root].ct-fit2:not([data-enq-index='0']) [data-enq-form]>div:first-child{padding-top:22px!important}" +
       "html body [data-enq-root].ct-fit3 [data-enq-form]>div:first-child{padding-top:16px!important}" +
       "}" +
+      "html body .enq-privacy-note a.hover-line-effect::after{height:1px!important}" +
       // logo loader in SUBMIT FORM
       "[data-enq-form] [type='submit']{position:relative}" +
       "[data-enq-form] [type='submit'] .ct-loader{position:absolute;left:50%;top:50%;height:17px;width:auto;color:" + LIGHT + ";transform:translate(-50%,-57%);opacity:0;pointer-events:none;z-index:3;transition:opacity .3s ease}" +
@@ -8590,7 +8617,7 @@ initPopupHoverReveal({
       all(":hover") + "," + all(":focus-visible") + "{background-color:" + LIGHT + "!important}" +
       all(":hover [data-enq-cta-text]") + "," + all(":focus-visible [data-enq-cta-text]") + "{color:" + DARK + "!important}" +
       all(":hover .btn-arrow") + "{background-color:" + DARK + "!important;border-color:" + DARK + "!important}" +
-      "html.ct-enq-cursor body .cursor{opacity:1!important;visibility:visible!important}" +
+      "html.ct-enq-cursor:has([data-enq-modal][aria-hidden]) body .cursor,html.ct-enq-cursor body .cursor{opacity:1!important;visibility:visible!important}" +
       "}" +
       // desktop: privacy note beside the buttons, tops aligned
       "@media (min-width:992px){html body [data-enq-root][data-enq-index] [data-enq-form]>div:last-child.ct-has-note,html body [data-enq-form]>div:last-child.ct-has-note{" +
@@ -8649,6 +8676,46 @@ initPopupHoverReveal({
       }).observe(wrap, { attributes: true, attributeFilter: ["hidden"] });
       setTimeout(sync, 300);
     }
+
+    // (12) privacy note: no full stop after "Privacy Policy"; the link has
+    //      the site's underline that sweeps in on hover (none at rest)
+    const tidyNote = () => {
+      const note = root.querySelector(".enq-privacy-note");
+      const a = note && note.querySelector("a");
+      if (!a) return;
+      // first words after the link (the note may be split into lines)
+      const walk = document.createTreeWalker(note, NodeFilter.SHOW_TEXT);
+      let n;
+      let past = false;
+      while ((n = walk.nextNode())) {
+        if (a.contains(n)) {
+          past = true;
+          continue;
+        }
+        if (past && n.textContent.trim()) {
+          if (/^\s*\./.test(n.textContent)) n.textContent = n.textContent.replace(/^(\s*)\./, "$1");
+          break;
+        }
+      }
+      if (a.dataset.ctSweep) return;
+      a.dataset.ctSweep = "1";
+      a.classList.add("hover-line-effect");
+      a.style.setProperty("text-decoration", "none", "important");
+      a.style.setProperty("--hover-underline-color", DARK);
+      a.style.setProperty("--underline-offset", "-1px");
+      if (!window.gsap) return;
+      gsap.set(a, { "--line-width": "0%", "--line-left": "0", "--line-right": "auto" });
+      a.addEventListener("mouseenter", () => {
+        gsap.set(a, { "--line-left": "0", "--line-right": "auto" });
+        gsap.to(a, { "--line-width": "100%", duration: 0.6, ease: "expo.out", overwrite: "auto" });
+      });
+      a.addEventListener("mouseleave", () => {
+        gsap.set(a, { "--line-left": "auto", "--line-right": "0" });
+        gsap.to(a, { "--line-width": "0%", duration: 0.6, ease: "expo.out", overwrite: "auto" });
+      });
+    };
+    [0, 600, 1500].forEach((t) => setTimeout(tidyNote, t));
+    new MutationObserver(() => tidyNote()).observe(root, { attributes: true, attributeFilter: ["data-enq-index"] });
 
     // (5) desktop: privacy note beside the buttons
     const mqDesk = window.matchMedia("(min-width: 992px)");
