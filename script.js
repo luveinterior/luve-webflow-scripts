@@ -5441,7 +5441,8 @@ document.addEventListener("DOMContentLoaded", () => {
       if (btn.classList.contains("reload-form-btn")) return;
 
       e.preventDefault();
-      const form = btn.closest("form");
+      const block = btn.closest(".w-form");
+      const form = btn.closest("form") || (block && block.querySelector("form"));
       if (!form) return;
 
       let isFormValid = true;
@@ -7856,8 +7857,10 @@ initPopupHoverReveal({
     IN(".form-select") + "{height:56px!important;padding:0 16px!important;font-size:15px!important}" +
     IN(".w-form") + "{margin:0!important;flex-direction:column!important;align-items:stretch!important}" +
     IN("form") + "{display:flex;flex-direction:column;padding-bottom:0!important;margin:0!important}" +
-    IN(".w-embed p") + "," + IN(".nc-privacy") + "{margin:0!important;font-size:12px!important;line-height:1.45!important;opacity:.7}" +
-    IN(".w-embed a") + "," + IN(".nc-privacy a") + "{color:inherit;text-decoration:underline;text-underline-offset:2px}" +
+    // privacy note: the same as in the GET IN TOUCH panel
+    IN(".enq-privacy-note") + "{margin:0!important;font-size:12px!important;line-height:1.45!important;opacity:.7}" +
+    IN(".enq-privacy-note a") + "{color:inherit}" +
+    ".ct-success .ct-nav,.ct-success>.ct-nav{display:none!important}" +
     IN(".careers-thanks") + "{margin:0!important}" +
     // ---------- New Client choice chips (text style: .nc-choice-text) ----------
     ".nc-choice-group{border:0;margin:0!important}" +
@@ -7949,8 +7952,8 @@ initPopupHoverReveal({
     IN("form") + "{flex:1 1 auto}" +
     IN(".w-form-done") + "{flex:1 1 auto}" +
     ".ct-steps .ct-nav{margin-top:auto;padding-top:6px}" +
-    ".ct-steps.ct-last .ct-nav{margin-top:4px}" +
-    ".ct-failed .w-embed,.ct-failed .nc-privacy{display:none!important}" +
+    ".ct-steps.ct-later .ct-step-head{margin-top:16px!important}" +
+    ".ct-failed .w-embed,.ct-failed .enq-privacy-note{display:none!important}" +
     // the site gives every paragraph height:50%, which stretched the privacy
     // note on the last step and pushed BACK / SUBMIT down
     IN("form p") + "{height:auto!important}" +
@@ -8092,8 +8095,6 @@ initPopupHoverReveal({
       if (g.querySelector("input[required]")) g.classList.add("is-req");
       else g.classList.remove("form-checkbox-group"); // optional: skip the site check
     });
-    const p = form.querySelector("p");
-    if (p && /Privacy Policy/.test(p.textContent)) p.classList.add("nc-privacy");
     const sync = () => {
       const o = form.querySelector('input[type="radio"][value="Others"]');
       form.classList.toggle("nc-has-others", !!(o && o.checked));
@@ -8169,16 +8170,9 @@ initPopupHoverReveal({
       c.setAttribute("data-ct-step", String(Math.min(step, LAST)));
     });
     if (submitBtn) nav.appendChild(submitBtn);
-    // Cloudflare Turnstile adds its box at the end of the form; keep the
-    // buttons last so they stay at the bottom of the card
-    new MutationObserver(() => {
-      const last = form.lastElementChild;
-      if (last && last !== nav && !last.matches("input[type='submit']")) {
-        form.appendChild(nav);
-        const rs = form.querySelector("input[type='submit']");
-        if (rs) form.appendChild(rs);
-      }
-    }).observe(form, { childList: true });
+    // the buttons live outside the form (right after it, at the bottom of the
+    // card): changing the spacing of the questions never moves them
+    if (nav.parentElement === form) form.after(nav);
 
     // phones: if this step is taller than the card, tighten the spacing just
     // enough so it fits without scrolling (nothing changes when it fits)
@@ -8218,8 +8212,8 @@ initPopupHoverReveal({
         // the questions and buttons change (the title words cross-fade)
         const parts = () =>
           [...form.children]
-            .filter((c) => c.matches("[data-ct-step], .ct-nav") && getComputedStyle(c).display !== "none")
-            .concat([hTitle, hCount].filter(Boolean));
+            .filter((c) => c.matches("[data-ct-step]") && getComputedStyle(c).display !== "none")
+            .concat([nav, hTitle, hCount].filter(Boolean));
         const out = parts();
         gsap.killTweensOf(out);
         gsap.to(out, {
@@ -8239,13 +8233,14 @@ initPopupHoverReveal({
         });
         return;
       }
-      gsap.killTweensOf(form);
-      gsap.to(form, {
+      gsap.killTweensOf([form, nav]);
+      gsap.to([form, nav], {
         autoAlpha: 0,
         duration: 0.22,
         ease: "power2.in",
         onComplete: () => {
           apply();
+          gsap.set(nav, { autoAlpha: 1 });
           gsap.fromTo(form, { autoAlpha: 0, y: 6 }, {
             autoAlpha: 1, y: 0, duration: 0.42, ease: "power2.out",
             clearProps: "transform",
@@ -8428,7 +8423,7 @@ initPopupHoverReveal({
     // success screen: Designer element (.ct-done), or a fallback
     const done = block.querySelector(".w-form-done");
     const fail = block.querySelector(".w-form-fail");
-    if (fail && fail.parentElement !== form) form.insertBefore(fail, nav);
+    if (fail && fail.parentElement !== form) form.appendChild(fail);
     const again = done && done.querySelector(".reload-form-btn");
     const enqDone = done && done.querySelector(".enq-success-inner");
     if (enqDone) {
@@ -8468,14 +8463,14 @@ initPopupHoverReveal({
       const wait = Math.max(0, 1100 - (Date.now() - startedAt));
       setTimeout(() => {
         const tl = gsap.timeline();
-        tl.to(form, { autoAlpha: 0, duration: 0.35, ease: "power2.in" });
+        tl.to([form, nav], { autoAlpha: 0, duration: 0.35, ease: "power2.in" });
         tl.add(() => {
           form.style.display = "none";
           card.classList.add("ct-success");
           card.scrollTop = 0;
           done.style.display = "flex";
           loaderOff();
-          gsap.set(form, { clearProps: "opacity,visibility" });
+          gsap.set([form, nav], { clearProps: "opacity,visibility" });
         });
         tl.fromTo(
           done.querySelectorAll(enqDone ? ".enq-success-inner > *, .ct-done-back" : ".ct-done > *, .reload-form-btn, .ct-done-back"),
