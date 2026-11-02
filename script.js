@@ -7892,6 +7892,7 @@ initPopupHoverReveal({
     ".ct-steps .ct-nav .btn-wrapper.is-contact{margin:0!important;display:none!important}" +
     ".ct-steps.ct-last .ct-nav .btn-wrapper.is-contact{display:flex!important}" +
     ".ct-arrow{-webkit-tap-highlight-color:transparent}" +
+    "html body .contact-body-form p a.hover-line-effect::after{height:1px!important}" +
     // ---------- SUBMIT: LUVÉ logo loader inside the pill ----------
     ".btn-wrapper.is-contact{position:relative}" +
     ".btn-wrapper.is-contact .ct-loader{position:absolute;left:50%;top:50%;height:17px;width:auto;color:" + LIGHT + ";transform:translate(-50%,-57%);opacity:0;pointer-events:none;transition:opacity .3s " + EASE + "}" +
@@ -7955,7 +7956,8 @@ initPopupHoverReveal({
     IN("form p") + "{height:auto!important}" +
     "html body .contact-body-form .careers-form-intro-wrapper{display:flex;justify-content:space-between;align-items:baseline}" +
     ".ct-steps .ct-step-head{margin:2px 0 4px}" +
-    ".ct-steps.ct-s1 .ct-nav .ct-arrow{display:inline-flex!important}" +
+    ".ct-steps>.ct-arrow.ct-back-list{display:inline-flex!important;position:absolute!important;top:14px;right:14px;left:auto!important;bottom:auto!important;margin:0!important;z-index:3}" +
+    ".ct-steps.ct-success>.ct-arrow.ct-back-list{display:none!important}" +
     ".ct-steps.ct-s1 .ct-nav .is-next{margin-left:auto}" +
     ".ct-done-back{display:inline-flex!important}" +
     ".ct-nav .btn-wrapper.is-contact .btn-text{font-size:12px!important}" +
@@ -8283,6 +8285,66 @@ initPopupHoverReveal({
         e.preventDefault();
         closeToList();
       });
+    // phones: the back-to-all-forms arrow sits at the card's top right on
+    // every step (beside the form name), not beside NEXT
+    if (arrow && arrow.parentElement !== card) {
+      arrow.classList.add("ct-back-list");
+      card.appendChild(arrow);
+    }
+
+    // privacy note: "See our Privacy Policy" on its own line, no full stop
+    // after it, and the site's underline that sweeps in on hover (as in the
+    // GET IN TOUCH panel)
+    const tidyPrivacy = () => {
+      const note = [...card.querySelectorAll("p")].find((p) => /Privacy Policy/.test(p.textContent));
+      const a = note && note.querySelector("a");
+      if (!a) return;
+      const texts = [];
+      const walk = document.createTreeWalker(note, NodeFilter.SHOW_TEXT);
+      let n;
+      while ((n = walk.nextNode())) texts.push(n);
+      // line break before "See our"
+      if (!note.querySelector("br.ct-see-br")) {
+        const t = texts.find((x) => !a.contains(x) && /See our/.test(x.textContent));
+        if (t) {
+          const i = t.textContent.indexOf("See our");
+          const rest = t.splitText(i);
+          t.textContent = t.textContent.replace(/\s+$/, "");
+          const br = document.createElement("br");
+          br.className = "ct-see-br";
+          rest.parentNode.insertBefore(br, rest);
+        }
+      }
+      // no full stop after the link
+      let past = false;
+      for (const x of texts) {
+        if (a.contains(x)) {
+          past = true;
+          continue;
+        }
+        if (past && x.textContent.trim()) {
+          if (/^\s*\./.test(x.textContent)) x.textContent = x.textContent.replace(/^(\s*)\./, "$1");
+          break;
+        }
+      }
+      if (a.dataset.ctSweep) return;
+      a.dataset.ctSweep = "1";
+      a.classList.add("hover-line-effect");
+      a.style.setProperty("text-decoration", "none", "important");
+      a.style.setProperty("--hover-underline-color", DARK);
+      a.style.setProperty("--underline-offset", "-1px");
+      gsap.set(a, { "--line-width": "0%", "--line-left": "0", "--line-right": "auto" });
+      a.addEventListener("mouseenter", () => {
+        gsap.set(a, { "--line-left": "0", "--line-right": "auto" });
+        gsap.to(a, { "--line-width": "100%", duration: 0.6, ease: "expo.out", overwrite: "auto" });
+      });
+      a.addEventListener("mouseleave", () => {
+        gsap.set(a, { "--line-left": "auto", "--line-right": "0" });
+        gsap.to(a, { "--line-width": "0%", duration: 0.6, ease: "expo.out", overwrite: "auto" });
+      });
+    };
+    tidyPrivacy();
+    [600, 1500].forEach((t) => setTimeout(tidyPrivacy, t));
 
     // ---- SUBMIT: logo loader in the pill, wait for Cloudflare Turnstile ----
     const realSubmit = form.querySelector("input[type='submit']");
