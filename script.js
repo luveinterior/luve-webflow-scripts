@@ -8550,19 +8550,24 @@ initPopupHoverReveal({
       // phones too: Others is a choice like the others (it was hidden on phones)
       "@media (max-width:479px){html body [data-enq-root] [data-enq-step='source'] label:has(input[name='hearAbout'][value='Others']){display:block!important}}" +
       "html body [data-enq-other-wrap].ct-other.ct-other-off{max-height:0;opacity:0;transform:translateY(-6px);margin-top:calc(-1 * var(--ct-gap,21px));pointer-events:none}" +
-      // choice error beside the last choice / under the choices
-      "html body [data-enq-form] .select-field-error-msg.ct-choice-error{position:absolute!important;right:auto!important;bottom:auto!important;display:flex!important;align-items:center;justify-content:flex-start;margin:0!important;padding:0 2px!important;text-align:left!important;white-space:normal!important;line-height:1.3!important;transform:none!important}" +
-      // phones: privacy note close to the last question; tighten per step only when needed
+      // phones only (the computer layout stays as it was)
       "@media (max-width:767px){" +
+      // "Please select an option" beside the last choice / under the choices
+      "html body [data-enq-form] .select-field-error-msg.ct-choice-error{position:absolute!important;right:auto!important;bottom:auto!important;display:flex!important;align-items:center;justify-content:flex-start;margin:0!important;padding:0 2px!important;text-align:left!important;white-space:normal!important;line-height:1.3!important;transform:none!important}" +
+      // steps 02–04: only the first intro line; every step's title at the same place
+      "html body [data-enq-root]:not([data-enq-index='0']) .enq-intro{min-height:0!important;height:auto!important}" +
+      "html body [data-enq-root]:not([data-enq-index='0']) .enq-intro .enq-intro-line-mask:not(:first-child){display:none!important}" +
+      "html body [data-enq-root]:not([data-enq-index='0']) [data-enq-form]>div:first-child{padding-top:30px!important}" +
+      // choices: the same small gap between rows as between columns
+      "html body [data-enq-root] [data-enq-step] div>label:has(>input[type='radio']){margin-bottom:0!important}" +
+      // privacy note close to the last question
       "html body [data-enq-root] .enq-privacy-note{margin-top:14px!important}" +
-      "html body [data-enq-root].ct-fit1 [data-enq-form]>div:first-child{padding-top:18px!important}" +
+      // only if a step still does not fit above BACK / NEXT
+      "html body [data-enq-root].ct-fit1 [data-enq-form]>div:first-child{padding-top:16px!important}" +
       "html body [data-enq-root].ct-fit1 .enq-privacy-note{margin-top:10px!important}" +
-      "html body [data-enq-root].ct-fit2 .enq-intro{margin-top:10px!important}" +
+      "html body [data-enq-root].ct-fit2 .enq-intro{margin-top:8px!important}" +
       "html body [data-enq-root].ct-fit2 .enq-intro .enq-intro-line-mask{margin-top:4px!important}" +
-      "html body [data-enq-root].ct-fit2 [data-enq-step] label:has(input[type='radio']){min-height:0!important;padding-top:10px!important;padding-bottom:10px!important}" +
       "html body [data-enq-root].ct-fit2 [data-enq-form]>div:first-child{padding-top:10px!important}" +
-      "html body [data-enq-root].ct-fit3:not([data-enq-index='0']) .enq-intro{min-height:0!important;height:auto!important}" +
-      "html body [data-enq-root].ct-fit3:not([data-enq-index='0']) .enq-intro .enq-intro-line-mask:not(:first-child){display:none!important}" +
       "}" +
       // logo loader in SUBMIT FORM
       "[data-enq-form] [type='submit']{position:relative}" +
@@ -8675,7 +8680,7 @@ initPopupHoverReveal({
     //     error messages included).
     const panel = root.querySelector("[data-enq-panel]");
     const mqPhone = window.matchMedia("(max-width: 767px)");
-    const FITS = ["ct-fit1", "ct-fit2", "ct-fit3"];
+    const FITS = ["ct-fit1", "ct-fit2"];
     let fitting = false;
     const fit = () => {
       if (fitting) return;
@@ -8697,9 +8702,13 @@ initPopupHoverReveal({
     const modal = root.closest("[data-enq-modal]");
     if (modal) new MutationObserver(fitSoon).observe(modal, { attributes: true, attributeFilter: ["aria-hidden"] });
     form.addEventListener("change", fitSoon);
-    form.addEventListener("click", (e) => {
-      if (e.target.closest && e.target.closest("[data-enq-action]")) fitSoon();
-    });
+    form.addEventListener(
+      "click",
+      (e) => {
+        if (e.target.closest && e.target.closest("[data-enq-action]")) fitSoon();
+      },
+      true
+    );
     window.addEventListener("resize", () => setTimeout(fit, 150));
     fitSoon();
 
@@ -8713,6 +8722,14 @@ initPopupHoverReveal({
     const placeChoiceErrors = () => {
       form.querySelectorAll(".select-field-error-msg").forEach((msg) => {
         const group = msg.parentElement;
+        if (!mqPhone.matches) {
+          if (msg.classList.contains("ct-choice-error")) {
+            msg.classList.remove("ct-choice-error");
+            ["top", "left", "width", "height"].forEach((k) => msg.style.removeProperty(k));
+            if (group) group.style.removeProperty("padding-bottom");
+          }
+          return;
+        }
         if (!group || msg.style.display === "none" || !msg.getClientRects().length) return;
         const grid = [...group.children].find((c) => c !== msg && c.querySelector("input[type='radio'],input[type='checkbox']"));
         const labels = grid ? [...grid.querySelectorAll("label")].filter((l) => l.getClientRects().length) : [];
@@ -8738,11 +8755,31 @@ initPopupHoverReveal({
         }
       });
     };
-    const placeSoon = () => [30, 120, 450].forEach((t) => setTimeout(placeChoiceErrors, t));
-    form.addEventListener("click", (e) => {
-      if (e.target.closest && e.target.closest('[data-enq-action="next"], [type="submit"]')) placeSoon();
-    });
-    form.addEventListener("change", placeSoon);
+    // the message is created / shown by the panel's own check when NEXT is
+    // pressed: watch for it to appear (not every style change in the form)
+    const watched = new WeakSet();
+    const watchMsgs = () => {
+      form.querySelectorAll(".select-field-error-msg").forEach((m) => {
+        if (watched.has(m)) return;
+        watched.add(m);
+        new MutationObserver(() => requestAnimationFrame(placeChoiceErrors)).observe(m, { attributes: true, attributeFilter: ["style"] });
+      });
+      requestAnimationFrame(placeChoiceErrors);
+    };
+    new MutationObserver((list) => {
+      if (list.some((r) => [...r.addedNodes].some((n) => n.nodeType === 1 && (n.matches(".select-field-error-msg") || n.querySelector(".select-field-error-msg")))))
+        watchMsgs();
+    }).observe(form, { childList: true, subtree: true });
+    watchMsgs();
+    form.addEventListener(
+      "click",
+      (e) => {
+        if (e.target.closest && e.target.closest('[data-enq-action="next"], [type="submit"]'))
+          [60, 250, 600].forEach((t) => setTimeout(watchMsgs, t));
+      },
+      true
+    );
+    form.addEventListener("change", () => setTimeout(placeChoiceErrors, 60));
     window.addEventListener("resize", () => setTimeout(placeChoiceErrors, 150));
   });
 
