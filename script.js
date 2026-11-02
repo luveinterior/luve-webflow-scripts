@@ -8352,12 +8352,14 @@ initPopupHoverReveal({
     css.textContent =
       all("") + "{background-color:#795e49!important;border:1px solid #795e49!important;transition:background-color .6s cubic-bezier(.215,.61,.355,1)!important}" +
       all(" [data-enq-cta-text]") + "{transition:color .6s cubic-bezier(.215,.61,.355,1)}" +
+      // touch screens: a tap must not leave the old beige hover colour behind
+      all(":hover") + "{background-color:#795e49!important}" +
       "@media (hover:hover) and (min-width:992px){" +
       all(":hover") + "," + all(":focus-visible") + "{background-color:#f0e8dd!important}" +
       all(":hover [data-enq-cta-text]") + "," + all(":focus-visible [data-enq-cta-text]") + "{color:#795e49!important}" +
       all(":hover .btn-arrow") + "{background-color:#795e49!important;border-color:#795e49!important}" +
       "html body [data-enq-panel] [data-enq-cta],html body [data-enq-panel] [data-enq-cta] *,html body [data-enq-panel] label:has(input[type='radio']),html body [data-enq-panel] label:has(input[type='radio']) *{cursor:none!important}" +
-      "html.ct-enq-cursor .cursor{opacity:1!important;visibility:visible!important}" +
+      "html.ct-enq-cursor body .cursor{opacity:1!important;visibility:visible!important}" +
       "}";
     document.head.appendChild(css);
   }
