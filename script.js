@@ -48,6 +48,7 @@
 // 44. Enquiry Panel — Keep Sticky Hero While Page Is Locked
 // 45. Contact Page — Form Cards, One Step at a Time, Submit Loader + Success
 // 46. Forms — Cloudflare Turnstile Fixes (all pages)
+// 47. GET IN TOUCH Panel — NEXT Colours + Site Cursor
 // 00. Page Transitions (Barba-style) — 喺最頂，包住成個 script（window.__luveRun）
 //
 // =============================================================================
@@ -7812,7 +7813,7 @@ initPopupHoverReveal({
     IN(".form-select-wrapper") + "{margin:0!important}" +
     IN(".form-select") + "{height:56px!important;padding:0 16px!important;font-size:15px!important}" +
     IN(".w-form") + "{margin:0!important}" +
-    IN("form") + "{display:flex;flex-direction:column;gap:12px!important;padding-bottom:0!important;margin:0!important}" +
+    IN("form") + "{display:flex;flex-direction:column;padding-bottom:0!important;margin:0!important}" +
     IN(".w-embed p") + "," + IN(".nc-privacy") + "{margin:0!important;font-size:12px!important;line-height:1.45!important;opacity:.7}" +
     IN(".w-embed a") + "," + IN(".nc-privacy a") + "{color:inherit;text-decoration:underline;text-underline-offset:2px}" +
     IN(".careers-thanks") + "{margin:0!important}" +
@@ -7820,16 +7821,18 @@ initPopupHoverReveal({
     ".nc-choice-group{border:0;margin:0!important}" +
     ".nc-choice-group.is-req .nc-q:after{content:' *'}" +
     ".nc-chips{-webkit-user-select:none;user-select:none}" +
-    ".nc-chips .w-radio{position:relative;display:inline-flex;align-items:center;margin:0!important;padding:0!important;-webkit-user-select:none;user-select:none}" +
-    ".nc-chips .w-radio input{position:absolute!important;opacity:0!important;width:1px!important;height:1px!important;margin:0!important;pointer-events:none}" +
-    ".nc-chips .w-form-label{display:inline-flex;align-items:center;height:40px;padding:0 16px;border-radius:999px;background-color:" + FIELD + ";cursor:pointer;margin:0!important;" +
-    "-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent;transition:background-color .4s " + EASE + ",color .4s " + EASE + "}" +
-    "@media (hover:hover){.nc-chips .w-form-label:hover{background-color:" + FIELD_FOCUS + "}}" +
-    ".nc-chips input:checked+.w-form-label{background-color:" + DARK + ";color:" + LIGHT + "}" +
+    ".nc-chips .w-radio{position:relative;display:block;width:100%;margin:0!important;padding:0!important;-webkit-user-select:none;user-select:none}" +
+    ".nc-chips .w-radio input{position:absolute!important;opacity:.001!important;width:1px!important;height:1px!important;margin:0!important;pointer-events:none}" +
+    ".nc-chips .w-form-label{display:flex;align-items:center;justify-content:center;min-height:62px;padding:13px;box-sizing:border-box;border:1px solid rgba(121,94,73,.4);border-radius:6px;" +
+    "background-color:rgba(121,94,73,.08);margin:0!important;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent;" +
+    "transition:background-color .32s cubic-bezier(.22,1,.36,1),border-color .32s cubic-bezier(.22,1,.36,1),color .32s cubic-bezier(.22,1,.36,1)}" +
+    "@media (hover:hover){.nc-chips input:not(:checked)+.w-form-label:hover{background-color:rgba(121,94,73,.16);border-color:rgba(121,94,73,.62)}}" +
+    ".nc-chips input:checked+.w-form-label{border-color:" + DARK + ";background-color:" + DARK + ";color:" + LIGHT + "}" +
     ".nc-chips input:focus-visible+.w-form-label{outline:2px solid " + DARK + ";outline-offset:2px}" +
+    "@media " + MQ + "{.nc-chips .w-form-label{min-height:clamp(48px,6.4dvh,54px);padding:10px}}" +
     ".nc-choice-group .select-field-error-msg{display:none}" +
     ".nc-choice-group.has-error .select-field-error-msg{display:block!important;opacity:1!important;transform:none!important;color:#d9534f;font-weight:700}" +
-    ".nc-others{display:none!important}.nc-has-others .nc-others{display:block!important}" +
+    ".nc-others{display:none!important}.ct-steps form:not(.nc-has-others) .nc-others{display:none!important}.nc-has-others .nc-others{display:block!important}" +
     // ---------- steps ----------
     ".ct-steps .ct-step-head{display:block!important;margin:0 0 4px}" +
     ".ct-bar-fill{transition:width .6s " + EASE + "}" +
@@ -7838,14 +7841,17 @@ initPopupHoverReveal({
     ".ct-steps form{transition:opacity .28s " + EASE + "}" +
     ".ct-steps.ct-fading form{opacity:0}" +
     ".ct-steps .ct-nav{display:flex!important;justify-content:flex-end;align-items:center;gap:12px;margin-top:6px}" +
-    ".ct-btn{cursor:pointer;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent;transition:background-color .35s " + EASE + ",color .35s " + EASE + "}" +
-    "@media (hover:hover){.ct-btn.is-next:hover{background-color:#5f4939}.ct-btn.is-back:hover{background-color:" + FIELD + "}}" +
+    ".ct-btn{position:relative;overflow:hidden;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}" +
+    ".ct-btn .ct-btn-text{position:relative;z-index:2;display:inline-block;white-space:nowrap}" +
+    "html body .ct-btn .btn-arrow{position:absolute!important;left:14px!important;top:50%!important;right:auto!important;bottom:auto!important;width:7px!important;height:7px!important;min-width:7px!important;margin:-3.5px 0 0!important;padding:0!important;border:1px solid currentColor;border-radius:50%!important;background:transparent;opacity:0;pointer-events:none}" +
+    // desktop: the site cursor (translucent dot) instead of the system pointer
+    "@media (min-width:992px){html body .ct-btn,html body .ct-arrow,html body .nc-chips label,html body .nc-chips span,html body .btn-wrapper.is-contact,html body .reload-form-btn{cursor:none!important}}" +
     ".ct-btn.is-back{margin-right:auto}" +
     ".ct-steps.ct-s1 .ct-nav .is-back{display:none!important}" +
     ".ct-steps.ct-last .ct-nav .is-next{display:none!important}" +
     ".ct-steps .ct-nav .btn-wrapper.is-contact{margin:0!important;display:none!important}" +
     ".ct-steps.ct-last .ct-nav .btn-wrapper.is-contact{display:flex!important}" +
-    ".ct-arrow{cursor:pointer;-webkit-tap-highlight-color:transparent}" +
+    ".ct-arrow{-webkit-tap-highlight-color:transparent}" +
     // ---------- SUBMIT: LUVÉ logo loader inside the pill ----------
     ".btn-wrapper.is-contact{position:relative}" +
     ".btn-wrapper.is-contact .ct-loader{position:absolute;left:50%;top:50%;height:17px;width:auto;color:" + LIGHT + ";transform:translate(-50%,-50%);opacity:0;pointer-events:none;transition:opacity .3s " + EASE + "}" +
@@ -7863,7 +7869,6 @@ initPopupHoverReveal({
     ".ct-success .form-intromessage,.ct-success .careers-form-intro-wrapper,.ct-success .careers-form-intro,.ct-success .ct-step-head{display:none!important}" +
     ".ct-later .form-intromessage,.ct-later .careers-form-intro-wrapper,.ct-later .careers-form-intro{display:none!important}" +
     IN(".form-description-text") + "," + IN(".careers-form-slogan") + "," + IN(".careers-form-intro") + "{margin:0!important}" +
-    IN(".form-intromessage") + "," + IN(".careers-form-intro-wrapper") + "{margin:0 0 6px!important;padding:0!important}" +
     "html body .contact-body-form .form-close-btn{display:none!important}" +
     // ---------- phones / tablets: card centred, a steady height ----------
     "@media " + MQ + "{" +
@@ -7875,12 +7880,11 @@ initPopupHoverReveal({
     CARD('[style*="display: block"]') + "{display:flex!important;flex-direction:column}" +
     "html body .contact-body-form>div::-webkit-scrollbar{display:none}" +
     IN(".w-form") + "{flex:1 1 auto;display:flex;flex-direction:column}" +
-    IN("form") + "{flex:1 1 auto;gap:10px!important}" +
+    IN("form") + "{flex:1 1 auto}" +
     IN(".w-form-done") + "{flex:1 1 auto}" +
     ".ct-steps .ct-nav{margin-top:auto;padding-top:6px}" +
     "html body .contact-body-form .careers-form-intro-wrapper{display:flex;justify-content:space-between;align-items:baseline}" +
-    IN(".form-intromessage") + "," + IN(".careers-form-intro-wrapper") + "{margin:0 0 4px!important}" +
-    ".ct-steps .ct-step-head{margin:6px 0 2px}" +
+    ".ct-steps .ct-step-head{margin:2px 0 4px}" +
     ".ct-steps.ct-s1 .ct-nav .ct-arrow{display:inline-flex!important}" +
     ".ct-steps.ct-s1 .ct-nav .is-next{margin-left:auto}" +
     ".ct-done-back{display:inline-flex!important}" +
@@ -7890,11 +7894,10 @@ initPopupHoverReveal({
     "@media (min-width:992px){" +
     CARD() + "{background:" + CARD_DESKTOP + "!important;border:0!important;border-radius:14px!important;padding:30px 32px 26px!important;height:auto!important;bottom:auto!important;" +
     "max-height:calc(100vh - 160px);max-height:calc(100svh - 160px);overflow-y:auto;box-sizing:border-box;box-shadow:0 30px 70px -40px rgba(48,30,18,.4);scrollbar-width:thin}" +
-    IN(".form-intromessage") + "," + IN(".careers-form-intro-wrapper") + "{margin:0 0 8px!important}" +
-    ".ct-steps .ct-step-head{margin:10px 0 6px}" +
+    ".ct-steps .ct-step-head{margin:6px 0 6px}" +
     // the list: chosen name looks bolder (stroke eases in, no re-wrap), others lighter
     ".contact-body-formlink [class*='-contact-link']{white-space:nowrap;width:max-content;max-width:100%;-webkit-text-stroke:0 currentColor;" +
-    "transition:opacity .6s " + EASE + ",-webkit-text-stroke-width .6s " + EASE + "}" +
+    "transition:opacity .35s cubic-bezier(.22,1,.36,1),-webkit-text-stroke-width .3s cubic-bezier(.22,1,.36,1)}" +
     ".contact-body-formlink.ct-has-active [class*='-contact-link']{opacity:.4}" +
     ".contact-body-formlink.ct-has-active [class*='-contact-link'].ct-link-active{opacity:1;-webkit-text-stroke-width:.7px}" +
     "@media (hover:hover){.contact-body-formlink.ct-has-active [class*='-contact-link']:hover{opacity:.8}}" +
@@ -7908,6 +7911,62 @@ initPopupHoverReveal({
     e.className = cls;
     if (html) e.innerHTML = html;
     return e;
+  };
+  // BACK / NEXT: same motion as the GET IN TOUCH panel and the site's CTAs —
+  // NEXT brand dark → brand light on hover, BACK light → dark; the small dot
+  // slides in and the text moves right. Phones: a short press instead.
+  const ctaMotion = (btn, kind) => {
+    if (btn.dataset.ctMotion) return;
+    btn.dataset.ctMotion = "1";
+    let text = btn.querySelector(".ct-btn-text");
+    if (!text) {
+      text = el("span", "ct-btn-text");
+      while (btn.firstChild) text.appendChild(btn.firstChild);
+      btn.appendChild(text);
+    }
+    let dot = btn.querySelector(".btn-arrow");
+    if (!dot) {
+      dot = el("span", "btn-arrow");
+      dot.setAttribute("aria-hidden", "true");
+      btn.appendChild(dot);
+    }
+    const primary = kind === "primary";
+    const baseBg = primary ? DARK : "rgba(121,94,73,0)";
+    const baseTx = primary ? LIGHT : DARK;
+    const hoverBg = primary ? LIGHT : DARK;
+    const hoverTx = primary ? DARK : LIGHT;
+    gsap.set(btn, { backgroundColor: baseBg, borderColor: DARK });
+    gsap.set(text, { x: 0, color: baseTx });
+    const touch = window.matchMedia("(max-width: 991px), (hover: none)").matches;
+    if (touch) {
+      gsap.set(dot, { display: "none" });
+      const press = () => {
+        gsap.to(btn, { scale: 0.96, backgroundColor: hoverBg, duration: 0.1, ease: "power1.out", overwrite: "auto" });
+        gsap.to(text, { color: hoverTx, duration: 0.1, overwrite: "auto" });
+      };
+      const release = () => {
+        gsap.to(btn, { scale: 1, backgroundColor: baseBg, duration: 0.2, ease: "power1.out", overwrite: "auto" });
+        gsap.to(text, { color: baseTx, duration: 0.2, overwrite: "auto" });
+      };
+      btn.addEventListener("touchstart", press, { passive: true });
+      btn.addEventListener("touchend", release, { passive: true });
+      btn.addEventListener("touchcancel", release, { passive: true });
+      btn.addEventListener("mousedown", press);
+      btn.addEventListener("mouseup", release);
+      btn.addEventListener("mouseleave", release);
+      return;
+    }
+    gsap.set(dot, { autoAlpha: 0, x: -15, scale: 0.6, backgroundColor: "transparent", borderColor: baseTx, display: "block" });
+    btn.addEventListener("mouseenter", () => {
+      gsap.to(btn, { backgroundColor: hoverBg, duration: 0.6, ease: "power2.out", overwrite: "auto" });
+      gsap.to(dot, { autoAlpha: 1, x: 0, scale: 1, backgroundColor: hoverTx, borderColor: hoverTx, duration: 0.6, ease: "expo.out", overwrite: "auto" });
+      gsap.to(text, { x: 12, color: hoverTx, duration: 1, ease: "expo.out", overwrite: "auto" });
+    });
+    btn.addEventListener("mouseleave", () => {
+      gsap.to(btn, { backgroundColor: baseBg, duration: 0.6, overwrite: "auto" });
+      gsap.to(dot, { autoAlpha: 0, x: -15, scale: 0.6, backgroundColor: "transparent", borderColor: baseTx, duration: 0.6, ease: "expo.out", overwrite: "auto" });
+      gsap.to(text, { x: 0, color: baseTx, duration: 0.8, ease: "expo.out", overwrite: "auto" });
+    });
   };
   const closeToList = (after) => {
     if (window.__luveContactClose) window.__luveContactClose();
@@ -7981,8 +8040,9 @@ initPopupHoverReveal({
     const heads = (head.getAttribute("data-ct-heads") || "").split("|").map((s) => s.trim()).filter(Boolean);
     const HEADS = heads.length ? heads : cfg.heads;
     const LAST = HEADS.length;
-    const hTitle = head.querySelector(".ct-step-title");
-    const hCount = head.querySelector(".ct-step-count");
+    const hRow = head.querySelector(".ct-step-row");
+    const hTitle = head.querySelector(".ct-step-title") || (hRow && hRow.children[0]);
+    const hCount = head.querySelector(".ct-step-count") || (hRow && hRow.children[1]);
     const hFill = head.querySelector(".ct-bar-fill");
 
     // nav: Designer element, or a fallback
@@ -7995,6 +8055,8 @@ initPopupHoverReveal({
     const backBtn = nav.querySelector(".is-back");
     const nextBtn = nav.querySelector(".is-next");
     if (arrow && !arrow.querySelector("svg")) arrow.innerHTML = ARROW;
+    if (nextBtn) ctaMotion(nextBtn, "primary");
+    if (backBtn) ctaMotion(backBtn, "light");
 
     // which step each field belongs to
     let submitBtn = null;
@@ -8269,6 +8331,42 @@ initPopupHoverReveal({
     };
     keepNavLast();
     new MutationObserver(keepNavLast).observe(form, { childList: true });
+  });
+})();
+
+// =====================================================
+// 47. GET IN TOUCH Panel — NEXT Colours + Site Cursor
+// 功能：(1) Enquiry panel 嘅 NEXT / SUBMIT FORM 同 Contact page 一致：
+//       平時 Brand Dark，hover 變 Brand Light（字同小波點轉深色），
+//       同網站其他 CTA 一樣。
+//       (2) 電腦版 panel 入面 BACK / NEXT / SUBMIT 同選項：唔用系統 pointer，
+//       用返網站嘅透明波點 cursor（panel 開咗時平時會收埋個 cursor）。
+// =====================================================
+(function initEnquiryPanelButtons() {
+  if (!document.querySelector("[data-enq-form]")) return;
+  if (!document.getElementById("ct-enq-btn-css")) {
+    const P = '[data-enq-form]>div:last-child>[data-enq-action="next"],[data-enq-form]>div:last-child>[type="submit"]';
+    const all = (suffix) => P.split(",").map((s) => "html body " + s + suffix).join(",");
+    const css = document.createElement("style");
+    css.id = "ct-enq-btn-css";
+    css.textContent =
+      all("") + "{background-color:#795e49!important;border:1px solid #795e49!important;transition:background-color .6s cubic-bezier(.215,.61,.355,1)!important}" +
+      all(" [data-enq-cta-text]") + "{transition:color .6s cubic-bezier(.215,.61,.355,1)}" +
+      "@media (hover:hover) and (min-width:992px){" +
+      all(":hover") + "," + all(":focus-visible") + "{background-color:#f0e8dd!important}" +
+      all(":hover [data-enq-cta-text]") + "," + all(":focus-visible [data-enq-cta-text]") + "{color:#795e49!important}" +
+      all(":hover .btn-arrow") + "{background-color:#795e49!important;border-color:#795e49!important}" +
+      "html body [data-enq-panel] [data-enq-cta],html body [data-enq-panel] [data-enq-cta] *,html body [data-enq-panel] label:has(input[type='radio']),html body [data-enq-panel] label:has(input[type='radio']) *{cursor:none!important}" +
+      "html.ct-enq-cursor .cursor{opacity:1!important;visibility:visible!important}" +
+      "}";
+    document.head.appendChild(css);
+  }
+  if (!window.matchMedia("(min-width: 992px)").matches || !document.querySelector(".cursor")) return;
+  const SEL = "[data-enq-panel] [data-enq-cta], [data-enq-panel] label:has(input[type='radio'])";
+  const root = document.documentElement;
+  document.addEventListener("pointerover", (e) => {
+    const t = e.target;
+    root.classList.toggle("ct-enq-cursor", !!(t && t.closest && t.closest(SEL)));
   });
 })();
 
