@@ -8551,7 +8551,7 @@ initPopupHoverReveal({
       "@media (max-width:479px){html body [data-enq-root] [data-enq-step='source'] label:has(input[name='hearAbout'][value='Others']){display:block!important}}" +
       "html body [data-enq-other-wrap].ct-other.ct-other-off{max-height:0;opacity:0;transform:translateY(-6px);margin-top:calc(-1 * var(--ct-gap,21px));pointer-events:none}" +
       // choice error beside the last choice / under the choices
-      "html body [data-enq-form] .select-field-error-msg.ct-choice-error{position:static!important;inset:auto!important;align-self:center;justify-self:start;margin:0!important;padding:0 2px!important;text-align:left!important;white-space:normal!important;line-height:1.3!important}" +
+      "html body [data-enq-form] .select-field-error-msg.ct-choice-error{position:absolute!important;right:auto!important;bottom:auto!important;display:flex!important;align-items:center;justify-content:flex-start;margin:0!important;padding:0 2px!important;text-align:left!important;white-space:normal!important;line-height:1.3!important;transform:none!important}" +
       // phones: privacy note close to the last question; tighten per step only when needed
       "@media (max-width:767px){" +
       "html body [data-enq-root] .enq-privacy-note{margin-top:14px!important}" +
@@ -8561,6 +8561,7 @@ initPopupHoverReveal({
       "html body [data-enq-root].ct-fit2 .enq-intro .enq-intro-line-mask{margin-top:4px!important}" +
       "html body [data-enq-root].ct-fit2 [data-enq-step] label:has(input[type='radio']){min-height:0!important;padding-top:10px!important;padding-bottom:10px!important}" +
       "html body [data-enq-root].ct-fit2 [data-enq-form]>div:first-child{padding-top:10px!important}" +
+      "html body [data-enq-root].ct-fit3:not([data-enq-index='0']) .enq-intro{min-height:0!important;height:auto!important}" +
       "html body [data-enq-root].ct-fit3:not([data-enq-index='0']) .enq-intro .enq-intro-line-mask:not(:first-child){display:none!important}" +
       "}" +
       // logo loader in SUBMIT FORM
@@ -8696,24 +8697,46 @@ initPopupHoverReveal({
     fitSoon();
 
     // (9) "Please select an option" goes into the empty space beside the last
-    //     choice (or on its own line under the choices) instead of squeezing
-    //     next to a long question
-    form.querySelectorAll(".select-field-error-msg").forEach((msg) => {
-      const group = msg.parentElement;
-      const grid = group && [...group.children].find((c) => c !== msg && c.querySelector("input[type='radio'],input[type='checkbox']"));
-      if (!grid) return;
-      grid.appendChild(msg);
-      msg.classList.add("ct-choice-error");
-      // empty cell after the last choice → sit there; row full → own line
-      const place = () => {
-        const cols = (getComputedStyle(grid).gridTemplateColumns || "").split(" ").filter(Boolean).length || 1;
-        const n = grid.querySelectorAll("label").length;
-        const v = n % cols === 0 ? "1 / -1" : "auto";
-        if (msg.style.gridColumn !== v) msg.style.gridColumn = v;
-      };
-      place();
-      new MutationObserver(place).observe(msg, { attributes: true, attributeFilter: ["style"] });
-    });
+    //     choice (or just under the choices) instead of squeezing next to a
+    //     long question. The message is created when NEXT is pressed, so it
+    //     is placed whenever it appears.
+    const put = (el, k, v) => {
+      if (el.style.getPropertyValue(k) !== v) el.style.setProperty(k, v, "important");
+    };
+    const placeChoiceErrors = () => {
+      form.querySelectorAll(".select-field-error-msg").forEach((msg) => {
+        const group = msg.parentElement;
+        if (!group || msg.style.display === "none" || !msg.getClientRects().length) return;
+        const grid = [...group.children].find((c) => c !== msg && c.querySelector("input[type='radio'],input[type='checkbox']"));
+        const labels = grid ? [...grid.querySelectorAll("label")].filter((l) => l.getClientRects().length) : [];
+        if (!labels.length) return;
+        const g = group.getBoundingClientRect();
+        const gr = grid.getBoundingClientRect();
+        const last = labels[labels.length - 1].getBoundingClientRect();
+        const gap = parseFloat(getComputedStyle(grid).columnGap) || 12;
+        const room = gr.right - (last.right + gap);
+        if (!msg.classList.contains("ct-choice-error")) msg.classList.add("ct-choice-error");
+        if (room >= 90) {
+          put(msg, "top", Math.round(last.top - g.top) + "px");
+          put(msg, "left", Math.round(last.right + gap - g.left) + "px");
+          put(msg, "width", Math.floor(room) + "px");
+          put(msg, "height", Math.round(last.height) + "px");
+          if (group.style.paddingBottom) group.style.removeProperty("padding-bottom");
+        } else {
+          put(msg, "top", Math.round(gr.bottom - g.top + 6) + "px");
+          put(msg, "left", "0px");
+          put(msg, "width", Math.round(gr.width) + "px");
+          put(msg, "height", "auto");
+          if (group.style.paddingBottom !== "22px") group.style.setProperty("padding-bottom", "22px");
+        }
+      });
+    };
+    let placing = 0;
+    new MutationObserver(() => {
+      cancelAnimationFrame(placing);
+      placing = requestAnimationFrame(placeChoiceErrors);
+    }).observe(form, { childList: true, subtree: true, attributes: true, attributeFilter: ["style", "class"] });
+    window.addEventListener("resize", () => setTimeout(placeChoiceErrors, 150));
   });
 
   if (!window.matchMedia("(min-width: 992px)").matches || !document.querySelector(".cursor")) return;
