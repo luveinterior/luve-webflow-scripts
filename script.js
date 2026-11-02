@@ -8299,7 +8299,7 @@ initPopupHoverReveal({
       let n;
       while ((n = walk.nextNode())) texts.push(n);
       // line break before "See our"
-      if (!note.querySelector("br.ct-see-br")) {
+      if (!note.querySelector("br")) {
         const t = texts.find((x) => !a.contains(x) && /See our/.test(x.textContent));
         if (t) {
           const i = t.textContent.indexOf("See our");
