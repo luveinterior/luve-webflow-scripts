@@ -8717,9 +8717,8 @@ initPopupHoverReveal({
         if (m && email.value.trim() && email.validity.patternMismatch && m.textContent !== "*Invalid email address")
           m.textContent = "*Invalid email address";
       };
-      form.addEventListener("click", (e) => {
-        if (e.target.closest && e.target.closest('[data-enq-action="next"], [type="submit"]')) [20, 120].forEach((t) => setTimeout(fixMsg, t));
-      }, true);
+      const box = email.closest("label") || email.parentElement;
+      if (box) new MutationObserver(fixMsg).observe(box, { childList: true, subtree: true, characterData: true });
       email.addEventListener("blur", () => setTimeout(fixMsg, 20));
     }
 
