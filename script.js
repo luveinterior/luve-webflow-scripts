@@ -48,7 +48,7 @@
 // 44. Enquiry Panel — Keep Sticky Hero While Page Is Locked
 // 45. Contact Page — Form Cards, One Step at a Time, Submit Loader + Success
 // 46. Forms — Cloudflare Turnstile Fixes (all pages)
-// 47. GET IN TOUCH Panel — NEXT Colours + Site Cursor
+// 47. GET IN TOUCH Panel — Buttons, Cursor, Step 04, Others, Loader
 // 00. Page Transitions (Barba-style) — 喺最頂，包住成個 script（window.__luveRun）
 //
 // =============================================================================
@@ -362,6 +362,12 @@
     } catch (e) {}
     try {
       W.ready();
+    } catch (e) {}
+    // Turnstile is already loaded after a transition, so Webflow's forms wait
+    // for a jQuery "ready" event that never comes; send it so each form gets
+    // its Turnstile check (forms from the old page are gone, so no doubles)
+    try {
+      if (window.turnstile && window.jQuery) window.jQuery(document).trigger("ready");
     } catch (e) {}
 
     ["ix2", "ix3"].forEach(function (m) {
@@ -7806,6 +7812,9 @@ initPopupHoverReveal({
     // once the box is focused or filled. Font / colour: .floating-label in Designer.
     IN(".input-group .floating-label") + "{position:absolute!important;left:16px!important;right:16px;top:28px!important;transform:translateY(-50%)!important;margin:0!important;padding:0!important;background:none!important;pointer-events:none;transform-origin:left top;transition:top .3s " + EASE + ",font-size .3s " + EASE + ",transform .3s " + EASE + "}" +
     IN(".input-group textarea.form-input+.floating-label") + "{top:18px!important;transform:none!important}" +
+    IN(".input-group.is-plain .form-input") + "{padding:14px 16px!important}" +
+    IN(".input-group.is-plain .nc-q") + "{margin-bottom:10px}" +
+    IN(".form-input::placeholder") + "{color:rgba(121,94,73,.55);opacity:1}" +
     IN(".input-group .form-input:focus+.floating-label") + "," + IN(".input-group .form-input:not(:placeholder-shown)+.floating-label") + "," + IN(".input-group.is-filled .floating-label") +
     "{top:8px!important;transform:none!important;font-size:11px!important}" +
     IN(".input-group .field-help-text") + "{position:static!important;transform:none!important;opacity:.7;font-size:12px!important;line-height:1.35;margin:6px 2px 0!important}" +
@@ -7829,7 +7838,7 @@ initPopupHoverReveal({
     "@media (hover:hover){.nc-chips input:not(:checked)+.w-form-label:hover{background-color:rgba(121,94,73,.16);border-color:rgba(121,94,73,.62)}}" +
     ".nc-chips input:checked+.w-form-label{border-color:" + DARK + ";background-color:" + DARK + ";color:" + LIGHT + "}" +
     ".nc-chips input:focus-visible+.w-form-label{outline:2px solid " + DARK + ";outline-offset:2px}" +
-    "@media " + MQ + "{.nc-chips .w-form-label{min-height:clamp(48px,6.4dvh,54px);padding:10px}}" +
+    "@media " + MQ + "{.nc-chips .w-form-label{min-height:clamp(44px,6dvh,50px);padding:8px}html body .contact-body-form .nc-q{margin-bottom:8px}}" +
     ".nc-choice-group .select-field-error-msg{display:none}" +
     ".nc-choice-group.has-error .select-field-error-msg{display:block!important;opacity:1!important;transform:none!important;color:#d9534f;font-weight:700}" +
     ".nc-others{display:none!important}.ct-steps form:not(.nc-has-others) .nc-others{display:none!important}.nc-has-others .nc-others{display:block!important}" +
@@ -7838,14 +7847,12 @@ initPopupHoverReveal({
     ".ct-bar-fill{transition:width .6s " + EASE + "}" +
     ".ct-steps [data-ct-step]{display:none!important}" +
     ".ct-steps.ct-s1 [data-ct-step='1'],.ct-steps.ct-s2 [data-ct-step='2'],.ct-steps.ct-s3 [data-ct-step='3'],.ct-steps.ct-s4 [data-ct-step='4']{display:block!important}" +
-    ".ct-steps form{transition:opacity .28s " + EASE + "}" +
-    ".ct-steps.ct-fading form{opacity:0}" +
     ".ct-steps .ct-nav{display:flex!important;justify-content:flex-end;align-items:center;gap:12px;margin-top:6px}" +
     ".ct-btn{position:relative;overflow:hidden;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}" +
     ".ct-btn .ct-btn-text{position:relative;z-index:2;display:inline-block;white-space:nowrap}" +
     "html body .ct-btn .btn-arrow{position:absolute!important;left:14px!important;top:50%!important;right:auto!important;bottom:auto!important;width:7px!important;height:7px!important;min-width:7px!important;margin:-3.5px 0 0!important;padding:0!important;border:1px solid currentColor;border-radius:50%!important;background:transparent;opacity:0;pointer-events:none}" +
     // desktop: the site cursor (translucent dot) instead of the system pointer
-    "@media (min-width:992px){html body .ct-btn,html body .ct-arrow,html body .nc-chips label,html body .nc-chips span,html body .btn-wrapper.is-contact,html body .reload-form-btn{cursor:none!important}}" +
+    "html body .ct-btn,html body .ct-btn *,html body .ct-arrow,html body .ct-arrow *,html body .nc-chips label,html body .nc-chips label *,html body .btn-wrapper.is-contact,html body .btn-wrapper.is-contact *,html body .reload-form-btn,html body .reload-form-btn *{cursor:pointer!important}" +
     ".ct-btn.is-back{margin-right:auto}" +
     ".ct-steps.ct-s1 .ct-nav .is-back{display:none!important}" +
     ".ct-steps.ct-last .ct-nav .is-next{display:none!important}" +
@@ -7854,7 +7861,7 @@ initPopupHoverReveal({
     ".ct-arrow{-webkit-tap-highlight-color:transparent}" +
     // ---------- SUBMIT: LUVÉ logo loader inside the pill ----------
     ".btn-wrapper.is-contact{position:relative}" +
-    ".btn-wrapper.is-contact .ct-loader{position:absolute;left:50%;top:50%;height:17px;width:auto;color:" + LIGHT + ";transform:translate(-50%,-50%);opacity:0;pointer-events:none;transition:opacity .3s " + EASE + "}" +
+    ".btn-wrapper.is-contact .ct-loader{position:absolute;left:50%;top:50%;height:17px;width:auto;color:" + LIGHT + ";transform:translate(-50%,-57%);opacity:0;pointer-events:none;transition:opacity .3s " + EASE + "}" +
     ".btn-wrapper.is-contact.ct-loading{pointer-events:none}" +
     ".btn-wrapper.is-contact .btn-text,.btn-wrapper.is-contact .btn-arrow{transition:opacity .25s " + EASE + "}" +
     ".btn-wrapper.is-contact.ct-loading .btn-text,.btn-wrapper.is-contact.ct-loading .btn-arrow{opacity:0!important}" +
@@ -7865,6 +7872,9 @@ initPopupHoverReveal({
     // ---------- success screen (text style: .ct-done-title / .ct-done-text) ----------
     IN(".w-form-done") + "{position:relative;background:transparent!important;padding:28px 0 8px!important;text-align:center;flex-direction:column;align-items:center;justify-content:center}" +
     ".w-form-done .reload-form-btn{margin:0 auto!important}" +
+    IN(".w-form-fail") + "{margin:12px 0 0!important;padding:12px 14px!important;border:1px solid rgba(121,94,73,.3)!important;border-radius:6px!important;background:#f7deda!important;" +
+    "color:" + DARK + "!important;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif!important;font-size:13px!important;font-weight:500!important;line-height:1.4!important}" +
+    IN(".w-form-fail *") + "{font:inherit!important;color:inherit!important}" +
     ".ct-done-back{display:none;position:absolute;left:0;bottom:8px}" +
     ".ct-success .form-intromessage,.ct-success .careers-form-intro-wrapper,.ct-success .careers-form-intro,.ct-success .ct-step-head{display:none!important}" +
     ".ct-later .form-intromessage,.ct-later .careers-form-intro-wrapper,.ct-later .careers-form-intro{display:none!important}" +
@@ -8025,6 +8035,11 @@ initPopupHoverReveal({
 
     // iPhone Safari only moves the floating label when the box has a
     // placeholder, so every box gets an invisible one
+    form.querySelectorAll(".input-group[data-ct-placeholder]").forEach((g) => {
+      const f = g.querySelector(".form-input");
+      if (f) f.setAttribute("placeholder", g.getAttribute("data-ct-placeholder"));
+      g.classList.add("is-plain");
+    });
     form.querySelectorAll(".input-group .form-input").forEach((i) => {
       if (!i.getAttribute("placeholder")) i.setAttribute("placeholder", " ");
     });
@@ -8071,6 +8086,16 @@ initPopupHoverReveal({
       c.setAttribute("data-ct-step", String(Math.min(step, LAST)));
     });
     if (submitBtn) nav.appendChild(submitBtn);
+    // Cloudflare Turnstile adds its box at the end of the form; keep the
+    // buttons last so they stay at the bottom of the card
+    new MutationObserver(() => {
+      const last = form.lastElementChild;
+      if (last && last !== nav && !last.matches("input[type='submit']")) {
+        form.appendChild(nav);
+        const rs = form.querySelector("input[type='submit']");
+        if (rs) form.appendChild(rs);
+      }
+    }).observe(form, { childList: true });
 
     let step = 1;
     const show = (n, animate) => {
@@ -8087,12 +8112,22 @@ initPopupHoverReveal({
         card.scrollTop = 0;
       };
       if (!animate) return apply();
-      card.classList.add("ct-fading");
-      setTimeout(() => {
-        apply();
-        requestAnimationFrame(() => card.classList.remove("ct-fading"));
-        setTimeout(() => card.classList.remove("ct-fading"), 60);
-      }, 280);
+      if (form.dataset.ctMoving) return;
+      form.dataset.ctMoving = "1";
+      gsap.killTweensOf(form);
+      gsap.to(form, {
+        autoAlpha: 0,
+        duration: 0.22,
+        ease: "power2.in",
+        onComplete: () => {
+          apply();
+          gsap.fromTo(form, { autoAlpha: 0, y: 6 }, {
+            autoAlpha: 1, y: 0, duration: 0.42, ease: "power2.out",
+            clearProps: "transform",
+            onComplete: () => delete form.dataset.ctMoving,
+          });
+        },
+      });
     };
 
     const stepValid = () => {
@@ -8128,6 +8163,13 @@ initPopupHoverReveal({
 
     // ---- SUBMIT: logo loader in the pill, wait for Cloudflare Turnstile ----
     const realSubmit = form.querySelector("input[type='submit']");
+    // Webflow sends the Turnstile answer with the form; SUBMIT only goes once
+    // Webflow has switched its submit back on and the answer is filled in
+    const tokenReady = () => {
+      if (!realSubmit || realSubmit.disabled) return false;
+      const t = form.querySelectorAll('input[name="cf-turnstile-response"]');
+      return !t.length || [...t].some((i) => i.value);
+    };
     let sending = false;
     let waiting = false;
     let submitted = false;
@@ -8158,18 +8200,18 @@ initPopupHoverReveal({
           setTimeout(() => {
             if (sending && !submitted && !waiting) loaderOff();
           }, 600);
-          if (realSubmit && realSubmit.disabled) {
+          if (!tokenReady()) {
             // Turnstile is still checking the visitor: wait, then send
             waiting = true;
             e.preventDefault();
             e.stopImmediatePropagation();
             const t0 = Date.now();
             const wait = () => {
-              if (!realSubmit.disabled) {
+              if (tokenReady()) {
                 waiting = false;
                 return realSubmit.click();
               }
-              if (Date.now() - t0 > 15000) {
+              if (Date.now() - t0 > 20000) {
                 loaderOff();
                 const fail = block.querySelector(".w-form-fail");
                 if (fail) fail.style.display = "block";
@@ -8274,51 +8316,39 @@ initPopupHoverReveal({
 // 46. Forms — Cloudflare Turnstile Fixes (all pages)
 // 功能：(1) Turnstile 喺 form 最尾加咗一格，搞亂咗 GET IN TOUCH
 //       「最後一格 = BACK / NEXT 按鈕列」嘅樣式 → 將按鈕列放返最尾。
-//       (2) Webflow 有時冇幫 form 啟動 Turnstile（例如經 page transition
-//       入嚟，或者 form 一開頭收埋），SUBMIT 會一直撳唔到 → form 一出現
-//       而冇 Turnstile 就自己補返，攞到 token 就開返 SUBMIT。
+//       (2) 每個 Turnstile 答案只可以用一次：交完（成功或者失敗）就即刻
+//       重新攞一個，所以 SUBMIT AGAIN / 再試都唔會再出錯。
+//       （經 page transition 入嚟嘅頁，Webflow 開始 Turnstile 嘅修正喺
+//       Section 00 webflowReinit。）
 // =====================================================
 (function initTurnstileFixes() {
-  const ensure = (form) => {
-    if (!window.turnstile || !window.jQuery || form.dataset.ctTs) return;
-    if (form.querySelector('input[name="cf-turnstile-response"], iframe[src*="challenges.cloudflare.com"]')) return;
-    const key = form.getAttribute("data-turnstile-sitekey");
-    if (!key) return;
-    form.dataset.ctTs = "1";
-    const $ = window.jQuery;
+  const $ = window.jQuery;
+  const renew = (form) => {
+    if (!window.turnstile || !$) return;
+    const input = form.querySelector('input[name="cf-turnstile-response"]');
+    const box = input && input.parentElement;
+    if (!box) return;
     const data = $.data(form, ".w-form");
-    const box = document.createElement("div");
-    form.appendChild(box);
-    const btn = $(form).find(':input[type="submit"]');
+    if (data) data.turnstileToken = null;
+    $(form).find(':input[type="submit"]').prop("disabled", true);
     try {
-      window.turnstile.render(box, {
-        sitekey: key,
-        callback: (token) => {
-          if (data) data.turnstileToken = token;
-          btn.prop("disabled", false).removeClass("w-form-loading");
-          $(form).closest(".w-form").removeClass("w-form-loading");
-        },
-        "error-callback": () => {
-          $(form).closest(".w-form").removeClass("w-form-loading");
-        },
-      });
+      window.turnstile.reset(box);
     } catch (e) {}
   };
-  const io = new IntersectionObserver(
-    (entries) =>
-      entries.forEach((en) => {
-        if (en.isIntersecting) setTimeout(() => ensure(en.target), 1200);
-      }),
-    { rootMargin: "200px" }
-  );
-  const forms = document.querySelectorAll("form[data-turnstile-sitekey]");
-  forms.forEach((f) => io.observe(f));
-  // also check the forms that are on screen a little after load / after a
-  // Contact form name is clicked (in case the observer is slow)
-  const sweep = () => forms.forEach((f) => f.offsetParent && ensure(f));
-  setTimeout(sweep, 3500);
-  document.addEventListener("click", (e) => {
-    if (e.target.closest && e.target.closest("[class*='-contact-link'], [data-enq-action='open']")) setTimeout(sweep, 2000);
+  document.querySelectorAll(".w-form").forEach((block) => {
+    const form = block.querySelector("form");
+    if (!form || !form.getAttribute("data-turnstile-sitekey") || block.dataset.ctTsWatch) return;
+    block.dataset.ctTsWatch = "1";
+    [".w-form-done", ".w-form-fail"].forEach((sel) => {
+      const msg = block.querySelector(":scope > " + sel);
+      if (!msg) return;
+      let shown = false;
+      new MutationObserver(() => {
+        const now = msg.style.display && msg.style.display !== "none";
+        if (now && !shown) setTimeout(() => renew(form), 400);
+        shown = !!now;
+      }).observe(msg, { attributes: true, attributeFilter: ["style"] });
+    });
   });
 
   document.querySelectorAll("[data-enq-form]").forEach((form) => {
@@ -8335,40 +8365,138 @@ initPopupHoverReveal({
 })();
 
 // =====================================================
-// 47. GET IN TOUCH Panel — NEXT Colours + Site Cursor
-// 功能：(1) Enquiry panel 嘅 NEXT / SUBMIT FORM 同 Contact page 一致：
-//       平時 Brand Dark，hover 變 Brand Light（字同小波點轉深色），
-//       同網站其他 CTA 一樣。
-//       (2) 電腦版 panel 入面 BACK / NEXT / SUBMIT 同選項：唔用系統 pointer，
-//       用返網站嘅透明波點 cursor（panel 開咗時平時會收埋個 cursor）。
+// 47. GET IN TOUCH Panel — Buttons, Cursor, Step 04, Others, Loader
+// 功能：(1) NEXT / SUBMIT FORM：平時 Brand Dark，hover 變 Brand Light
+//       （字同小波點轉深色），同網站其他 CTA 一樣。
+//       (2) 電腦版：掣同選項成粒（包括入面啲字）都係 pointer，加網站嘅
+//       透明波點 cursor（panel 開咗時平時會收埋個 cursor）。
+//       (3) Step 04 標題：One last thing (optional)。
+//       (4)「If you selected "Others"…」只係揀咗 Others 先淡入，揀返其他
+//       就淡出。
+//       (5) 電腦版：私隱聲明放喺 BACK / SUBMIT 左邊，同粒掣頂對齊。
+//       (6) 手機版：BACK / NEXT 黐住 panel 底，但喺 Safari 底部網址欄上面。
+//       (7) SUBMIT FORM：改用 LUVÉ logo loading（同 Contact page 一樣）。
 // =====================================================
-(function initEnquiryPanelButtons() {
+(function initEnquiryPanel() {
   if (!document.querySelector("[data-enq-form]")) return;
+  const DARK = "#795e49";
+  const LIGHT = "#f0e8dd";
+  const LOGO = '<svg class="ct-loader" viewBox="20 6 794 248" aria-hidden="true" focusable="false"><g fill="currentColor"><path d="M22.3,246.48h22.82V74.12h-22.82v-4.64h92.12v4.64h-25.35v172.36h32.39c49.86,0,61.13-22.19,61.13-52.12v-5.16h5.07v61.93H22.3v-4.64Z"/><path d="M206.73,69.84h88.74v4.64h-22.82v113.53c0,33.03,8.17,58.31,49.3,58.31,27.33,0,50.42-17.03,50.42-52.12v-98.05c0-14.96-4.51-21.67-18.87-21.67h-8.17v-4.64h78.6v4.64h-30.15c-10.14,0-14.65,6.71-14.65,21.67v96.5c0,37.93-22.54,62.96-74.37,62.96-45.92,0-76.06-24.25-76.06-64.25v-116.88h-21.97v-4.64Z"/><path d="M423.93,69.84h94.65v4.64h-27.33l52.4,129.01,41.41-102.95c1.97-5.16,3.38-11.61,3.38-16.51,0-6.19-4.23-9.55-13.8-9.55h-7.33v-4.64h53.81v4.64h-4.51c-7.61,0-13.8,2.32-25.35,30.45l-61.97,150.68h-11.27l-74.09-181.13h-20v-4.64Z"/><path d="M654.23,246.84h22.82V74.48h-55.92v-4.64h190.58v51.35h-5.07v-3.61c0-23.48-18.87-43.09-52.4-43.09h-33.24v78.95h19.44c18.31,0,27.89-9.55,27.89-34.06v-2.84h5.07v81.53h-5.07v-5.93c0-18.32-9.58-34.06-27.89-34.06h-19.44v88.76h40.57c46.2,0,52.96-35.09,52.96-49.8v-3.61h5.07v58.05h-165.36v-4.64ZM750.86,23.4c6.76-12.39,7.61-14.19,16.06-14.19,7.89,0,10.7,2.58,10.7,6.45,0,1.81-2.25,5.93-6.76,10.32l-36.9,35.86h-3.66l20.56-38.44Z"/></g></svg>';
   if (!document.getElementById("ct-enq-btn-css")) {
     const P = '[data-enq-form]>div:last-child>[data-enq-action="next"],[data-enq-form]>div:last-child>[type="submit"]';
     const all = (suffix) => P.split(",").map((s) => "html body " + s + suffix).join(",");
     const css = document.createElement("style");
     css.id = "ct-enq-btn-css";
     css.textContent =
-      all("") + "{background-color:#795e49!important;border:1px solid #795e49!important;transition:background-color .6s cubic-bezier(.215,.61,.355,1)!important}" +
+      all("") + "{background-color:" + DARK + "!important;border:1px solid " + DARK + "!important;transition:background-color .6s cubic-bezier(.215,.61,.355,1)!important}" +
       all(" [data-enq-cta-text]") + "{transition:color .6s cubic-bezier(.215,.61,.355,1)}" +
       // touch screens: a tap must not leave the old beige hover colour behind
-      all(":hover") + "{background-color:#795e49!important}" +
+      all(":hover") + "{background-color:" + DARK + "!important}" +
+      // pointer over the whole button / choice, text included
+      "html body [data-enq-panel] [data-enq-cta],html body [data-enq-panel] [data-enq-cta] *,html body [data-enq-panel] label:has(input[type='radio']),html body [data-enq-panel] label:has(input[type='radio']) *{cursor:pointer!important}" +
+      // Others detail: fades / folds in only when Others is chosen
+      "html body [data-enq-other-wrap].ct-other{display:grid!important;overflow:hidden;max-height:240px;opacity:1;transform:none;" +
+      "transition:max-height .5s cubic-bezier(.65,0,.35,1),opacity .4s cubic-bezier(.65,0,.35,1),transform .5s cubic-bezier(.65,0,.35,1),margin-top .5s cubic-bezier(.65,0,.35,1)}" +
+      "html body [data-enq-other-wrap].ct-other.ct-other-off{max-height:0;opacity:0;transform:translateY(-6px);margin-top:calc(-1 * var(--ct-gap,21px));pointer-events:none}" +
+      // logo loader in SUBMIT FORM
+      "[data-enq-form] [type='submit']{position:relative}" +
+      "[data-enq-form] [type='submit'] .ct-loader{position:absolute;left:50%;top:50%;height:17px;width:auto;color:" + LIGHT + ";transform:translate(-50%,-57%);opacity:0;pointer-events:none;z-index:3;transition:opacity .3s ease}" +
+      "[data-enq-form] [type='submit'] .ct-loader path{animation:ct-logo 1.2s ease-in-out infinite;opacity:.25}" +
+      "[data-enq-form] [type='submit'] .ct-loader path:nth-child(2){animation-delay:.15s}[data-enq-form] [type='submit'] .ct-loader path:nth-child(3){animation-delay:.3s}[data-enq-form] [type='submit'] .ct-loader path:nth-child(4){animation-delay:.45s}" +
+      "@keyframes ct-logo{0%,100%{opacity:.25}35%{opacity:1}}" +
+      "html body [data-enq-form] [type='submit'].ct-loading{background-color:" + DARK + "!important}" +
+      "html body [data-enq-form] [type='submit'].ct-loading [data-enq-cta-text],html body [data-enq-form] [type='submit'].ct-loading .btn-arrow{opacity:0!important;visibility:hidden!important}" +
+      "html body [data-enq-form] [type='submit'].ct-loading .ct-loader{opacity:1}" +
+      // phones: buttons stay at the bottom of the panel, above Safari's bar
+      "@media (max-width:991px){html body [data-enq-form]>div:last-child{position:sticky!important;bottom:0!important;" +
+      "padding-bottom:max(14px,calc(env(safe-area-inset-bottom) + 8px),calc(100lvh - 100svh + 10px))!important;" +
+      "background:linear-gradient(to bottom,rgba(240,232,221,0),var(--light,#f0e8dd) 22%,var(--light,#f0e8dd) 100%)!important}}" +
       "@media (hover:hover) and (min-width:992px){" +
-      all(":hover") + "," + all(":focus-visible") + "{background-color:#f0e8dd!important}" +
-      all(":hover [data-enq-cta-text]") + "," + all(":focus-visible [data-enq-cta-text]") + "{color:#795e49!important}" +
-      all(":hover .btn-arrow") + "{background-color:#795e49!important;border-color:#795e49!important}" +
-      "html body [data-enq-panel] [data-enq-cta],html body [data-enq-panel] [data-enq-cta] *,html body [data-enq-panel] label:has(input[type='radio']),html body [data-enq-panel] label:has(input[type='radio']) *{cursor:none!important}" +
+      all(":hover") + "," + all(":focus-visible") + "{background-color:" + LIGHT + "!important}" +
+      all(":hover [data-enq-cta-text]") + "," + all(":focus-visible [data-enq-cta-text]") + "{color:" + DARK + "!important}" +
+      all(":hover .btn-arrow") + "{background-color:" + DARK + "!important;border-color:" + DARK + "!important}" +
       "html.ct-enq-cursor body .cursor{opacity:1!important;visibility:visible!important}" +
-      "}";
+      "}" +
+      // desktop: privacy note beside the buttons, tops aligned
+      "@media (min-width:992px){html body [data-enq-form]>div:last-child.ct-has-note{align-items:flex-start!important}" +
+      "html body [data-enq-form]>div:last-child>.enq-privacy-note{margin:0 auto 0 0!important;max-width:300px;padding-right:16px;align-self:flex-start}}";
     document.head.appendChild(css);
   }
+
+  document.querySelectorAll("[data-enq-root]").forEach((root) => {
+    const form = root.querySelector("[data-enq-form]");
+    if (!form || root.dataset.ctPanel) return;
+    root.dataset.ctPanel = "1";
+
+    // (3) step 04 title (the component script names it on start)
+    const STEP4 = "One last thing (optional)";
+    const title = () => {
+      const t = root.querySelector('[data-enq-step="source"] .enq-step-title');
+      if (t && t.textContent !== STEP4) t.textContent = STEP4;
+    };
+    title();
+    setTimeout(title, 600);
+    new MutationObserver(title).observe(root, { attributes: true, attributeFilter: ["data-enq-index"] });
+
+    // (4) Others detail only when Others is chosen
+    const wrap = root.querySelector("[data-enq-other-wrap]");
+    const source = root.querySelector('[data-enq-step="source"]');
+    if (wrap && source) {
+      const others = () => source.querySelector('input[type="radio"][value="Others"], input[type="radio"][value="Other"]');
+      const sync = () => {
+        if (!others()) return; // no Others choice in this layout: leave the field as it is
+        if (wrap.hidden) wrap.hidden = false;
+        const gap = parseFloat(getComputedStyle(wrap.parentElement).rowGap) || 21;
+        wrap.style.setProperty("--ct-gap", gap + "px");
+        wrap.classList.add("ct-other");
+        wrap.classList.toggle("ct-other-off", !others().checked);
+        if (!others().checked) {
+          const f = wrap.querySelector("textarea,input");
+          if (f) f.value = "";
+        }
+      };
+      source.addEventListener("change", sync);
+      new MutationObserver(() => {
+        if (wrap.hidden && others()) sync();
+      }).observe(wrap, { attributes: true, attributeFilter: ["hidden"] });
+      setTimeout(sync, 300);
+    }
+
+    // (5) desktop: privacy note beside the buttons
+    const mqDesk = window.matchMedia("(min-width: 992px)");
+    const placeNote = () => {
+      const note = root.querySelector(".enq-privacy-note");
+      const next = form.querySelector('[data-enq-action="next"]');
+      const nav = next && next.parentElement;
+      if (!note || !nav) return;
+      if (mqDesk.matches) {
+        if (note.parentElement !== nav) nav.insertBefore(note, nav.firstChild);
+        nav.classList.add("ct-has-note");
+      } else if (note.parentElement === nav) {
+        form.insertBefore(note, nav);
+        nav.classList.remove("ct-has-note");
+      }
+    };
+    setTimeout(placeNote, 0);
+    setTimeout(placeNote, 800);
+    mqDesk.addEventListener("change", placeNote);
+
+    // (7) SUBMIT FORM: LUVÉ logo loader instead of "SUBMITTING..."
+    const sub = form.querySelector('[type="submit"]');
+    if (sub) {
+      if (!sub.querySelector(".ct-loader")) sub.insertAdjacentHTML("beforeend", LOGO);
+      new MutationObserver(() => {
+        sub.classList.toggle("ct-loading", sub.getAttribute("data-enq-submitting") === "true");
+      }).observe(sub, { attributes: true, attributeFilter: ["data-enq-submitting"] });
+    }
+  });
+
   if (!window.matchMedia("(min-width: 992px)").matches || !document.querySelector(".cursor")) return;
   const SEL = "[data-enq-panel] [data-enq-cta], [data-enq-panel] label:has(input[type='radio'])";
-  const root = document.documentElement;
+  const docEl = document.documentElement;
   document.addEventListener("pointerover", (e) => {
     const t = e.target;
-    root.classList.toggle("ct-enq-cursor", !!(t && t.closest && t.closest(SEL)));
+    docEl.classList.toggle("ct-enq-cursor", !!(t && t.closest && t.closest(SEL)));
   });
 })();
 
