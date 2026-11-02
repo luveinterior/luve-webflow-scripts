@@ -50,8 +50,41 @@
 // 46. Forms — Cloudflare Turnstile Fixes (all pages)
 // 47. GET IN TOUCH Panel — Buttons, Cursor, Step 04, Others, Loader
 // 00. Page Transitions (Barba-style) — 喺最頂，包住成個 script（window.__luveRun）
+// 00a. Always the Latest Page (no Ctrl+Shift+R needed after a publish)
 //
 // =============================================================================
+
+// =====================================================
+// 00a. Always the Latest Page
+// 功能：Webflow 冇叫瀏覽器唔好 cache 頁面，所以 publish 之後，
+//       舊訪客（尤其手機）可能仍然用緊舊版頁面 + 舊版 script，
+//       要 Ctrl+Shift+R 先得。而家每次開頁，背景問一問伺服器
+//       （HEAD，唔下載內容）：如果網站有新版，就自動 reload 一次。
+//       同一頁一個 session 最多 reload 一次，唔會 loop。
+//       轉頁（Section 00）攞下一頁時亦一定同伺服器核對，唔用舊 cache。
+// =====================================================
+(function freshPage() {
+  try {
+    const KEY = "luve-fresh-reload";
+    const here = location.pathname + location.search;
+    if (sessionStorage.getItem(KEY) === here) {
+      sessionStorage.removeItem(KEY);
+      return;
+    }
+    const mine = Date.parse(document.lastModified);
+    if (!mine || !window.fetch) return;
+    fetch(here, { method: "HEAD", cache: "no-store", credentials: "same-origin" })
+      .then((r) => {
+        const live = Date.parse(r.headers.get("last-modified") || "");
+        // the page on the server is newer than the one on screen
+        if (live && live - mine > 2000) {
+          sessionStorage.setItem(KEY, here);
+          location.reload();
+        }
+      })
+      .catch(() => {});
+  } catch (e) {}
+})();
 
 // =====================================================
 // 00. Page Transitions (Barba-style, no full reload)
@@ -454,7 +487,7 @@
     if (!cache.has(k))
       cache.set(
         k,
-        fetch(k, { credentials: "same-origin" }).then(function (r) {
+        fetch(k, { credentials: "same-origin", cache: "no-cache" }).then(function (r) {
           // 401 = Webflow password page (e.g. Furniture) — still a normal HTML page
           if ((!r.ok && r.status !== 401) || !/text\/html/.test(r.headers.get("content-type") || ""))
             throw new Error("not html");
@@ -7889,6 +7922,7 @@ initPopupHoverReveal({
     ":where(html body .contact-body-form .w-form-done.ct-enq-done) .enq-success-actions>a{position:relative;display:inline-flex;align-items:center;justify-content:center;min-height:42px;padding:12px 32px;border:1px solid " + DARK + ";border-radius:999px;background:" + DARK + ";color:" + LIGHT + ";overflow:hidden;text-decoration:none;font:500 var(--text-small--font-size,14px)/1.2 'Helvetica Neue',Arial,sans-serif;letter-spacing:var(--text-small--letter-spacing,1px);text-transform:uppercase;cursor:pointer!important}" +
     ":where(html body .contact-body-form .w-form-done.ct-enq-done) .enq-success-actions>a[data-enq-success-variant='secondary']{background:" + LIGHT + ";color:" + DARK + "}" +
     ":where(html body .contact-body-form .w-form-done.ct-enq-done) .enq-success-actions>a *{cursor:pointer!important}" +
+    "html body .contact-body-form .w-form-done.ct-enq-done .enq-success-actions>a .btn-arrow{position:absolute!important;inset:50% auto auto 20px!important;display:block!important;margin:-3.5px 0 0!important}" +
     ":where(html body .contact-body-form .w-form-done.ct-enq-done) .enq-success-actions>.enq-success-restart{flex:0 0 100%;width:100%}" +
     "@media (min-width:768px){:where(html body .contact-body-form .w-form-done.ct-enq-done) .enq-success-actions{display:grid!important;grid-template-columns:max-content max-content!important;justify-content:start!important;align-items:center!important;gap:12px!important}:where(html body .contact-body-form .w-form-done.ct-enq-done) .enq-success-actions>.enq-success-restart{grid-column:1/-1!important;flex:0 0 auto!important;width:100%!important;max-width:none!important;justify-self:stretch!important}}" +
     "@media (max-width:767px){:where(html body .contact-body-form .w-form-done.ct-enq-done) .enq-success-actions>.enq-success-restart{flex:0 0 100%!important;width:100%!important}}" +
@@ -8513,6 +8547,8 @@ initPopupHoverReveal({
       // Others detail: fades / folds in only when Others is chosen
       "html body [data-enq-other-wrap].ct-other{display:grid!important;overflow:hidden;max-height:240px;opacity:1;transform:none;" +
       "transition:max-height .5s cubic-bezier(.65,0,.35,1),opacity .4s cubic-bezier(.65,0,.35,1),transform .5s cubic-bezier(.65,0,.35,1),margin-top .5s cubic-bezier(.65,0,.35,1)}" +
+      // phones too: Others is a choice like the others (it was hidden on phones)
+      "@media (max-width:479px){html body [data-enq-root] [data-enq-step='source'] label:has(input[name='hearAbout'][value='Others']){display:block!important}}" +
       "html body [data-enq-other-wrap].ct-other.ct-other-off{max-height:0;opacity:0;transform:translateY(-6px);margin-top:calc(-1 * var(--ct-gap,21px));pointer-events:none}" +
       // logo loader in SUBMIT FORM
       "[data-enq-form] [type='submit']{position:relative}" +
@@ -8574,6 +8610,16 @@ initPopupHoverReveal({
           if (f) f.value = "";
         }
       };
+      // same wording on phones as on computers (the panel used a phone-only line)
+      const copy = () => {
+        const lab = wrap.querySelector(".enq-field-label");
+        const fld = wrap.querySelector("textarea,input");
+        if (lab) lab.textContent = 'If you selected "Others" above, please provide details below.';
+        if (fld) fld.placeholder = "";
+      };
+      copy();
+      setTimeout(copy, 300);
+      window.matchMedia("(max-width:479px)").addEventListener("change", () => setTimeout(copy, 60));
       source.addEventListener("change", sync);
       new MutationObserver(() => {
         if (wrap.hidden && others()) sync();
