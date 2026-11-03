@@ -1988,12 +1988,14 @@ if (FAQ_ITEMS.length) {
     ) {
       return;
     }
+    // Contact page form names: hover turns Brand Color Dark (and the line too)
+    const formName = el.matches(".new-client-contact-link, .media-contact-link, .general-contact-link, .careers-contact-link");
     applyUnderlineSweep({
       hitEl: el,
       lineEl: el,
-      hoverColor: "#cfbea6",
+      hoverColor: formName ? "#795e49" : "#cfbea6",
       leaveColor: "#795e49",
-      lineColor: "#cfbea6",
+      lineColor: formName ? "#795e49" : "#cfbea6",
     });
   });
 })();
@@ -7912,6 +7914,8 @@ initPopupHoverReveal({
     IN(".w-form-fail") + "{margin:0!important;padding:12px 14px!important;border:1px solid rgba(121,94,73,.3)!important;border-radius:6px!important;background:#f7deda!important;" +
     "color:" + DARK + "!important;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif!important;font-size:13px!important;font-weight:500!important;line-height:1.4!important}" +
     IN(".w-form-fail *") + "{font:inherit!important;color:inherit!important}" +
+    // every field message in bold, like the choice message
+    IN(".field-error-msg") + "{font-weight:700!important}" +
     ".ct-done-back{display:none;position:absolute;left:0;bottom:8px}" +
     // New Client success = the GET IN TOUCH panel's success (same classes;
     // these are the panel's own rules, which live in its embed)
@@ -7991,11 +7995,13 @@ initPopupHoverReveal({
     "max-height:calc(100vh - 160px);max-height:calc(100svh - 160px);overflow-y:auto;box-sizing:border-box;box-shadow:0 30px 70px -40px rgba(48,30,18,.4);scrollbar-width:thin}" +
     ".ct-steps .ct-step-head{margin:6px 0 6px}" +
     // the list: chosen name looks bolder (stroke eases in, no re-wrap), others lighter
-    ".contact-body-formlink [class*='-contact-link']{white-space:nowrap;width:max-content;max-width:100%;-webkit-text-stroke:0 currentColor;" +
-    "transition:opacity .35s cubic-bezier(.22,1,.36,1),-webkit-text-stroke-width .3s cubic-bezier(.22,1,.36,1)}" +
+    // the list: the chosen name and the hovered name show in full Brand Color
+    // Dark, the others lighter (no bolder weight)
+    ".contact-body-formlink [class*='-contact-link']{white-space:nowrap;width:max-content;max-width:100%;color:" + DARK + ";" +
+    "transition:opacity .35s cubic-bezier(.22,1,.36,1)}" +
     ".contact-body-formlink.ct-has-active [class*='-contact-link']{opacity:.4}" +
-    ".contact-body-formlink.ct-has-active [class*='-contact-link'].ct-link-active{opacity:1;-webkit-text-stroke-width:.7px}" +
-    "@media (hover:hover){.contact-body-formlink.ct-has-active [class*='-contact-link']:hover{opacity:.8}}" +
+    ".contact-body-formlink.ct-has-active [class*='-contact-link'].ct-link-active{opacity:1}" +
+    "@media (hover:hover){.contact-body-formlink.ct-has-active [class*='-contact-link']:hover{opacity:1}}" +
     "}";
   document.head.appendChild(css);
 
