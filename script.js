@@ -75,10 +75,8 @@
       st.textContent =
         T + ".cursor," + T + ".cursor-wrapper," + T + ".cursor-text{display:none!important}" +
         "@media (min-width:992px){" +
-        // Side Menu（只限 iPad 打橫）：Safari 工具列會遮住 100vh 底部 → 用可見高度，
-        // 地址 / social icons 離底少少（手機版完全唔郁）
-        T + ".side-bar," + T + ".side-bar-2{height:100dvh!important}" +
-        T + ".side-menu-bottom{top:auto!important;bottom:0!important;padding-bottom:calc(1.75rem + env(safe-area-inset-bottom))!important}" +
+        // （Side Menu：平板改用手機版，見 Section 48）
+
         // GET IN TOUCH（iPad 打橫）：Step 01 標題同介紹之間收窄，睇得晒三個輸入欄
         T + "[data-enq-root][data-enq-index='0'] [data-enq-form]>div:first-child{padding-top:20px!important}" +
         // Step 02：Full Property Address 同 Size 並排
@@ -9424,6 +9422,102 @@ initPopupHoverReveal({
     const t = e.target;
     docEl.classList.toggle("ct-enq-cursor", !!(t && t.closest && t.closest(SEL)));
   });
+})();
+
+// =====================================================
+// 48. iPad / 平板：Side Menu 用手機版
+// 功能：觸控平板（螢幕短邊 ≥ 600px，即 iPad 打橫 / 打直）開 side menu
+//       （burger 或 MENU）時，side menu 用手機版（≤479px）嗰套樣式，
+//       同 Contact 頁喺 iPad 開出嚟嘅 side menu 一樣。
+//       做法：將 Webflow / 網站 CSS 入面手機版適用、而又係 side menu 入面元素
+//       嘅規則抽出嚟，限定喺 side menu 入面再套一次。頁面其他部分唔郁。
+//       電腦（有 mouse）同手機完全唔受影響。
+// =====================================================
+(function sideMenuPhoneOnTablet() {
+  try {
+    if (!window.__LUVE_TOUCH__ || Math.min(screen.width, screen.height) < 600) return;
+    var de = document.documentElement;
+    if (de.classList.contains("luve-tablet-phone")) return; // Contact 頁：成頁已經係手機版
+    var bars = [].slice.call(document.querySelectorAll(".side-bar, .side-bar-2"));
+    if (!bars.length) return;
+    var old = document.getElementById("luve-sidemenu-phone");
+    if (old) old.remove();
+    var W = 479;
+    var inBar = function (el) {
+      for (var i = 0; i < bars.length; i++) if (bars[i] === el || bars[i].contains(el)) return true;
+      return false;
+    };
+    var phoneOnly = function (t) {
+      var any = false,
+        ok = true;
+      String(t).replace(/\(\s*(min|max)-width\s*:\s*([\d.]+)\s*(px|em|rem)?\s*\)/gi, function (_, mm, n, u) {
+        any = true;
+        var v = parseFloat(n) * (u && /em/i.test(u) ? 16 : 1);
+        if (!(mm.toLowerCase() === "max" ? W <= v : W >= v)) ok = false;
+        return _;
+      });
+      return any && ok;
+    };
+    var split = function (sel) {
+      var out = [],
+        depth = 0,
+        cur = "";
+      for (var i = 0; i < sel.length; i++) {
+        var c = sel[i];
+        if (c === "(") depth++;
+        else if (c === ")") depth--;
+        if (c === "," && !depth) {
+          out.push(cur.trim());
+          cur = "";
+        } else cur += c;
+      }
+      if (cur.trim()) out.push(cur.trim());
+      return out;
+    };
+    var scope = function (sel) {
+      var keep = [];
+      split(sel).forEach(function (part) {
+        var test = part
+          .replace(/::?(before|after|placeholder|marker|selection|-webkit-[\w-]+)\b(\([^)]*\))?/gi, "")
+          .replace(/:(hover|focus|active|focus-visible|focus-within|visited)\b/gi, "")
+          .trim();
+        var els;
+        try {
+          els = document.querySelectorAll(test || "*");
+        } catch (e) {
+          return;
+        }
+        if (!els.length) return;
+        var ins = 0;
+        for (var i = 0; i < els.length; i++) if (inBar(els[i])) ins++;
+        if (!ins) return;
+        keep.push(ins === els.length ? part : ":is(.side-bar,.side-bar-2) " + part);
+      });
+      return keep.join(",");
+    };
+    var css = [];
+    var walk = function (rules, inPhone) {
+      for (var i = 0; i < rules.length; i++) {
+        var r = rules[i];
+        if (r.media && r.cssRules) {
+          walk(r.cssRules, phoneOnly(r.media.mediaText));
+        } else if (inPhone && r.selectorText && r.style) {
+          var s = scope(r.selectorText);
+          if (s) css.push(s + "{" + r.style.cssText + "}");
+        }
+      }
+    };
+    for (var i = 0; i < document.styleSheets.length; i++) {
+      try {
+        walk(document.styleSheets[i].cssRules, false);
+      } catch (e) {}
+    }
+    if (!css.length) return;
+    var st = document.createElement("style");
+    st.id = "luve-sidemenu-phone";
+    st.textContent = css.join("\n");
+    document.head.appendChild(st);
+  } catch (e) {}
 })();
 
 }; // end window.__luveRun
