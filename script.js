@@ -1892,25 +1892,37 @@ if (FAQ_ITEMS.length) {
     });
   });
 
-  // Profile Awards CMS links：同全站一樣嘅 underline sweep
-  document
-    .querySelectorAll(".item-award")
-    .forEach((a) => {
-      const lineEl =
-        a.querySelector(".div-block-23") ||
-        a.firstElementChild ||
-        ensureSweepSpan(a, "u-award-sweep");
-      if (!lineEl) return;
-      lineEl.style.display = "inline-block";
-      lineEl.style.position = "relative";
-      applyUnderlineSweep({
-        hitEl: a,
-        lineEl,
-        hoverColor: "#cfbea6",
-        leaveColor: "#795e49",
-        lineColor: "#cfbea6",
-      });
+  // Profile Awards + Publications CMS links：全站 underline sweep（同色同速度）
+  //   用 inline span + background 畫線，底線長度 = 文字實際長度，
+  //   字轉行時會一行接一行咁掃，唔會超出文字
+  if (!document.getElementById("luve-cms-sweep-css")) {
+    const st = document.createElement("style");
+    st.id = "luve-cms-sweep-css";
+    st.textContent =
+      ".luve-cms-sweep{background-image:linear-gradient(#cfbea6,#cfbea6);background-repeat:no-repeat;background-size:0% 2px;background-position:0 100%;padding-bottom:2px}";
+    document.head.appendChild(st);
+  }
+  document.querySelectorAll(".item-award, .item-article").forEach((a) => {
+    if (!bindOnce(a, "cms_sweep")) return;
+    const box = a.querySelector(".div-block-23, .div-block-24") || a;
+    let span = box.querySelector(":scope > .luve-cms-sweep");
+    if (!span) {
+      span = document.createElement("span");
+      span.className = "luve-cms-sweep";
+      while (box.firstChild) span.appendChild(box.firstChild);
+      box.appendChild(span);
+    }
+    a.addEventListener("mouseenter", () => {
+      gsap.to(a, { color: "#cfbea6", duration: 0.4, ease: "power3.out", overwrite: "auto" });
+      gsap.set(span, { backgroundPosition: "0% 100%" });
+      gsap.to(span, { backgroundSize: "100% 2px", duration: 0.6, ease: "expo.out", overwrite: "auto" });
     });
+    a.addEventListener("mouseleave", () => {
+      gsap.to(a, { color: "#795e49", duration: 0.5, ease: "power3.inOut", overwrite: "auto" });
+      gsap.set(span, { backgroundPosition: "100% 100%" });
+      gsap.to(span, { backgroundSize: "0% 2px", duration: 0.6, ease: "expo.out", overwrite: "auto" });
+    });
+  });
 
   // =====================================================
   // Add this block inside the existing Footer & General Text Links section,
@@ -3753,15 +3765,43 @@ document.fonts.ready.then(() => {
     document.head.appendChild(st);
   }
 
-  // 先一次過讀晒位置（只排版一次），再決定邊啲即拆
+  // 先一次過讀晒位置（只排版一次），再決定邊啲即拆：
+  //   - 而家睇得見嘅第一屏字 → 即拆（Loader 走完就要 reveal）
+  //   - 其餘（下面嘅字、收埋嘅 panel / success 文字）→ 等 Loader
+  //     完全走晒先處理，Loader slogan 動畫期間唔做任何重排版
   const vh = window.innerHeight || 800;
-  const tops = elements.map((el) => el.getBoundingClientRect().top);
+  const HIDDEN_AREA =
+    "[data-enq-root], .enq-panel, .w-form-done, .w-form-fail, .side-bar, .side-bar-2";
+  const rects = elements.map((el) => el.getBoundingClientRect());
   const later = [];
   elements.forEach((el, i) => {
-    if (tops[i] < vh * 1.15 || !("IntersectionObserver" in window)) splitOne(el);
+    const r = rects[i];
+    const onScreen =
+      r.height > 0 && r.width > 0 && r.top < vh && r.bottom > 0 && !el.closest(HIDDEN_AREA);
+    if (onScreen || !("IntersectionObserver" in window)) splitOne(el);
     else later.push(el);
   });
-  if (later.length) {
+  if (!later.length) return;
+
+  const afterLoader = () =>
+    new Promise((resolve) => {
+      if (window.__luveLoaderDone) return resolve();
+      window.addEventListener("luve:loader-done", () => resolve(), { once: true });
+      setTimeout(resolve, 4000);
+    });
+  const idle = (fn) =>
+    window.requestIdleCallback
+      ? requestIdleCallback(fn, { timeout: 300 })
+      : setTimeout(fn, 16);
+
+  afterLoader().then(() => {
+    // 收埋嘅文字（size 0 / panel 入面）：之前一開頁就拆，而家改喺空閒時逐個拆
+    const hidden = later.filter((el) => {
+      const r = el.getBoundingClientRect();
+      return r.height === 0 || r.width === 0 || el.closest(HIDDEN_AREA);
+    });
+    const visibleLater = later.filter((el) => !hidden.includes(el));
+
     const io = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
@@ -3772,8 +3812,19 @@ document.fonts.ready.then(() => {
       },
       { rootMargin: "0px 0px 60% 0px" }
     );
-    later.forEach((el) => io.observe(el));
-  }
+    visibleLater.forEach((el) => io.observe(el));
+
+    const queue = hidden.slice();
+    const pump = (deadline) => {
+      do {
+        const el = queue.shift();
+        if (!el) return;
+        splitOne(el);
+      } while (deadline && deadline.timeRemaining && deadline.timeRemaining() > 8);
+      if (queue.length) idle(pump);
+    };
+    if (queue.length) idle(pump);
+  });
 });
 
 // =====================================================
@@ -4151,6 +4202,7 @@ window.addEventListener("load", function () {
 function initSmartLoader() {
   const loader = document.querySelector(".page-loader");
   if (!loader) {
+    window.__luveLoaderDone = true;
     document.body.style.opacity = "1";
     document.body.style.visibility = "visible";
     return;
@@ -4188,6 +4240,8 @@ function initSmartLoader() {
         ease: "power2.inOut",
         onComplete: () => {
           loader.style.display = "none";
+          window.__luveLoaderDone = true;
+          window.dispatchEvent(new Event("luve:loader-done"));
           gsap.set("body", { opacity: 1, visibility: "visible" });
           document.body.style.opacity = "1";
           document.body.style.visibility = "visible";
@@ -4284,6 +4338,7 @@ function initSmartLoader() {
   // --- 判斷 ---
   // 頁面轉場（Section 00）換頁後重新啟動：遮罩由 Section 00 自己淡出
   if (window.__luveLife && window.__luveLife.gen > 0) {
+    window.__luveLoaderDone = true;
     // nothing — Section 00 lifts the overlay itself after the new page is ready
   } else try {
     const isInternal = sessionStorage.getItem("internal-transition");
