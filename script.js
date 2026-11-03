@@ -8213,7 +8213,7 @@ initPopupHoverReveal({
         const parts = () =>
           [...form.children]
             .filter((c) => c.matches("[data-ct-step]") && getComputedStyle(c).display !== "none")
-            .concat([nav, hTitle, hCount].filter(Boolean));
+            .concat([hTitle, hCount].filter(Boolean));
         const out = parts();
         gsap.killTweensOf(out);
         gsap.to(out, {
@@ -8233,14 +8233,13 @@ initPopupHoverReveal({
         });
         return;
       }
-      gsap.killTweensOf([form, nav]);
-      gsap.to([form, nav], {
+      gsap.killTweensOf(form);
+      gsap.to(form, {
         autoAlpha: 0,
         duration: 0.22,
         ease: "power2.in",
         onComplete: () => {
           apply();
-          gsap.set(nav, { autoAlpha: 1 });
           gsap.fromTo(form, { autoAlpha: 0, y: 6 }, {
             autoAlpha: 1, y: 0, duration: 0.42, ease: "power2.out",
             clearProps: "transform",
@@ -8636,7 +8635,7 @@ initPopupHoverReveal({
       // phones only (the computer layout stays as it was)
       "@media (max-width:767px){" +
       // "Please select an option" beside the last choice / under the choices
-      "html body [data-enq-form] .select-field-error-msg.ct-choice-error{position:absolute!important;right:auto!important;bottom:auto!important;display:flex!important;max-width:none!important;align-items:center;justify-content:flex-end;margin:0!important;padding:0!important;text-align:right!important;white-space:normal!important;line-height:1.3!important;transform:none!important}" +
+      "html body [data-enq-form] .select-field-error-msg.ct-choice-error{position:static!important;inset:auto!important;width:auto!important;max-width:none!important;margin:6px 0 0!important;padding:0!important;text-align:left!important;white-space:normal!important;line-height:1.3!important;transform:none!important}" +
       // steps 02–04: only the first intro line; every step's title at the same place
       "html body [data-enq-root]:not([data-enq-index='0']) .enq-intro{min-height:0!important;height:auto!important}" +
       "html body [data-enq-root]:not([data-enq-index='0']) .enq-intro .enq-intro-line-mask:not(:first-child){display:none!important}" +
@@ -8819,7 +8818,20 @@ initPopupHoverReveal({
         const r = step && step.closest("[data-enq-root]");
         return r ? { root: r, lines: [...r.querySelectorAll(".enq-intro .enq-intro-line-mask:not(:first-child)")] } : { lines: [] };
       };
+      // the BACK / NEXT / SUBMIT buttons sit outside the steps: keep them
+      // in place (no fade) when the step changes
+      const isCtrl = (x) => x && x.matches && x.matches('[data-enq-action], [type="submit"], [data-enq-cta]');
+      const dropCtrls = (t) => (Array.isArray(t) ? t.filter((x) => !isCtrl(x)) : t);
+      const set = gsap.set.bind(gsap);
+      gsap.set = function (targets, vars) {
+        if (vars && typeof vars === "object" && isStep(targets)) {
+          (Array.isArray(targets) ? targets : []).filter(isCtrl).forEach((c) => (c.style.opacity = ""));
+          targets = dropCtrls(targets);
+        }
+        return set.apply(gsap, [targets, vars].concat([].slice.call(arguments, 2)));
+      };
       gsap.to = function (targets, vars) {
+        if (vars && typeof vars === "object" && !Array.isArray(vars) && isStep(targets)) targets = dropCtrls(targets);
         if (vars && typeof vars === "object" && !Array.isArray(vars) && isStep(targets)) {
           const x = extraLines(targets);
           const onFirst = x.root && x.root.getAttribute("data-enq-index") === "0";
@@ -8917,45 +8929,18 @@ initPopupHoverReveal({
     const put = (el, k, v) => {
       if (el.style.getPropertyValue(k) !== v) el.style.setProperty(k, v, "important");
     };
+    // phones: the message sits under the choices, left-aligned, one line
+    // (as on the Contact page); computers keep the panel's own place
     const placeChoiceErrors = () => {
       form.querySelectorAll(".select-field-error-msg").forEach((msg) => {
+        const on = mqPhone.matches;
+        if (msg.classList.contains("ct-choice-error") !== on) msg.classList.toggle("ct-choice-error", on);
+        ["top", "left", "right", "width", "height"].forEach((k) => {
+          if (msg.style.getPropertyValue(k)) msg.style.removeProperty(k);
+        });
         const group = msg.parentElement;
-        if (!mqPhone.matches) {
-          if (msg.classList.contains("ct-choice-error")) {
-            msg.classList.remove("ct-choice-error");
-            ["top", "left", "right", "width", "height"].forEach((k) => msg.style.removeProperty(k));
-            if (group) group.style.removeProperty("padding-bottom");
-          }
-          return;
-        }
-        if (!group || msg.style.display === "none" || !msg.getClientRects().length) return;
-        const grid = [...group.children].find((c) => c !== msg && c.querySelector("input[type='radio'],input[type='checkbox']"));
-        const labels = grid ? [...grid.querySelectorAll("label")].filter((l) => l.getClientRects().length) : [];
-        if (!labels.length) return;
-        const g = group.getBoundingClientRect();
-        const gr = grid.getBoundingClientRect();
-        const last = labels[labels.length - 1].getBoundingClientRect();
-        const gap = parseFloat(getComputedStyle(grid).columnGap) || 12;
-        const room = gr.right - (last.right + gap);
-        if (!msg.classList.contains("ct-choice-error")) msg.classList.add("ct-choice-error");
-        // the Chinese part on its own line (not just its last character)
-        if (!msg.querySelector("br") && / \(請選擇一項\)/.test(msg.textContent))
-          msg.innerHTML = msg.textContent.replace(/ \(請選擇一項\)/, "<br>(請選擇一項)");
-        if (room >= 90) {
-          put(msg, "top", Math.round(last.top - g.top) + "px");
-          put(msg, "left", Math.round(last.right + gap - g.left) + "px");
-          put(msg, "right", "0px");
-          put(msg, "width", "auto");
-          put(msg, "height", Math.round(last.height) + "px");
-          if (group.style.paddingBottom) group.style.removeProperty("padding-bottom");
-        } else {
-          put(msg, "top", Math.round(gr.bottom - g.top + 6) + "px");
-          put(msg, "left", "0px");
-          put(msg, "right", "0px");
-          put(msg, "width", "auto");
-          put(msg, "height", "auto");
-          if (group.style.paddingBottom !== "22px") group.style.setProperty("padding-bottom", "22px");
-        }
+        if (group && group.style.paddingBottom) group.style.removeProperty("padding-bottom");
+        if (msg.querySelector("br")) msg.textContent = msg.textContent;
       });
     };
     // the message is created / shown by the panel's own check when NEXT is
