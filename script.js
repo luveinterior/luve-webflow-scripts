@@ -2164,10 +2164,6 @@ document.addEventListener("DOMContentLoaded", () => {
     ".section-cta *",
     ".slide-nav-wrapper .nav-item",
     ".footer-legal-wrapper *",
-    // Profile：About 標題 + Studio Recognition（Awards / Publications）入面嘅 DIV 字
-    ".cover-about-title",
-    ".cover-about-title *",
-    ".studio-recognition-bottom *",
     '[data-cursor="warm"]',
     VIEW_TARGET,
   ].join(", ");
@@ -2247,14 +2243,53 @@ document.addEventListener("DOMContentLoaded", () => {
     return false;
   }
 
+  // Profile：About 標題 + Studio Recognition（Awards / Publications）
+  //   只有 cursor 真係壓住啲字先變透明 warm；喺空白位（欄位空位、行距）
+  //   保持正常啡色波點
+  const TEXT_ONLY_AREAS = ".cover-about-title, .studio-recognition-bottom";
+  const pointOverText = (x, y) => {
+    const el = document.elementFromPoint(x, y);
+    if (!el || !el.closest(TEXT_ONLY_AREAS)) return false;
+    const range = document.createRange();
+    for (const node of el.childNodes) {
+      if (node.nodeType !== 3 || !node.textContent.trim()) continue;
+      range.selectNodeContents(node);
+      for (const r of range.getClientRects()) {
+        if (x >= r.left - 2 && x <= r.right + 2 && y >= r.top - 2 && y <= r.bottom + 2) return true;
+      }
+    }
+    return false;
+  };
+  let inTextArea = false;
+  let textCheckQueued = false;
+  window.addEventListener(
+    "mousemove",
+    (event) => {
+      if (!inTextArea || textCheckQueued) return;
+      textCheckQueued = true;
+      const x = event.clientX;
+      const y = event.clientY;
+      requestAnimationFrame(() => {
+        textCheckQueued = false;
+        if (inTextArea) setHover(pointOverText(x, y) ? "warm" : "none");
+      });
+    },
+    { passive: true }
+  );
+
   document.addEventListener("pointerover", (event) => {
     const target = event.target;
+    inTextArea = false;
 
     // This test must run before the generic button/role=button warm target.
     if (target.closest(ENQUIRY_SOFT_TARGETS)) return setHover("warm");
     if (target.closest(HIDE_CURSOR_TARGETS)) return setHover("hidden");
     if (target.closest(VIEW_TARGET)) return setHover("view");
     if (isImageOrBg(target)) return setHover("none");
+    if (target.closest(TEXT_ONLY_AREAS)) {
+      inTextArea = true;
+      return setHover(pointOverText(event.clientX, event.clientY) ? "warm" : "none");
+    }
     if (target.closest(WARM_HOVER_TARGETS)) return setHover("warm");
     setHover("none");
   });
