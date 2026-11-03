@@ -2285,11 +2285,12 @@ document.addEventListener("DOMContentLoaded", () => {
     if (target.closest(ENQUIRY_SOFT_TARGETS)) return setHover("warm");
     if (target.closest(HIDE_CURSOR_TARGETS)) return setHover("hidden");
     if (target.closest(VIEW_TARGET)) return setHover("view");
-    if (isImageOrBg(target)) return setHover("none");
+    // 要喺 isImageOrBg 之前：Awards 底線用 background 畫，會被當成背景圖
     if (target.closest(TEXT_ONLY_AREAS)) {
       inTextArea = true;
       return setHover(pointOverText(event.clientX, event.clientY) ? "warm" : "none");
     }
+    if (isImageOrBg(target)) return setHover("none");
     if (target.closest(WARM_HOVER_TARGETS)) return setHover("warm");
     setHover("none");
   });
