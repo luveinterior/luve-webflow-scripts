@@ -1892,6 +1892,26 @@ if (FAQ_ITEMS.length) {
     });
   });
 
+  // Profile Awards CMS links：同全站一樣嘅 underline sweep
+  document
+    .querySelectorAll(".item-award")
+    .forEach((a) => {
+      const lineEl =
+        a.querySelector(".div-block-23") ||
+        a.firstElementChild ||
+        ensureSweepSpan(a, "u-award-sweep");
+      if (!lineEl) return;
+      lineEl.style.display = "inline-block";
+      lineEl.style.position = "relative";
+      applyUnderlineSweep({
+        hitEl: a,
+        lineEl,
+        hoverColor: "#cfbea6",
+        leaveColor: "#795e49",
+        lineColor: "#cfbea6",
+      });
+    });
+
   // =====================================================
   // Add this block inside the existing Footer & General Text Links section,
   // immediately AFTER the sideMenuTextLinks.forEach(...) block.
@@ -2132,6 +2152,10 @@ document.addEventListener("DOMContentLoaded", () => {
     ".section-cta *",
     ".slide-nav-wrapper .nav-item",
     ".footer-legal-wrapper *",
+    // Profile：About 標題 + Studio Recognition（Awards / Publications）入面嘅 DIV 字
+    ".cover-about-title",
+    ".cover-about-title *",
+    ".studio-recognition-bottom *",
     '[data-cursor="warm"]',
     VIEW_TARGET,
   ].join(", ");
@@ -3676,7 +3700,10 @@ document.fonts.ready.then(() => {
 
   console.log("[LineReveal] Found elements:", elements.length);
 
-  elements.forEach((el) => {
+  // ★ Performance：唔再一次過拆晒全頁（每拆一個都會逼瀏覽器重新排版全頁，
+  //   Loader 動畫期間會 lag）。只即時拆第一屏附近嘅字，其餘喺捲到
+  //   前大半個畫面先拆（IntersectionObserver），動畫效果完全一樣。
+  const splitOne = (el) => {
     if (el.dataset.linesSplit === "true") return;
     if (!el.textContent.trim()) return;
 
@@ -3714,7 +3741,39 @@ document.fonts.ready.then(() => {
     });
 
     el.dataset.linesSplit = "true";
+  };
+
+  // CTA「Start your LUVÉ Story Here」：mask 上下加位（負 margin 抵消），
+  // 令 É 頂 / y 尾唔會被遮，句子位置同動畫不變
+  if (!document.getElementById("luve-cta-mask-pad")) {
+    const st = document.createElement("style");
+    st.id = "luve-cta-mask-pad";
+    st.textContent =
+      ".section-cta-wrap > p > div{padding-block:.22em!important;margin-block:-.22em!important}";
+    document.head.appendChild(st);
+  }
+
+  // 先一次過讀晒位置（只排版一次），再決定邊啲即拆
+  const vh = window.innerHeight || 800;
+  const tops = elements.map((el) => el.getBoundingClientRect().top);
+  const later = [];
+  elements.forEach((el, i) => {
+    if (tops[i] < vh * 1.15 || !("IntersectionObserver" in window)) splitOne(el);
+    else later.push(el);
   });
+  if (later.length) {
+    const io = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (!entry.isIntersecting) return;
+          io.unobserve(entry.target);
+          splitOne(entry.target);
+        });
+      },
+      { rootMargin: "0px 0px 60% 0px" }
+    );
+    later.forEach((el) => io.observe(el));
+  }
 });
 
 // =====================================================
