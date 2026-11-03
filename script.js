@@ -71,8 +71,21 @@
       document.documentElement.classList.add("luve-touch");
       var st = document.createElement("style");
       st.id = "luve-touch-css";
+      var T = "html.luve-touch ";
       st.textContent =
-        "html.luve-touch .cursor,html.luve-touch .cursor-wrapper,html.luve-touch .cursor-text{display:none!important}";
+        T + ".cursor," + T + ".cursor-wrapper," + T + ".cursor-text{display:none!important}" +
+        // Side Menu：Safari 工具列會遮住 100vh 底部 → 用可見高度，地址欄位升上少少
+        T + ".side-bar," + T + ".side-bar-2{height:100dvh!important}" +
+        "@media (min-width:992px){" +
+        T + ".side-menu-bottom{top:auto!important;bottom:0!important;padding-bottom:calc(4rem + env(safe-area-inset-bottom))!important}" +
+        // GET IN TOUCH（iPad 打橫）：Step 01 標題同介紹之間收窄，睇得晒三個輸入欄
+        T + "[data-enq-root][data-enq-index='0'] [data-enq-form]>div:first-child{padding-top:20px!important}" +
+        // Step 02：Full Property Address 同 Size 並排
+        T + "[data-enq-root] [data-enq-step='type']>div:nth-child(2){grid-template-columns:minmax(0,1.6fr) minmax(0,1fr)!important}" +
+        T + "[data-enq-root] [data-enq-step='type']>div:nth-child(2)>*:not(label){grid-column:1/-1!important}" +
+        // Step 04：Others 輸入框嘅位一直預留，淡入淡出唔會推郁下面 privacy note / 掣
+        T + "[data-enq-other-wrap].ct-other.ct-other-off{max-height:240px!important;margin-top:0!important;transform:none!important;visibility:hidden}" +
+        "}";
       (document.head || document.documentElement).appendChild(st);
     }
   } catch (e) {}
@@ -545,6 +558,9 @@ window.__luveTouchWide = function () {
     if (u.origin !== location.origin || !/^https?:$/.test(u.protocol)) return false;
     if (/\.(pdf|vcf|jpe?g|png|webp|gif|zip|mp4)$/i.test(u.pathname)) return false;
     if (u.pathname === location.pathname && u.search === location.search) return false;
+    // iPad / 觸控：Contact 頁用 Mobile 版（另一個 viewport），入出 Contact 要正常載入
+    if (window.__LUVE_TOUCH__ && (/^\/contact\/?$/.test(u.pathname) || /^\/contact\/?$/.test(location.pathname)))
+      return false;
     return true;
   }
 
@@ -1827,6 +1843,7 @@ if (FAQ_ITEMS.length) {
     lineOpacity,
   }) => {
     if (!hitEl || !lineEl) return;
+    if (window.__LUVE_TOUCH__) return; // 冇 mouse 嘅裝置唔做 hover 底線
     if (
       !bindOnce(
         hitEl,
@@ -1931,6 +1948,7 @@ if (FAQ_ITEMS.length) {
     document.head.appendChild(st);
   }
   document.querySelectorAll(".item-award, .item-article").forEach((a) => {
+    if (window.__LUVE_TOUCH__) return; // 冇 mouse 嘅裝置唔做 hover 底線
     if (!bindOnce(a, "cms_sweep")) return;
     const box = a.querySelector(".div-block-23, .div-block-24") || a;
     let span = box.querySelector(":scope > .luve-cms-sweep");
@@ -5931,6 +5949,8 @@ function initPopupHoverReveal(config) {
     // iPad 打橫（觸控 + Desktop layout）：冇 hover → 捲到畫面中間就自動彈出，
     // 離開中間就收回（同一組動畫）。Desktop / Mobile 不變。
     const touchWide = window.__luveTouchWide && window.__luveTouchWide();
+    // fp-card（Home Featured Projects）：iPad 唔要彈出效果，淨係睇卡本身
+    if (touchWide && config.touchWide === "off") return;
     const on = (type, fn) => {
       if (touchWide) {
         if (!wrap.__popupST) wrap.__popupST = {};
@@ -6029,6 +6049,7 @@ initPopupHoverReveal({
 // 執行 — Home 頁 Featured Projects（新結構，多張卡）
 initPopupHoverReveal({
   wrapSelector: ".fp-card",
+  touchWide: "off",
   mainImgSelector: ".fp-img",
   centerImgSelector: ".fp-hover-img",
   infoRowSelector: ".project-info-row",
@@ -8748,6 +8769,7 @@ initPopupHoverReveal({
       a.style.setProperty("text-decoration", "none", "important");
       a.style.setProperty("--hover-underline-color", DARK);
       a.style.setProperty("--underline-offset", "-1px");
+      if (window.__LUVE_TOUCH__) return; // 冇 mouse 嘅裝置唔做 hover 底線
       gsap.set(a, { "--line-width": "0%", "--line-left": "0", "--line-right": "auto" });
       a.addEventListener("mouseenter", () => {
         gsap.set(a, { "--line-left": "0", "--line-right": "auto" });
@@ -9180,7 +9202,7 @@ initPopupHoverReveal({
       a.style.setProperty("text-decoration", "none", "important");
       a.style.setProperty("--hover-underline-color", DARK);
       a.style.setProperty("--underline-offset", "-1px");
-      if (!window.gsap) return;
+      if (!window.gsap || window.__LUVE_TOUCH__) return; // 冇 mouse：唔做 hover 底線
       gsap.set(a, { "--line-width": "0%", "--line-left": "0", "--line-right": "auto" });
       a.addEventListener("mouseenter", () => {
         gsap.set(a, { "--line-left": "0", "--line-right": "auto" });
