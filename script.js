@@ -55,6 +55,34 @@
 // =============================================================================
 
 // =====================================================
+// 00t. Touch Devices (iPad / tablets / phones)
+// 功能：冇滑鼠嘅裝置（hover:none 或 pointer:coarse）加 html.luve-touch，
+//       window.__LUVE_TOUCH__ = true。
+//       iPad 打橫（≥992px）會用 Desktop layout，但冇 mouse，所以：
+//       - 唔出網站 cursor（啡色波點）
+//       - Desktop 嘅 hover 效果改為「捲到先出」或者直接跟 Mobile 做法
+//       Desktop（有 mouse）同 Mobile 完全唔受影響。
+// =====================================================
+(function touchFlag() {
+  try {
+    var t = window.matchMedia("(hover: none), (pointer: coarse)").matches;
+    window.__LUVE_TOUCH__ = t;
+    if (t) {
+      document.documentElement.classList.add("luve-touch");
+      var st = document.createElement("style");
+      st.id = "luve-touch-css";
+      st.textContent =
+        "html.luve-touch .cursor,html.luve-touch .cursor-wrapper,html.luve-touch .cursor-text{display:none!important}";
+      (document.head || document.documentElement).appendChild(st);
+    }
+  } catch (e) {}
+})();
+// iPad 打橫：觸控 + Desktop 闊度
+window.__luveTouchWide = function () {
+  return !!window.__LUVE_TOUCH__ && window.matchMedia("(min-width: 992px)").matches;
+};
+
+// =====================================================
 // 00a. Always the Latest Page
 // 功能：Webflow 冇叫瀏覽器唔好 cache 頁面，所以 publish 之後，
 //       舊訪客（尤其手機）可能仍然用緊舊版頁面 + 舊版 script，
@@ -2114,6 +2142,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   if (!cursor) return;
   if (!window.matchMedia("(min-width: 992px)").matches) return;
+  if (window.__LUVE_TOUCH__) return; // iPad 等觸控裝置：冇 mouse，唔出 cursor
 
   // GET IN TOUCH panel：enq component 本身有條舊 CSS 喺 panel 打開時收埋 .cursor
   // 同改用系統 cursor。蓋過佢：panel 入面都用返網站嘅啡色波點 + 字上透明狀態，
@@ -4194,8 +4223,8 @@ function initProjectAnimations() {
           );
         }
 
-        // 3. Hover Interaction
-        if (imageWrapper) {
+        // 3. Hover Interaction（觸控裝置冇 hover，唔綁）
+        if (imageWrapper && !window.__LUVE_TOUCH__) {
           imageWrapper.addEventListener("mouseenter", () => {
             if (image)
               gsap.to(image, {
@@ -5899,8 +5928,18 @@ function initPopupHoverReveal(config) {
       });
     }
 
+    // iPad 打橫（觸控 + Desktop layout）：冇 hover → 捲到畫面中間就自動彈出，
+    // 離開中間就收回（同一組動畫）。Desktop / Mobile 不變。
+    const touchWide = window.__luveTouchWide && window.__luveTouchWide();
+    const on = (type, fn) => {
+      if (touchWide) {
+        if (!wrap.__popupST) wrap.__popupST = {};
+        wrap.__popupST[type] = fn;
+      } else wrap.addEventListener(type, fn);
+    };
+
     // --- 2. Hover In：兩個元素一齊彈出 ---
-    wrap.addEventListener("mouseenter", () => {
+    on("mouseenter", () => {
       if (centerImg) {
         gsap.to(centerImg, {
           autoAlpha: 1,
@@ -5933,7 +5972,7 @@ function initPopupHoverReveal(config) {
     });
 
     // --- 3. Hover Out：全部收回 ---
-    wrap.addEventListener("mouseleave", () => {
+    on("mouseleave", () => {
       if (centerImg) {
         gsap.to(centerImg, {
           autoAlpha: 0,
@@ -5963,6 +6002,19 @@ function initPopupHoverReveal(config) {
         });
       }
     });
+
+    if (touchWide && wrap.__popupST) {
+      const fns = wrap.__popupST;
+      ScrollTrigger.create({
+        trigger: wrap,
+        start: "top 65%",
+        end: "bottom 35%",
+        onEnter: fns.mouseenter,
+        onEnterBack: fns.mouseenter,
+        onLeave: fns.mouseleave,
+        onLeaveBack: fns.mouseleave,
+      });
+    }
   });
 }
 
@@ -6508,6 +6560,7 @@ initPopupHoverReveal({
     "(hover: hover) and (pointer: fine)"
   ).matches;
   if (isDesktopHover) return;
+  if (window.__luveTouchWide && window.__luveTouchWide()) return; // iPad 打橫：用下面 D
 
   var imgWrap = document.querySelector(".service-img");
   var track = document.querySelector(".service-img-track");
@@ -6581,6 +6634,108 @@ initPopupHoverReveal({
   window.addEventListener("load", function () {
     ScrollTrigger.refresh();
   });
+})();
+
+// ── D. SERVICES：iPad 打橫（觸控 + Desktop layout）──
+//   Desktop 版係「cursor 停喺邊個服務，張相就跟去邊度 + 個名變色」；
+//   iPad 冇 cursor，改為捲到邊一項，嗰項就亮起，張相滑去嗰行（疊住個名，
+//   同 Desktop 一樣用 difference 字）；點一下某一項都會即時轉。
+(function initServicesTouchWide() {
+  if (!(window.__luveTouchWide && window.__luveTouchWide())) return;
+  var items = Array.from(document.querySelectorAll(".service-item"));
+  var list = document.querySelector(".services-list");
+  var imgWrap = document.querySelector(".service-img");
+  var track = document.querySelector(".service-img-track");
+  if (!items.length || !list || !imgWrap || !track) return;
+
+  var imgEls = Array.from(track.querySelectorAll(".service-img-el"));
+  if (!imgEls.length) return;
+  var total = imgEls.length;
+  var STEP = 100 / total;
+  var DIM = 0.18;
+  var nameBlend = document.querySelector(".service-name-blend");
+  var blendText = nameBlend ? nameBlend.querySelector(".service-name") : null;
+  var realNames = items.map(function (it) {
+    return it.querySelector(".service-name");
+  });
+
+  gsap.set(items, { opacity: DIM });
+  gsap.set(imgWrap, { autoAlpha: 0 });
+  gsap.set(track, { yPercent: 0 });
+  var xTo = gsap.quickTo(imgWrap, "x", { duration: 0.6, ease: "power3" });
+  var yTo = gsap.quickTo(imgWrap, "y", { duration: 0.6, ease: "power3" });
+  var current = -1;
+
+  function spot(i) {
+    var lr = list.getBoundingClientRect();
+    var ir = items[i].getBoundingClientRect();
+    return [
+      lr.width * 0.62 - imgWrap.offsetWidth / 2,
+      ir.top - lr.top + ir.height / 2 - imgWrap.offsetHeight / 2,
+    ];
+  }
+  function activate(i, force) {
+    if (i === current && !force) return;
+    var first = current < 0;
+    current = i;
+    items.forEach(function (it) {
+      it.classList.remove("is-active");
+    });
+    items[i].classList.add("is-active");
+    gsap.to(items, { opacity: DIM, duration: 0.35, ease: "power2.out", overwrite: "auto" });
+    gsap.to(items[i], { opacity: 1, duration: 0.35, ease: "power2.out", overwrite: "auto" });
+    var p = spot(i);
+    if (first) gsap.set(imgWrap, { x: p[0], y: p[1] });
+    else {
+      xTo(p[0]);
+      yTo(p[1]);
+    }
+    gsap.to(track, {
+      yPercent: -STEP * Math.min(i, total - 1),
+      duration: first ? 0 : 0.5,
+      ease: "power3.out",
+      overwrite: "auto",
+    });
+    if (blendText && realNames[i]) blendText.textContent = realNames[i].textContent;
+  }
+
+  items.forEach(function (it, i) {
+    ScrollTrigger.create({
+      trigger: it,
+      start: "top 60%",
+      end: "bottom 60%",
+      onToggle: function (self) {
+        if (self.isActive) activate(i);
+      },
+    });
+    it.addEventListener("click", function () {
+      activate(i);
+    });
+  });
+  ScrollTrigger.create({
+    trigger: list,
+    start: "top 70%",
+    end: "bottom 30%",
+    onToggle: function (self) {
+      if (self.isActive && current < 0) activate(0);
+      gsap.to(imgWrap, { autoAlpha: self.isActive ? 1 : 0, duration: 0.4, overwrite: "auto" });
+    },
+  });
+  window.addEventListener("resize", function () {
+    if (current >= 0) activate(current, true);
+  });
+
+  if (nameBlend) {
+    gsap.ticker.add(function () {
+      if (current < 0 || !realNames[current]) return;
+      var lr = list.getBoundingClientRect();
+      var rr = realNames[current].getBoundingClientRect();
+      gsap.set(nameBlend, {
+        x: rr.left - lr.left - gsap.getProperty(imgWrap, "x"),
+        y: rr.top - lr.top - gsap.getProperty(imgWrap, "y"),
+      });
+    });
+  }
 })();
 
 // =====================================================
@@ -9237,7 +9392,7 @@ initPopupHoverReveal({
     window.addEventListener("resize", () => setTimeout(placeChoiceErrors, 150));
   });
 
-  if (!window.matchMedia("(min-width: 992px)").matches || !document.querySelector(".cursor")) return;
+  if (!window.matchMedia("(min-width: 992px)").matches || window.__LUVE_TOUCH__ || !document.querySelector(".cursor")) return;
   const SEL = "[data-enq-panel] [data-enq-cta], [data-enq-panel] label:has(input[type='radio'])";
   const docEl = document.documentElement;
   document.addEventListener("pointerover", (e) => {
