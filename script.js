@@ -2123,7 +2123,20 @@ document.addEventListener("DOMContentLoaded", () => {
     st.id = "luve-enq-cursor-css";
     st.textContent =
       'html:has([data-enq-modal][aria-hidden="false"]) body .cursor{opacity:1!important;visibility:visible!important;z-index:2147483000!important}' +
-      '[data-enq-modal][aria-hidden="false"] [data-enq-panel],[data-enq-modal][aria-hidden="false"] [data-enq-panel] *{cursor:none!important}';
+      // enq embed 有同 specificity、但喺 DOM 較後嘅 cursor:default!important，
+      // 所以加 html body 提高優先次序
+      'html body [data-enq-modal][aria-hidden="false"] [data-enq-panel],html body [data-enq-modal][aria-hidden="false"] [data-enq-panel] *{cursor:none!important}' +
+      // 例外：輸入欄同時顯示系統 text / pointer
+      'html body [data-enq-modal][aria-hidden="false"] [data-enq-panel] input:not([type="radio"]):not([type="checkbox"]):not([type="submit"]):not([type="button"]):not([type="hidden"]),' +
+      'html body [data-enq-modal][aria-hidden="false"] [data-enq-panel] textarea{cursor:text!important}' +
+      'html body [data-enq-modal][aria-hidden="false"] [data-enq-panel] select,' +
+      'html body [data-enq-modal][aria-hidden="false"] [data-enq-panel] input[type="radio"],' +
+      'html body [data-enq-modal][aria-hidden="false"] [data-enq-panel] input[type="checkbox"],' +
+      'html body [data-enq-modal][aria-hidden="false"] [data-enq-panel] label:has(input[type="radio"]),' +
+      'html body [data-enq-modal][aria-hidden="false"] [data-enq-panel] label:has(input[type="radio"]) *,' +
+      // Privacy Policy 連結：透明 cursor + pointer
+      'html body [data-enq-modal][aria-hidden="false"] [data-enq-panel] .enq-privacy-note a,' +
+      'html body [data-enq-modal][aria-hidden="false"] [data-enq-panel] .enq-privacy-note a *{cursor:pointer!important}';
     document.head.appendChild(st);
   }
 
