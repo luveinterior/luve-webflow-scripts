@@ -3800,6 +3800,10 @@ document.fonts.ready.then(() => {
           });
         }
 
+        // GET IN TOUCH panel 係 fixed overlay，冇得 scroll，scroll reveal 永遠唔會
+        // 觸發（例如 panel 底部嘅 privacy note 會一直隱形）→ 只拆行唔做 reveal
+        if (el.closest("[data-enq-root], [data-enq-modal], .enq-panel")) return;
+
         return gsap.from(self.lines, {
           yPercent: 110,
           autoAlpha: 0,
