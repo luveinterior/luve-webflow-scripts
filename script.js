@@ -8635,7 +8635,7 @@ initPopupHoverReveal({
       // phones only (the computer layout stays as it was)
       "@media (max-width:767px){" +
       // "Please select an option" beside the last choice / under the choices
-      "html body [data-enq-form] .select-field-error-msg.ct-choice-error{position:static!important;inset:auto!important;width:auto!important;max-width:none!important;margin:6px 0 0!important;padding:0!important;text-align:left!important;white-space:normal!important;line-height:1.3!important;transform:none!important}" +
+      "html body [data-enq-form] .select-field-error-msg.ct-choice-error{position:static!important;inset:auto!important;width:auto!important;max-width:none!important;margin:6px 0 10px!important;padding:0!important;text-align:left!important;white-space:normal!important;line-height:1.3!important;transform:none!important}" +
       // steps 02–04: only the first intro line; every step's title at the same place
       "html body [data-enq-root]:not([data-enq-index='0']) .enq-intro{min-height:0!important;height:auto!important}" +
       "html body [data-enq-root]:not([data-enq-index='0']) .enq-intro .enq-intro-line-mask:not(:first-child){display:none!important}" +
