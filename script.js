@@ -2260,7 +2260,9 @@ document.addEventListener("DOMContentLoaded", () => {
     while (element && element !== document.body) {
       if (element.tagName === "IMG") return true;
       const style = window.getComputedStyle(element);
-      if (style && style.backgroundImage && style.backgroundImage !== "none") {
+      // 只計真圖片（url(...)）；漸變底色（例如 GET IN TOUCH panel 底部
+      // privacy note 嘅 fade）唔當係圖，否則入面嘅字唔會變透明
+      if (style && style.backgroundImage && style.backgroundImage.indexOf("url(") !== -1) {
         return true;
       }
       element = element.parentElement;
