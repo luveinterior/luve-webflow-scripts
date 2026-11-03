@@ -83,6 +83,8 @@
         // Step 02：Full Property Address 同 Size 並排
         T + "[data-enq-root] [data-enq-step='type']>div:nth-child(2){grid-template-columns:minmax(0,1.6fr) minmax(0,1fr)!important}" +
         T + "[data-enq-root] [data-enq-step='type']>div:nth-child(2)>*:not(label){grid-column:1/-1!important}" +
+        // Step 04：選項排三格一行，騰位畀 Others 輸入框
+        T + "[data-enq-root] [data-enq-step='source']>div:nth-child(2)>div:first-child>div{grid-template-columns:repeat(3,minmax(0,1fr))!important}" +
         // Step 04：Others 輸入框嘅位一直預留，淡入淡出唔會推郁下面 privacy note / 掣
         T + "[data-enq-other-wrap].ct-other.ct-other-off{max-height:240px!important;margin-top:0!important;transform:none!important;visibility:hidden}" +
         "}";
