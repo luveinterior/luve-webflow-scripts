@@ -2115,6 +2115,18 @@ document.addEventListener("DOMContentLoaded", () => {
   if (!cursor) return;
   if (!window.matchMedia("(min-width: 992px)").matches) return;
 
+  // GET IN TOUCH panel：enq component 本身有條舊 CSS 喺 panel 打開時收埋 .cursor
+  // 同改用系統 cursor。蓋過佢：panel 入面都用返網站嘅啡色波點 + 字上透明狀態，
+  // z-index 要高過 panel（20000）。
+  if (!document.getElementById("luve-enq-cursor-css")) {
+    const st = document.createElement("style");
+    st.id = "luve-enq-cursor-css";
+    st.textContent =
+      'html:has([data-enq-modal][aria-hidden="false"]) body .cursor{opacity:1!important;visibility:visible!important;z-index:2147483000!important}' +
+      '[data-enq-modal][aria-hidden="false"] [data-enq-panel],[data-enq-modal][aria-hidden="false"] [data-enq-panel] *{cursor:none!important}';
+    document.head.appendChild(st);
+  }
+
   const BASE = {
     size: 20,
     growSize: 32,
@@ -6392,120 +6404,81 @@ initPopupHoverReveal({
   // ★ 已移除：原本 .services-eyebrow + service-item 嘅左飛入 reveal ★
 })();
 
-// ── C. PROFILE AWARDS：hover 項目名（.item_project）→ 封面圖跟住 cursor 淡入 ──
-//   同 Services 一樣：280×210、跟 cursor、單軌上下換圖、項目名用 difference 疊喺圖上
-//   圖片來源：Awards CMS「Cover Thumbnail」（Designer 入面隱藏嘅 .award-cover-src）
-//   冇圖嘅項目唔會出圖
+// ── C. PROFILE AWARDS / PUBLICATIONS：hover 名 → 封面圖喺標題下面淡入 ──
+//   張相固定喺左邊「Awards」/「Publications」標題（.cover-about-title）下面，
+//   唔跟 cursor；hover 項目名淡入、移去另一個名時上下滑去下一張、離開淡出。
+//   圖片來源：CMS「Cover Thumbnail」（Designer 入面隱藏嘅 .award-cover-src）
+//   冇圖嘅項目唔會出圖（Publications 暫時未有圖，位會預留住）。
 (function initAwardCoverHover() {
-  if (!window.matchMedia("(hover: hover) and (pointer: fine)").matches) return;
-  var names = Array.from(document.querySelectorAll(".item_project"));
-  if (!names.length) return;
-  var list = names[0].closest(".w-dyn-items") || names[0].parentElement.parentElement;
-  if (!list) return;
+  if (!window.matchMedia("(hover: hover) and (pointer: fine) and (min-width: 992px)").matches) return;
+  var IMG_W = 360;
+  var IMG_H = 240;
+  var GAP = 24;
 
-  var srcs = names.map(function (n) {
-    var row = n.closest(".w-dyn-item") || n.parentElement;
-    var img = row && row.querySelector(".award-cover-src");
-    var src = img && (img.currentSrc || img.getAttribute("src"));
-    return src && !/placeholder/i.test(src) ? src : "";
-  });
-  var withImg = srcs.filter(Boolean);
-  if (!withImg.length) return;
+  var heads = Array.from(document.querySelectorAll(".studio-recognition-bottom .studio-awards-wrap"));
+  var lists = Array.from(document.querySelectorAll(".studio-recognition-bottom .studio-collection-wrap"));
 
-  if (getComputedStyle(list).position === "static") list.style.position = "relative";
+  heads.forEach(function (wrapEl, k) {
+    var listEl = lists[k];
+    if (!listEl) return;
+    var names = Array.from(listEl.querySelectorAll(".item_project, .item-publication"));
+    if (!names.length) return;
 
-  var wrap = document.createElement("div");
-  wrap.className = "award-cover-float";
-  wrap.setAttribute("aria-hidden", "true");
-  wrap.style.cssText =
-    "position:absolute;left:0;top:0;width:280px;height:210px;overflow:hidden;" +
-    "pointer-events:none;z-index:10;opacity:0;visibility:hidden";
-  var track = document.createElement("div");
-  track.style.cssText = "position:absolute;left:0;top:0;width:100%;height:" + withImg.length * 100 + "%";
-  var trackIdx = srcs.map(function (src) {
-    return src ? withImg.indexOf(src) : -1;
-  });
-  withImg.forEach(function (src) {
-    var im = document.createElement("img");
-    im.src = src;
-    im.alt = "";
-    im.loading = "lazy";
-    im.decoding = "async";
-    im.draggable = false;
-    im.style.cssText =
-      "display:block;width:100%;height:" + 100 / withImg.length + "%;object-fit:cover;user-select:none";
-    track.appendChild(im);
-  });
-  var blend = document.createElement("div");
-  blend.style.cssText =
-    "position:absolute;left:0;top:0;z-index:2;white-space:nowrap;color:#f0e8dd;mix-blend-mode:difference";
-  wrap.appendChild(track);
-  wrap.appendChild(blend);
-  list.appendChild(wrap);
-
-  var xTo = gsap.quickTo(wrap, "x", { duration: 0.5, ease: "power3" });
-  var yTo = gsap.quickTo(wrap, "y", { duration: 0.5, ease: "power3" });
-  var current = -1;
-  var shown = false;
-  var firstMove = true;
-
-  list.addEventListener("mousemove", function (e) {
-    var r = list.getBoundingClientRect();
-    var x = e.clientX - r.left - wrap.offsetWidth / 2;
-    var y = e.clientY - r.top - wrap.offsetHeight / 2;
-    if (firstMove) {
-      gsap.set(wrap, { x: x, y: y });
-      firstMove = false;
-    }
-    xTo(x);
-    yTo(y);
-  });
-  list.addEventListener("pointerleave", function () {
-    firstMove = true;
-  });
-
-  function copyFont(from) {
-    var c = getComputedStyle(from);
-    blend.style.font = c.font;
-    blend.style.letterSpacing = c.letterSpacing;
-    blend.style.lineHeight = c.lineHeight;
-    blend.style.textTransform = c.textTransform;
-    blend.style.whiteSpace = c.whiteSpace;
-    blend.style.width = from.getBoundingClientRect().width + "px";
-  }
-
-  names.forEach(function (name, i) {
-    name.addEventListener("mouseenter", function () {
-      var t = trackIdx[i];
-      if (t < 0) return hide();
-      current = i;
-      copyFont(name);
-      blend.textContent = name.textContent.trim();
-      gsap.to(track, {
-        yPercent: (-100 / withImg.length) * t,
-        duration: shown ? 0.5 : 0,
-        ease: "power3.out",
-        overwrite: "auto",
-      });
-      shown = true;
-      gsap.to(wrap, { autoAlpha: 1, duration: 0.3, overwrite: "auto" });
+    var srcs = names.map(function (n) {
+      var row = n.closest(".w-dyn-item") || n.parentElement;
+      var img = row && row.querySelector(".award-cover-src");
+      if (!img || img.classList.contains("w-dyn-bind-empty")) return "";
+      var src = img.getAttribute("src") || "";
+      return src && !/placeholder/i.test(src) ? src : "";
     });
-    name.addEventListener("mouseleave", hide);
-  });
+    var withImg = srcs.filter(function (v, i, a) {
+      return v && a.indexOf(v) === i;
+    });
 
-  function hide() {
-    shown = false;
-    gsap.to(wrap, { autoAlpha: 0, duration: 0.3, overwrite: "auto" });
-  }
+    // 兩個標題下面都預留同一個位，令 Awards / Publications 張相位置一致
+    var box = document.createElement("div");
+    box.className = "award-cover-box";
+    box.setAttribute("aria-hidden", "true");
+    box.style.cssText =
+      "position:relative;width:" + IMG_W + "px;max-width:100%;height:" + IMG_H + "px;" +
+      "margin-top:" + GAP + "px;overflow:hidden;pointer-events:none;opacity:0;visibility:hidden";
+    wrapEl.appendChild(box);
+    if (!withImg.length) return;
 
-  // 項目名疊喺圖上（difference），只喺圖見到時先計
-  gsap.ticker.add(function () {
-    if (current < 0 || gsap.getProperty(wrap, "autoAlpha") === 0) return;
-    var lr = list.getBoundingClientRect();
-    var nr = names[current].getBoundingClientRect();
-    gsap.set(blend, {
-      x: nr.left - lr.left - gsap.getProperty(wrap, "x"),
-      y: nr.top - lr.top - gsap.getProperty(wrap, "y"),
+    var track = document.createElement("div");
+    track.style.cssText =
+      "position:absolute;left:0;top:0;width:100%;height:" + withImg.length * 100 + "%";
+    withImg.forEach(function (src) {
+      var im = document.createElement("img");
+      im.src = src;
+      im.alt = "";
+      im.decoding = "async";
+      im.draggable = false;
+      im.style.cssText =
+        "display:block;width:100%;height:" + 100 / withImg.length + "%;object-fit:cover;user-select:none";
+      track.appendChild(im);
+    });
+    box.appendChild(track);
+
+    var shown = false;
+    var hide = function () {
+      shown = false;
+      gsap.to(box, { autoAlpha: 0, duration: 0.3, overwrite: "auto" });
+    };
+    names.forEach(function (name, i) {
+      var t = srcs[i] ? withImg.indexOf(srcs[i]) : -1;
+      name.addEventListener("mouseenter", function () {
+        if (t < 0) return hide();
+        gsap.to(track, {
+          yPercent: (-100 / withImg.length) * t,
+          duration: shown ? 0.5 : 0,
+          ease: "power3.out",
+          overwrite: "auto",
+        });
+        shown = true;
+        gsap.to(box, { autoAlpha: 1, duration: 0.3, overwrite: "auto" });
+      });
+      name.addEventListener("mouseleave", hide);
     });
   });
 })();
