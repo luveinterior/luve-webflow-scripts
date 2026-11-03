@@ -74,10 +74,11 @@
       var T = "html.luve-touch ";
       st.textContent =
         T + ".cursor," + T + ".cursor-wrapper," + T + ".cursor-text{display:none!important}" +
-        // Side Menu：Safari 工具列會遮住 100vh 底部 → 用可見高度，地址欄位升上少少
-        T + ".side-bar," + T + ".side-bar-2{height:100dvh!important}" +
         "@media (min-width:992px){" +
-        T + ".side-menu-bottom{top:auto!important;bottom:0!important;padding-bottom:calc(4rem + env(safe-area-inset-bottom))!important}" +
+        // Side Menu（只限 iPad 打橫）：Safari 工具列會遮住 100vh 底部 → 用可見高度，
+        // 地址 / social icons 離底少少（手機版完全唔郁）
+        T + ".side-bar," + T + ".side-bar-2{height:100dvh!important}" +
+        T + ".side-menu-bottom{top:auto!important;bottom:0!important;padding-bottom:calc(1.75rem + env(safe-area-inset-bottom))!important}" +
         // GET IN TOUCH（iPad 打橫）：Step 01 標題同介紹之間收窄，睇得晒三個輸入欄
         T + "[data-enq-root][data-enq-index='0'] [data-enq-form]>div:first-child{padding-top:20px!important}" +
         // Step 02：Full Property Address 同 Size 並排
