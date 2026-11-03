@@ -6392,6 +6392,124 @@ initPopupHoverReveal({
   // ★ 已移除：原本 .services-eyebrow + service-item 嘅左飛入 reveal ★
 })();
 
+// ── C. PROFILE AWARDS：hover 項目名（.item_project）→ 封面圖跟住 cursor 淡入 ──
+//   同 Services 一樣：280×210、跟 cursor、單軌上下換圖、項目名用 difference 疊喺圖上
+//   圖片來源：Awards CMS「Cover Thumbnail」（Designer 入面隱藏嘅 .award-cover-src）
+//   冇圖嘅項目唔會出圖
+(function initAwardCoverHover() {
+  if (!window.matchMedia("(hover: hover) and (pointer: fine)").matches) return;
+  var names = Array.from(document.querySelectorAll(".item_project"));
+  if (!names.length) return;
+  var list = names[0].closest(".w-dyn-items") || names[0].parentElement.parentElement;
+  if (!list) return;
+
+  var srcs = names.map(function (n) {
+    var row = n.closest(".w-dyn-item") || n.parentElement;
+    var img = row && row.querySelector(".award-cover-src");
+    var src = img && (img.currentSrc || img.getAttribute("src"));
+    return src && !/placeholder/i.test(src) ? src : "";
+  });
+  var withImg = srcs.filter(Boolean);
+  if (!withImg.length) return;
+
+  if (getComputedStyle(list).position === "static") list.style.position = "relative";
+
+  var wrap = document.createElement("div");
+  wrap.className = "award-cover-float";
+  wrap.setAttribute("aria-hidden", "true");
+  wrap.style.cssText =
+    "position:absolute;left:0;top:0;width:280px;height:210px;overflow:hidden;" +
+    "pointer-events:none;z-index:10;opacity:0;visibility:hidden";
+  var track = document.createElement("div");
+  track.style.cssText = "position:absolute;left:0;top:0;width:100%;height:" + withImg.length * 100 + "%";
+  var trackIdx = srcs.map(function (src) {
+    return src ? withImg.indexOf(src) : -1;
+  });
+  withImg.forEach(function (src) {
+    var im = document.createElement("img");
+    im.src = src;
+    im.alt = "";
+    im.loading = "lazy";
+    im.decoding = "async";
+    im.draggable = false;
+    im.style.cssText =
+      "display:block;width:100%;height:" + 100 / withImg.length + "%;object-fit:cover;user-select:none";
+    track.appendChild(im);
+  });
+  var blend = document.createElement("div");
+  blend.style.cssText =
+    "position:absolute;left:0;top:0;z-index:2;white-space:nowrap;color:#f0e8dd;mix-blend-mode:difference";
+  wrap.appendChild(track);
+  wrap.appendChild(blend);
+  list.appendChild(wrap);
+
+  var xTo = gsap.quickTo(wrap, "x", { duration: 0.5, ease: "power3" });
+  var yTo = gsap.quickTo(wrap, "y", { duration: 0.5, ease: "power3" });
+  var current = -1;
+  var shown = false;
+  var firstMove = true;
+
+  list.addEventListener("mousemove", function (e) {
+    var r = list.getBoundingClientRect();
+    var x = e.clientX - r.left - wrap.offsetWidth / 2;
+    var y = e.clientY - r.top - wrap.offsetHeight / 2;
+    if (firstMove) {
+      gsap.set(wrap, { x: x, y: y });
+      firstMove = false;
+    }
+    xTo(x);
+    yTo(y);
+  });
+  list.addEventListener("pointerleave", function () {
+    firstMove = true;
+  });
+
+  function copyFont(from) {
+    var c = getComputedStyle(from);
+    blend.style.font = c.font;
+    blend.style.letterSpacing = c.letterSpacing;
+    blend.style.lineHeight = c.lineHeight;
+    blend.style.textTransform = c.textTransform;
+    blend.style.whiteSpace = c.whiteSpace;
+    blend.style.width = from.getBoundingClientRect().width + "px";
+  }
+
+  names.forEach(function (name, i) {
+    name.addEventListener("mouseenter", function () {
+      var t = trackIdx[i];
+      if (t < 0) return hide();
+      current = i;
+      copyFont(name);
+      blend.textContent = name.textContent.trim();
+      gsap.to(track, {
+        yPercent: (-100 / withImg.length) * t,
+        duration: shown ? 0.5 : 0,
+        ease: "power3.out",
+        overwrite: "auto",
+      });
+      shown = true;
+      gsap.to(wrap, { autoAlpha: 1, duration: 0.3, overwrite: "auto" });
+    });
+    name.addEventListener("mouseleave", hide);
+  });
+
+  function hide() {
+    shown = false;
+    gsap.to(wrap, { autoAlpha: 0, duration: 0.3, overwrite: "auto" });
+  }
+
+  // 項目名疊喺圖上（difference），只喺圖見到時先計
+  gsap.ticker.add(function () {
+    if (current < 0 || gsap.getProperty(wrap, "autoAlpha") === 0) return;
+    var lr = list.getBoundingClientRect();
+    var nr = names[current].getBoundingClientRect();
+    gsap.set(blend, {
+      x: nr.left - lr.left - gsap.getProperty(wrap, "x"),
+      y: nr.top - lr.top - gsap.getProperty(wrap, "y"),
+    });
+  });
+})();
+
 // ── B. SERVICES：Mobile/Tablet Autoplay + Scroll 逐個變色 ──
 (function initServicesMobile() {
   var isDesktopHover = window.matchMedia(
