@@ -6497,7 +6497,7 @@ initPopupHoverReveal({
   // ★ 已移除：原本 .services-eyebrow + service-item 嘅左飛入 reveal ★
 })();
 
-// ── C. PROFILE AWARDS / PUBLICATIONS：hover 名 → 封面圖喺標題下面淡入 ──
+// ── C. PROFILE AWARDS / PUBLICATIONS：hover 成行 → 封面圖喺標題下面淡入 ──
 //   張相固定喺左邊「Awards」/「Publications」標題（.cover-about-title）下面，
 //   唔跟 cursor；hover 項目名淡入、移去另一個名時上下滑去下一張、離開淡出。
 //   圖片來源：CMS「Cover Thumbnail」（Designer 入面隱藏嘅 .award-cover-src）
@@ -6560,7 +6560,9 @@ initPopupHoverReveal({
     };
     names.forEach(function (name, i) {
       var t = srcs[i] ? withImg.indexOf(srcs[i]) : -1;
-      name.addEventListener("mouseenter", function () {
+      // hover 成行（studio-awards-item / CMS 項目）都會出相；表頭唔計
+      var hit = name.closest(".w-dyn-item") || name;
+      hit.addEventListener("mouseenter", function () {
         if (t < 0) return hide();
         gsap.to(track, {
           yPercent: (-100 / withImg.length) * t,
@@ -6571,7 +6573,7 @@ initPopupHoverReveal({
         shown = true;
         gsap.to(box, { autoAlpha: 1, duration: 0.3, overwrite: "auto" });
       });
-      name.addEventListener("mouseleave", hide);
+      hit.addEventListener("mouseleave", hide);
     });
   });
 })();
