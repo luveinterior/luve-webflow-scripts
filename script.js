@@ -6573,8 +6573,11 @@ initPopupHoverReveal({
         shown = true;
         gsap.to(box, { autoAlpha: 1, duration: 0.3, overwrite: "auto" });
       });
-      hit.addEventListener("mouseleave", hide);
     });
+    // 同 Services 一樣：喺行與行之間移動唔會淡出，張相直接上下滑去下一張；
+    // 離開成個 list（唔計表頭）先淡出
+    var rowsWrap = names[0].closest(".w-dyn-items") || listEl;
+    rowsWrap.addEventListener("mouseleave", hide);
   });
 })();
 
