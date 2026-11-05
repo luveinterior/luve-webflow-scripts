@@ -71,6 +71,8 @@
       document.documentElement.classList.add("luve-touch");
       var st = document.createElement("style");
       st.id = "luve-touch-css";
+      // 轉頁時要保留（見 __luveRun 開頭）
+      (window.__luveKeepStyles = window.__luveKeepStyles || []).push(st);
       var T = "html.luve-touch ";
       st.textContent =
         T + ".cursor," + T + ".cursor-wrapper," + T + ".cursor-text{display:none!important}" +
@@ -818,7 +820,12 @@ window.__luveRun = function (
   MutationObserver,
   IntersectionObserver
 ) {
+// 轉頁（Section 00）會換走 <head> 入面唔屬於新一頁嘅 style：
+// 全站一開始加嘅 style（觸控 / logo 大細）要每頁都放返
 if (window.__luveSameLogo) window.__luveSameLogo();
+(window.__luveKeepStyles || []).forEach(function (n) {
+  if (!n.isConnected) document.head.appendChild(n);
+});
 
 // =====================================================
 // 01. LUVE Home — Card Hover Effects (True Mask Effect)
