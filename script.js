@@ -1089,13 +1089,14 @@ function initUnifiedMenuSystem() {
     }
   };
 
-  const showTopBurger = () => {
+  const showTopBurger = (delay = 0) => {
     gsap.killTweensOf(navBurger);
     navBurger.style.pointerEvents = "auto";
     navBurger.setAttribute("aria-hidden", "false");
     gsap.to(navBurger, {
       autoAlpha: 1,
       duration: 0.3,
+      delay,
       ease: "power2.out",
       overwrite: "auto",
     });
@@ -1125,6 +1126,31 @@ function initUnifiedMenuSystem() {
     );
   };
 
+  // ── 兩組 nav 唔好疊埋（手機最明顯）──
+  // 頂部：大 logo + burger；落咗去：細 logo + GET IN TOUCH + MENU。
+  // 之前兩組同時淡入淡出，有一刻會見到兩個 logo 疊埋。而家：
+  //   落：大 logo / burger 先 0.25 秒內收起 → 0.22 秒後另一組先出
+  //   上：MENU / GET IN TOUCH 先收起 → 0.3 秒後大 logo / burger 先出返
+  const NAV_SWAP_DELAY = 0.22;
+  const sequenceNavSwap = (visible) => {
+    const phone = window.matchMedia("(max-width: 991px)").matches;
+    const bigLogo = navBar.querySelector(".nav-logo-link");
+    if (phone && bigLogo) {
+      // GET IN TOUCH 個 component 會即時郁大 logo / 一對 pill，喺佢之後調返次序
+      gsap.killTweensOf(bigLogo);
+      gsap.to(bigLogo, visible
+        ? { autoAlpha: 0, duration: 0.2, ease: "power2.out", overwrite: true }
+        : { autoAlpha: 1, duration: 0.45, delay: 0.3, ease: "power2.out", overwrite: true });
+      const mask = document.querySelector("[data-enq-trigger-mask]");
+      if (mask && visible) {
+        const ts = gsap.getTweensOf(mask);
+        ts.forEach((t) => {
+          if (t.vars && "--enq-mobile-pair-y" in t.vars) t.delay(NAV_SWAP_DELAY);
+        });
+      }
+    }
+  };
+
   // OH Architecture floating-nav motion:
   // both pills stay opaque and move through an overflow mask at yPercent 102.
   const setFloatingVisible = (visible, instant = false) => {
@@ -1138,6 +1164,8 @@ function initUnifiedMenuSystem() {
 
     // The isolated enquiry trigger receives the same GSAP state in this tick.
     announceFloatingState(visible, true, instant);
+    // 頂部 logo / burger 先收起，MENU、GET IN TOUCH、細 logo 先出；返上頂就倒轉
+    if (!instant) sequenceNavSwap(visible);
 
     gsap.to(floatingBtn, {
       yPercent: visible ? 0 : 102,
@@ -1145,6 +1173,7 @@ function initUnifiedMenuSystem() {
       visibility: "visible",
       clipPath: visible ? "inset(0 0 0% 0)" : "inset(0 0 100% 0)",
       duration: instant ? 0 : visible ? 0.75 : 0.55,
+      delay: instant || !visible ? 0 : NAV_SWAP_DELAY,
       ease: visible ? "power3.out" : "power3.inOut",
       overwrite: "auto",
     });
@@ -1157,11 +1186,15 @@ function initUnifiedMenuSystem() {
 
     const scrollY = window.scrollY;
     const threshold = window.innerHeight * 0.15;
+    const floating = scrollY > threshold;
 
-    if (scrollY > 10) hideTopBurger();
-    else showTopBurger();
+    // 頂部 burger 同 logo 同一下收起（同 MENU 出現同一刻），中間冇一刻撳唔到 menu；
+    // 返上頂時等 MENU / GET IN TOUCH 收起先再出返，兩組唔會疊埋
+    if (floating) hideTopBurger();
+    else if (navBurger.getAttribute("aria-hidden") === "true")
+      showTopBurger(instant || !STATE.floatingVisible ? 0 : NAV_SWAP_DELAY);
 
-    setFloatingVisible(scrollY > threshold, instant);
+    setFloatingVisible(floating, instant);
   };
 
   gsap.set(floatingBtn, {
@@ -7112,7 +7145,7 @@ initPopupHoverReveal({
       .nav-mini-logo a:focus-visible{outline:1px solid currentColor;outline-offset:4px}
       body.side-menu-open .nav-mini-logo{visibility:hidden}
       .nav-mini-logo{opacity:0;transition:opacity .45s ease}
-      .nav-mini-logo.is-on{opacity:1}
+      .nav-mini-logo.is-on{opacity:1;transition-delay:.22s}
       .nav-top-fade{position:fixed;left:0;right:0;top:0;height:var(--fade-h,110px);z-index:9990;pointer-events:none;opacity:0;transition:opacity .45s ease;background:linear-gradient(to bottom,var(--fade-c) 0,var(--fade-c) var(--fade-solid,60px),var(--fade-c0) 100%)}
       .nav-top-fade.is-on{opacity:1}
       body.side-menu-open .nav-top-fade{opacity:0}
