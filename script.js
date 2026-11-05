@@ -1242,8 +1242,8 @@ function initUnifiedMenuSystem() {
         "transition:opacity .5s ease .3s,visibility 0s linear .3s!important}" +
       // 兩粒掣：個框唔郁、剪走框外面，入面兩粒掣由下面升上嚟（GPU 位移）
       MASK + "{transform:none!important;clip-path:none!important;-webkit-clip-path:none!important;overflow:hidden!important}" +
-      MASK + ">*{translate:0 105%;will-change:translate;transition:translate .38s " + IN + " 0s!important}" +
-      MASK_S + ">*{translate:0 0;transition:translate .6s " + OUT + " .22s!important}" +
+      MASK + ">*{translate:0 105%!important;will-change:translate;transition:translate .38s " + IN + " 0s!important}" +
+      MASK_S + ">*{translate:0 0!important;transition:translate .6s " + OUT + " .22s!important}" +
       // 細 logo + 頂部色帶
       H + " .nav-mini-logo:not(.is-static)," + H + " .nav-mini-logo.is-on:not(.is-static)," + H + " .nav-top-fade{opacity:0!important;will-change:opacity;transition:opacity .2s ease 0s!important}" +
       S + " .nav-mini-logo:not(.is-static)," + S + " .nav-top-fade{opacity:1!important;transition:opacity .4s ease .22s!important}" +
