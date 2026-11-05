@@ -91,6 +91,35 @@
     }
   } catch (e) {}
 })();
+// 頂部 nav（大 logo + burger）轉做細 logo + GET IN TOUCH + MENU 嘅 scroll 位置。
+// 手機：一郁就轉（40px），唔使等啲內容撞到 logo / burger；平板 / 電腦：畫面高度 15%
+window.__luveNavThreshold = function () {
+  return window.matchMedia("(max-width: 767px)").matches ? 40 : window.innerHeight * 0.15;
+};
+// ScrollTrigger.refresh() 會重設 scroll 位置；手機 scroll 緊（慣性滑動）時做，
+// 會令頁面「突然急停」。所以等手指離開、停咗 scroll 先 refresh。
+window.__luveSafeRefresh = (function () {
+  var touching = false, lastScroll = 0, timer = 0;
+  try {
+    addEventListener("touchstart", function () { touching = true; }, { passive: true, capture: true });
+    addEventListener("touchend", function () { touching = false; lastScroll = Date.now(); }, { passive: true, capture: true });
+    addEventListener("touchcancel", function () { touching = false; }, { passive: true, capture: true });
+    addEventListener("scroll", function () { lastScroll = Date.now(); }, { passive: true, capture: true });
+  } catch (e) {}
+  return function () {
+    clearTimeout(timer);
+    (function wait() {
+      if (touching || Date.now() - lastScroll < 350) {
+        timer = setTimeout(wait, 200);
+        return;
+      }
+      try { ScrollTrigger.refresh(); } catch (e) {}
+    })();
+  };
+})();
+try {
+  if (window.ScrollTrigger) ScrollTrigger.config({ ignoreMobileResize: true });
+} catch (e) {}
 // iPad 打橫：觸控 + Desktop 闊度
 window.__luveTouchWide = function () {
   return !!window.__LUVE_TOUCH__ && window.matchMedia("(min-width: 992px)").matches;
@@ -720,9 +749,7 @@ window.__luveTouchWide = function () {
               function () {
                 clearTimeout(t);
                 t = setTimeout(function () {
-                  try {
-                    ScrollTrigger.refresh();
-                  } catch (e) {}
+                  window.__luveSafeRefresh();
                 }, 120);
               },
               { once: true }
@@ -1185,13 +1212,14 @@ function initUnifiedMenuSystem() {
     }
 
     const scrollY = window.scrollY;
-    const threshold = window.innerHeight * 0.15;
+    const threshold = window.__luveNavThreshold();
     const floating = scrollY > threshold;
 
     // 頂部 burger 同 logo 同一下收起（同 MENU 出現同一刻），中間冇一刻撳唔到 menu；
     // 返上頂時等 MENU / GET IN TOUCH 收起先再出返，兩組唔會疊埋
-    if (floating) hideTopBurger();
-    else if (navBurger.getAttribute("aria-hidden") === "true")
+    if (floating) {
+      if (navBurger.getAttribute("aria-hidden") !== "true") hideTopBurger();
+    } else if (navBurger.getAttribute("aria-hidden") === "true")
       showTopBurger(instant || !STATE.floatingVisible ? 0 : 0.3);
 
     setFloatingVisible(floating, instant);
@@ -1430,6 +1458,20 @@ function initUnifiedMenuSystem() {
     syncClosedVisibility(true);
   });
   syncClosedVisibility(true);
+
+  // 手機：GET IN TOUCH component 有自己一套「向上 scroll 早啲收起」嘅規則
+  // （離頂 340px 內就收埋 GET IN TOUCH / MENU），令大 logo、burger 同兩粒掣
+  // 有段時間一齊唔見 / 轉得遲。而家以呢度嘅位置為準：仲未返到頂，就保持兩粒掣。
+  const keepPhonePair = () => {
+    if (!STATE.floatingVisible || STATE.menuOpen) return;
+    if (!window.matchMedia("(max-width: 991px)").matches) return;
+    const trig = document.querySelector("[data-enq-action='open']");
+    if (trig && trig.getAttribute("aria-hidden") === "true")
+      announceFloatingState(true, true, false);
+  };
+  const bindKeepPair = () => window.addEventListener("scroll", keepPhonePair, { passive: true });
+  if (document.readyState === "complete") bindKeepPair();
+  else window.addEventListener("load", bindKeepPair, { once: true });
 
   window.LuveMenuController = {
     openFromTop: () => openMenu("top"),
@@ -3361,7 +3403,12 @@ window.addEventListener("load", () => {
   build();
 
   let rid;
+  let lastW = window.innerWidth;
   window.addEventListener("resize", () => {
+    // 手機 Safari 網址列收埋 / 出返都會觸發 resize（只係高度變）→ 唔好重建，
+    // 否則 scroll 緊會急停
+    if (window.innerWidth === lastW) return;
+    lastW = window.innerWidth;
     clearTimeout(rid);
     rid = setTimeout(() => {
       ScrollTrigger.getAll().forEach((st) => st.kill());
@@ -4372,8 +4419,9 @@ function initSmartLoader() {
     isExiting = true;
 
     if (progressBar) {
+      // scaleX（GPU）代替 width，手機唔會每格重新排版
       gsap.to(progressBar, {
-        width: "100%",
+        scaleX: 1,
         duration: 0.3,
         ease: "power2.out",
       });
@@ -4393,7 +4441,7 @@ function initSmartLoader() {
           gsap.set("body", { opacity: 1, visibility: "visible" });
           document.body.style.opacity = "1";
           document.body.style.visibility = "visible";
-          if (progressBar) gsap.set(progressBar, { width: "0%", opacity: 0 });
+          if (progressBar) gsap.set(progressBar, { scaleX: 0, opacity: 0 });
           ScrollTrigger.refresh();
           if (window.location.hash && window.lenis) {
             setTimeout(() => {
@@ -4410,8 +4458,8 @@ function initSmartLoader() {
     if (spinner) gsap.set(spinner, { opacity: 1 });
 
     if (progressBar) {
-      gsap.set(progressBar, { opacity: 1, width: "0%" });
-      gsap.to(progressBar, { width: "85%", duration: 2, ease: "power2.out" });
+      gsap.set(progressBar, { opacity: 1, width: "100%", scaleX: 0, transformOrigin: "0% 50%" });
+      gsap.to(progressBar, { scaleX: 0.85, duration: 2, ease: "power2.out" });
     }
 
     const loaderSlogan = document.querySelector(".loader-slogan");
@@ -7586,11 +7634,13 @@ initPopupHoverReveal({
     // at most ~10 measurements a second while scrolling, plus one at the end
     let toneT = 0,
       toneTimer = 0;
+    // 手機 CPU 慢：scroll 時少啲量度背景深淺
+    const TONE_GAP = window.matchMedia("(max-width: 991px)").matches ? 240 : 100;
     const requestTone = () => {
       if (!shown) return;
       const now = performance.now();
       clearTimeout(toneTimer);
-      if (now - toneT > 100) {
+      if (now - toneT > TONE_GAP) {
         toneT = now;
         tone();
       }
@@ -7714,14 +7764,16 @@ initPopupHoverReveal({
     pairPills();
 
     const sync = () => {
-      pairPills();
-      const scrolled = window.scrollY > window.innerHeight * 0.15;
+      const scrolled = window.scrollY > window.__luveNavThreshold();
+      const turnedOn = scrolled && !scrolledNow;
+      if (turnedOn || !scrolled) pairPills();
       scrolledNow = scrolled;
       setBigHidden(scrolled);
       setShown(scrolled && !document.body.classList.contains("side-menu-open"));
       updateFade();
       if (scrolled) {
-        place();
+        // 位置只喺啱啱轉出嚟（或者 resize）先計，唔使每次 scroll 都量度
+        if (turnedOn) place();
         requestTone();
       }
     };
