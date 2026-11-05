@@ -9909,7 +9909,7 @@ initPopupHoverReveal({
       ".enq-close .enq-close-arrow{display:none}" +
       "@media (max-width:991px){" + rules("html body ") + "}" +
       // 矮身手機（例如 iPhone SE、Safari 工具列展開）：表格上面嘅空位收細，唔使 scroll
-      "@media (max-width:767px) and (max-height:720px){html body " + P + " form>div:first-child{padding-top:24px!important}}" +
+      "@media (max-width:767px) and (max-height:720px){html body " + P + " form>div:first-child{padding-top:16px!important}}" +
       rules("html.luve-touch body ");
     document.head.appendChild(st);
   } catch (e) {}
