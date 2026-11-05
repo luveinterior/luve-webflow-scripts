@@ -94,8 +94,10 @@
 // Home 頁中間 logo 大細：Home 嘅 logo link 係「current」（w--current），Webflow 喺
 // current 狀態另外寫死咗闊度（手機 9rem、平板 12.5rem、電腦 200px），所以 Home 個 logo
 // 明顯大過其他頁。呢度令 current 狀態跟返普通 logo 一樣闊，全部頁一致。
-(function sameLogoAllPages() {
+window.__luveSameLogo = function sameLogoAllPages() {
   try {
+    // 轉頁（Section 00）會清走額外加落 <head> 嘅 style，所以每次轉頁都再加一次
+    if (document.getElementById("luve-logo-same")) return;
     var st = document.createElement("style");
     st.id = "luve-logo-same";
     st.textContent =
@@ -103,7 +105,8 @@
       "@media (max-width:479px){html body .nav-logo-link.w--current{width:30%}}";
     (document.head || document.documentElement).appendChild(st);
   } catch (e) {}
-})();
+};
+window.__luveSameLogo();
 // 頂部 nav（大 logo + burger）轉做細 logo + GET IN TOUCH + MENU 嘅 scroll 位置。
 // 手機：一郁就轉（40px），唔使等啲內容撞到 logo / burger；平板 / 電腦：畫面高度 15%
 window.__luveNavThreshold = function () {
@@ -815,6 +818,7 @@ window.__luveRun = function (
   MutationObserver,
   IntersectionObserver
 ) {
+if (window.__luveSameLogo) window.__luveSameLogo();
 
 // =====================================================
 // 01. LUVE Home — Card Hover Effects (True Mask Effect)
