@@ -91,6 +91,19 @@
     }
   } catch (e) {}
 })();
+// Home 頁中間 logo 大細：Home 嘅 logo link 係「current」（w--current），Webflow 喺
+// current 狀態另外寫死咗闊度（手機 9rem、平板 12.5rem、電腦 200px），所以 Home 個 logo
+// 明顯大過其他頁。呢度令 current 狀態跟返普通 logo 一樣闊，全部頁一致。
+(function sameLogoAllPages() {
+  try {
+    var st = document.createElement("style");
+    st.id = "luve-logo-same";
+    st.textContent =
+      "html body .nav-logo-link.w--current{width:20%}" +
+      "@media (max-width:479px){html body .nav-logo-link.w--current{width:30%}}";
+    (document.head || document.documentElement).appendChild(st);
+  } catch (e) {}
+})();
 // 頂部 nav（大 logo + burger）轉做細 logo + GET IN TOUCH + MENU 嘅 scroll 位置。
 // 手機：一郁就轉（40px），唔使等啲內容撞到 logo / burger；平板 / 電腦：畫面高度 15%
 window.__luveNavThreshold = function () {
@@ -1178,6 +1191,174 @@ function initUnifiedMenuSystem() {
     }
   };
 
+  // ── 手機 nav 總指揮（一條 timeline 管晒）──
+  // 以前大 logo、burger、GET IN TOUCH / MENU、細 logo、頂部色帶各自有自己嘅動畫
+  // （仲有 GET IN TOUCH component 自己嗰套），好快咁上落 scroll 時會互相打架，
+  // 出現唔同步 / 兩組 nav 疊埋。而家（手機 ≤767px）全部放入同一條 GSAP timeline：
+  //   落（過咗 40px）：大 logo + burger 先收（0.2 秒）→ 細 logo、色帶、兩粒掣先出
+  //   上（返到頂）：同一條 timeline 倒帶 —— 兩粒掣先收 → 大 logo + burger 先出返
+  // 中途轉方向就由當刻位置即刻倒返轉頭，永遠唔會兩組同時出現。
+  // 其他程式（GET IN TOUCH component 等）對呢幾樣嘢嘅 gsap 動畫，喺手機會被略過。
+  const NAVC_SEL = ".nav-logo-link, .class-nav-burger, [data-enq-trigger-mask]";
+  const navc = (() => {
+    const phoneMq = window.matchMedia("(max-width: 767px)");
+    const enabled = () =>
+      phoneMq.matches &&
+      !document.documentElement.classList.contains("luve-tablet-phone") &&
+      !document.body.classList.contains("body-contact");
+    let tl = null;
+    let parts = "";
+    let want = false;
+    const css = document.getElementById("luve-navc-css") || document.createElement("style");
+    css.id = "luve-navc-css";
+    css.textContent =
+      "@media (max-width:767px){" +
+      "html.luve-navc .nav-mini-logo,html.luve-navc .nav-mini-logo.is-on,html.luve-navc .nav-top-fade{transition:none!important}" +
+      "html.luve-navc body.side-menu-open .nav-top-fade{opacity:0!important}" +
+      "}";
+    document.head.appendChild(css);
+
+    const els = () => ({
+      logo: navBar.querySelector(".nav-logo-link"),
+      burger: navBurger,
+      mask: document.querySelector("[data-enq-trigger-mask]"),
+      mini: document.querySelector(".nav-mini-logo:not(.is-static)"),
+      fade: document.querySelector(".nav-top-fade"),
+      trig: document.querySelector("[data-enq-action='open']"),
+    });
+
+    const own = (fn) => {
+      window.__luveNavOwn = true;
+      try { return fn(); } finally { window.__luveNavOwn = false; }
+    };
+
+    const build = () => {
+      const e = els();
+      const key = [e.logo, e.mask, e.mini, e.fade].map((x) => (x ? 1 : 0)).join("");
+      if (tl && key === parts) return;
+      const p = tl ? tl.progress() : want ? 1 : 0;
+      const wasReversed = tl ? tl.reversed() : !want;
+      if (tl) tl.kill();
+      parts = key;
+      tl = own(() => {
+        const t = gsap.timeline({ paused: true });
+        const big = [e.logo, e.burger].filter(Boolean);
+        t.fromTo(big, { autoAlpha: 1 }, { autoAlpha: 0, duration: 0.2, ease: "power1.in" }, 0);
+        if (e.mask)
+          t.fromTo(
+            e.mask,
+            { "--enq-mobile-pair-y": "102%", "--enq-mobile-pair-clip": "100%" },
+            { "--enq-mobile-pair-y": "0%", "--enq-mobile-pair-clip": "0%", duration: 0.6, ease: "power3.out" },
+            0.22
+          );
+        const soft = [e.mini, e.fade].filter(Boolean);
+        if (soft.length)
+          t.fromTo(soft, { opacity: 0 }, { opacity: 1, duration: 0.4, ease: "power1.out" }, 0.22);
+        t.progress(p).reversed(wasReversed);
+        return t;
+      });
+    };
+
+    // pointer / 讀屏狀態跟住 want 即刻轉，唔使等動畫
+    const applyAttrs = () => {
+      const e = els();
+      const big = !want;
+      if (e.logo) e.logo.style.pointerEvents = big ? "auto" : "none";
+      navBurger.style.pointerEvents = big ? "auto" : "none";
+      navBurger.setAttribute("aria-hidden", big ? "false" : "true");
+      if (e.mask) e.mask.style.pointerEvents = want ? "auto" : "none";
+      if (e.trig) {
+        e.trig.style.pointerEvents = want ? "auto" : "none";
+        e.trig.tabIndex = want ? 0 : -1;
+        e.trig.setAttribute("aria-hidden", want ? "false" : "true");
+      }
+    };
+
+    const set = (visible, instant) => {
+      if (!enabled()) return;
+      document.documentElement.classList.add("luve-navc");
+      build();
+      want = visible;
+      applyAttrs();
+      own(() => {
+        if (instant) {
+          tl.pause().progress(visible ? 1 : 0).reversed(!visible);
+          return;
+        }
+        if (visible) tl.timeScale(1).play();
+        else tl.timeScale(1.35).reverse();
+      });
+    };
+
+    // 側邊 menu 開咗：大 logo 留俾 menu 用（GET IN TOUCH component 會處理）；
+    // 收返之後，按 timeline 而家嘅位置重新擺返啱
+    const resync = () => {
+      if (!enabled() || !tl) return;
+      own(() => {
+        tl.getChildren(false, true, false).forEach((c) => {
+          try { c.render(c.totalTime(), true, true); } catch (err) {}
+        });
+      });
+      applyAttrs();
+    };
+
+    const off = () => {
+      if (tl) own(() => tl.kill());
+      tl = null;
+      parts = "";
+      document.documentElement.classList.remove("luve-navc");
+      const e = els();
+      own(() => {
+        [e.mini, e.fade].filter(Boolean).forEach((x) => gsap.set(x, { clearProps: "opacity" }));
+        if (e.logo) gsap.set(e.logo, { clearProps: "opacity,visibility" });
+      });
+    };
+
+    // 手機：其他程式對大 logo / burger / 兩粒掣嘅 gsap 動畫一律略過（側邊 menu 開住除外）
+    if (!gsap.__luveNavGuard) {
+      gsap.__luveNavGuard = true;
+      const blocked = (el) =>
+        el && el.nodeType === 1 && !window.__luveNavOwn &&
+        document.documentElement.classList.contains("luve-navc") &&
+        !document.body.classList.contains("side-menu-open") &&
+        el.matches(NAVC_SEL);
+      const split = (targets) => {
+        if (!targets || typeof targets === "string") return null;
+        const list = targets.nodeType === 1 ? [targets] : Array.prototype.slice.call(targets);
+        if (!list.some(blocked)) return null;
+        return list.filter((x) => !blocked(x));
+      };
+      const wrapTween = (name) => {
+        const orig = gsap[name].bind(gsap);
+        gsap[name] = function (targets, a, b) {
+          const keep = split(targets);
+          if (!keep) return orig.apply(null, arguments);
+          const vars = name === "fromTo" ? b : a;
+          if (keep.length) return name === "fromTo" ? orig(keep, a, b) : orig(keep, a);
+          const dummy = { duration: (vars && vars.duration) || 0, delay: (vars && vars.delay) || 0 };
+          if (vars && vars.onComplete) dummy.onComplete = vars.onComplete;
+          return orig({}, dummy);
+        };
+      };
+      ["to", "set", "fromTo", "from"].forEach(wrapTween);
+      const origKill = gsap.killTweensOf.bind(gsap);
+      gsap.killTweensOf = function (targets) {
+        const keep = split(targets);
+        if (!keep) return origKill.apply(null, arguments);
+        if (keep.length) return origKill(keep, arguments[1], arguments[2]);
+      };
+    }
+
+    phoneMq.addEventListener
+      ? phoneMq.addEventListener("change", () => { if (!enabled()) off(); })
+      : phoneMq.addListener(() => { if (!enabled()) off(); });
+
+    if (window.__luveNavc && window.__luveNavc.off) window.__luveNavc.off();
+    const api = { enabled, set, resync, off, build: () => enabled() && build() };
+    window.__luveNavc = api;
+    return api;
+  })();
+
   // OH Architecture floating-nav motion:
   // both pills stay opaque and move through an overflow mask at yPercent 102.
   const setFloatingVisible = (visible, instant = false) => {
@@ -1192,7 +1373,8 @@ function initUnifiedMenuSystem() {
     // The isolated enquiry trigger receives the same GSAP state in this tick.
     announceFloatingState(visible, true, instant);
     // 頂部 logo / burger 先收起，MENU、GET IN TOUCH、細 logo 先出；返上頂就倒轉
-    if (!instant) sequenceNavSwap(visible);
+    if (navc.enabled()) navc.set(visible, instant);
+    else if (!instant) sequenceNavSwap(visible);
 
     gsap.to(floatingBtn, {
       yPercent: visible ? 0 : 102,
@@ -1217,7 +1399,9 @@ function initUnifiedMenuSystem() {
 
     // 頂部 burger 同 logo 同一下收起（同 MENU 出現同一刻），中間冇一刻撳唔到 menu；
     // 返上頂時等 MENU / GET IN TOUCH 收起先再出返，兩組唔會疊埋
-    if (floating) {
+    if (navc.enabled()) {
+      // 手機：burger 由上面嘅 nav 總指揮處理
+    } else if (floating) {
       if (navBurger.getAttribute("aria-hidden") !== "true") hideTopBurger();
     } else if (navBurger.getAttribute("aria-hidden") === "true")
       showTopBurger(instant || !STATE.floatingVisible ? 0 : 0.3);
@@ -1333,6 +1517,7 @@ function initUnifiedMenuSystem() {
     unlockScroll();
     resetFloatingCtaVisual();
     syncClosedVisibility();
+    navc.resync();
     if (source === "floating" && STATE.floatingVisible) {
       floatingBtn.focus({ preventScroll: true });
     } else if (source === "top") {
@@ -1458,6 +1643,10 @@ function initUnifiedMenuSystem() {
     syncClosedVisibility(true);
   });
   syncClosedVisibility(true);
+  // 細 logo / 頂部色帶喺 load 之後先整出嚟（Section 37）→ 加入 nav 總指揮條 timeline
+  const navcLate = () => setTimeout(() => { navc.build(); navc.resync(); }, 0);
+  if (document.readyState === "complete") navcLate();
+  else window.addEventListener("load", navcLate, { once: true });
 
   // 手機：GET IN TOUCH component 有自己一套「向上 scroll 早啲收起」嘅規則
   // （離頂 340px 內就收埋 GET IN TOUCH / MENU），令大 logo、burger 同兩粒掣
