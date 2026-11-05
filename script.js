@@ -1202,73 +1202,63 @@ function initUnifiedMenuSystem() {
     }
   };
 
-  // ── 手機 nav 總指揮（一條 timeline 管晒）──
+  // ── 手機 nav 總指揮 ──
   // 以前大 logo、burger、GET IN TOUCH / MENU、細 logo、頂部色帶各自有自己嘅動畫
-  // （仲有 GET IN TOUCH component 自己嗰套），好快咁上落 scroll 時會互相打架，
-  // 出現唔同步 / 兩組 nav 疊埋。而家（手機 ≤767px）全部放入同一條 GSAP timeline：
+  // （仲有 GET IN TOUCH component 自己嗰套），好快咁上落 scroll 時會互相打架。
+  // 而家（手機 ≤767px）只靠 <html> 上面一個 class：luve-nav-scrolled。
   //   落（過咗 40px）：大 logo + burger 先收（0.2 秒）→ 細 logo、色帶、兩粒掣先出
-  //   上（返到頂）：同一條 timeline 倒帶 —— 兩粒掣先收 → 大 logo + burger 先出返
-  // 中途轉方向就由當刻位置即刻倒返轉頭，永遠唔會兩組同時出現。
+  //   上（返到頂）：兩粒掣先收 → 大 logo + burger 先出返
+  // 全部用 CSS transition 做（只郁 opacity 同位移），手機會交俾 GPU 自己行，
+  // 就算 JavaScript 忙緊（scroll、載入圖片）都唔會窒；中途轉方向會由當刻位置倒返轉頭。
   // 其他程式（GET IN TOUCH component 等）對呢幾樣嘢嘅 gsap 動畫，喺手機會被略過。
   const NAVC_SEL = ".nav-logo-link, .class-nav-burger, [data-enq-trigger-mask]";
   const navc = (() => {
     const phoneMq = window.matchMedia("(max-width: 767px)");
+    const root = document.documentElement;
     const enabled = () =>
       phoneMq.matches &&
-      !document.documentElement.classList.contains("luve-tablet-phone") &&
+      !root.classList.contains("luve-tablet-phone") &&
       !document.body.classList.contains("body-contact");
-    let tl = null;
-    let parts = "";
     let want = false;
+    let on = false;
+
+    const H = "html.luve-navc";
+    const S = "html.luve-navc.luve-nav-scrolled";
+    const MASK = "html.luve-navc[data-enq-mobile-pair] [data-enq-trigger-mask]";
+    const MASK_S = "html.luve-navc.luve-nav-scrolled[data-enq-mobile-pair] [data-enq-trigger-mask]";
+    const OUT = "cubic-bezier(.215,.61,.355,1)"; // power3.out
+    const IN = "cubic-bezier(.55,.055,.675,.19)"; // power3.in
     const css = document.getElementById("luve-navc-css") || document.createElement("style");
     css.id = "luve-navc-css";
     css.textContent =
       "@media (max-width:767px){" +
-      "html.luve-navc .nav-mini-logo,html.luve-navc .nav-mini-logo.is-on,html.luve-navc .nav-top-fade{transition:none!important}" +
-      "html.luve-navc body.side-menu-open .nav-top-fade{opacity:0!important}" +
+      // 大 logo + burger：頂部 = 顯示（等兩粒掣收埋先出），落咗 = 即刻收
+      H + " .nav-bar .nav-logo-link," + H + " .nav-bar .class-nav-burger{opacity:1!important;visibility:visible!important;will-change:opacity;" +
+        "transition:opacity .3s ease .32s,visibility 0s linear .32s!important}" +
+      S + " .nav-bar .nav-logo-link," + S + " .nav-bar .class-nav-burger{opacity:0!important;visibility:hidden!important;pointer-events:none!important;" +
+        "transition:opacity .2s ease-in 0s,visibility 0s linear .2s!important}" +
+      // 側邊 menu 開咗：大 logo 返嚟（同 menu 一齊），收 menu 時再走
+      S + " body.side-menu-open:not(.nav-menu-closing) .nav-bar .nav-logo-link{opacity:1!important;visibility:visible!important;pointer-events:auto!important;" +
+        "transition:opacity .5s ease .3s,visibility 0s linear .3s!important}" +
+      // 兩粒掣：個框唔郁、剪走框外面，入面兩粒掣由下面升上嚟（GPU 位移）
+      MASK + "{transform:none!important;clip-path:none!important;-webkit-clip-path:none!important;overflow:hidden!important}" +
+      MASK + ">*{translate:0 105%;will-change:translate;transition:translate .38s " + IN + " 0s!important}" +
+      MASK_S + ">*{translate:0 0;transition:translate .6s " + OUT + " .22s!important}" +
+      // 細 logo + 頂部色帶
+      H + " .nav-mini-logo:not(.is-static)," + H + " .nav-mini-logo.is-on:not(.is-static)," + H + " .nav-top-fade{opacity:0!important;will-change:opacity;transition:opacity .2s ease 0s!important}" +
+      S + " .nav-mini-logo:not(.is-static)," + S + " .nav-top-fade{opacity:1!important;transition:opacity .4s ease .22s!important}" +
+      H + " body.side-menu-open .nav-top-fade{opacity:0!important}" +
+      // 頁面一開：直接擺好位，唔行動畫
+      "html.luve-navc-instant .nav-bar .nav-logo-link,html.luve-navc-instant .nav-bar .class-nav-burger," +
+      "html.luve-navc-instant [data-enq-trigger-mask]>*,html.luve-navc-instant .nav-mini-logo,html.luve-navc-instant .nav-top-fade{transition:none!important}" +
       "}";
-    document.head.appendChild(css);
+    if (!css.isConnected) document.head.appendChild(css);
 
     const els = () => ({
       logo: navBar.querySelector(".nav-logo-link"),
-      burger: navBurger,
       mask: document.querySelector("[data-enq-trigger-mask]"),
-      mini: document.querySelector(".nav-mini-logo:not(.is-static)"),
-      fade: document.querySelector(".nav-top-fade"),
       trig: document.querySelector("[data-enq-action='open']"),
     });
-
-    const own = (fn) => {
-      window.__luveNavOwn = true;
-      try { return fn(); } finally { window.__luveNavOwn = false; }
-    };
-
-    const build = () => {
-      const e = els();
-      const key = [e.logo, e.mask, e.mini, e.fade].map((x) => (x ? 1 : 0)).join("");
-      if (tl && key === parts) return;
-      const p = tl ? tl.progress() : want ? 1 : 0;
-      const wasReversed = tl ? tl.reversed() : !want;
-      if (tl) tl.kill();
-      parts = key;
-      tl = own(() => {
-        const t = gsap.timeline({ paused: true });
-        const big = [e.logo, e.burger].filter(Boolean);
-        t.fromTo(big, { autoAlpha: 1 }, { autoAlpha: 0, duration: 0.2, ease: "power1.in" }, 0);
-        if (e.mask)
-          t.fromTo(
-            e.mask,
-            { "--enq-mobile-pair-y": "102%", "--enq-mobile-pair-clip": "100%" },
-            { "--enq-mobile-pair-y": "0%", "--enq-mobile-pair-clip": "0%", duration: 0.6, ease: "power3.out" },
-            0.22
-          );
-        const soft = [e.mini, e.fade].filter(Boolean);
-        if (soft.length)
-          t.fromTo(soft, { opacity: 0 }, { opacity: 1, duration: 0.4, ease: "power1.out" }, 0.22);
-        t.progress(p).reversed(wasReversed);
-        return t;
-      });
-    };
 
     // pointer / 讀屏狀態跟住 want 即刻轉，唔使等動畫
     const applyAttrs = () => {
@@ -1285,48 +1275,44 @@ function initUnifiedMenuSystem() {
       }
     };
 
-    const set = (visible, instant) => {
-      if (!enabled()) return;
-      document.documentElement.classList.add("luve-navc");
-      // 「即時」只用喺頁面一開嗰下。之後一律行動畫：iPhone Safari 返到頂時網址列
-      // 會彈返出嚟（觸發 resize），以前 resize 會叫「即時」轉狀態，令到遮罩
-      // 間中冇咗淡出、一下閃返普通 nav-bar。
-      if (tl) instant = false;
-      build();
-      want = visible;
-      applyAttrs();
-      own(() => {
-        if (instant) {
-          tl.pause().progress(visible ? 1 : 0).reversed(!visible);
-          return;
-        }
-        if (visible) tl.timeScale(1).play();
-        else tl.timeScale(1.35).reverse();
-      });
+    // 之前其他程式（gsap）寫落去嘅 inline 樣式清走，等 CSS 話事
+    const clean = () => {
+      const e = els();
+      window.__luveNavOwn = true;
+      try {
+        [e.logo, navBurger].forEach((x) => x && gsap.set(x, { clearProps: "opacity,visibility" }));
+        document.querySelectorAll(".nav-mini-logo, .nav-top-fade").forEach((x) => x.style.removeProperty("opacity"));
+      } finally {
+        window.__luveNavOwn = false;
+      }
     };
 
-    // 側邊 menu 開咗：大 logo 留俾 menu 用（GET IN TOUCH component 會處理）；
-    // 收返之後，按 timeline 而家嘅位置重新擺返啱
+    const set = (visible, instant) => {
+      if (!enabled()) return;
+      if (!on) {
+        on = true;
+        instant = true;
+        root.classList.add("luve-navc");
+        clean();
+      }
+      want = visible;
+      applyAttrs();
+      if (instant) root.classList.add("luve-navc-instant");
+      root.classList.toggle("luve-nav-scrolled", visible);
+      if (instant) {
+        void root.offsetWidth; // 套用咗先再開返動畫
+        requestAnimationFrame(() => root.classList.remove("luve-navc-instant"));
+      }
+    };
+
     const resync = () => {
-      if (!enabled() || !tl) return;
-      own(() => {
-        tl.getChildren(false, true, false).forEach((c) => {
-          try { c.render(c.totalTime(), true, true); } catch (err) {}
-        });
-      });
+      if (!on || !enabled()) return;
       applyAttrs();
     };
 
     const off = () => {
-      if (tl) own(() => tl.kill());
-      tl = null;
-      parts = "";
-      document.documentElement.classList.remove("luve-navc");
-      const e = els();
-      own(() => {
-        [e.mini, e.fade].filter(Boolean).forEach((x) => gsap.set(x, { clearProps: "opacity" }));
-        if (e.logo) gsap.set(e.logo, { clearProps: "opacity,visibility" });
-      });
+      on = false;
+      root.classList.remove("luve-navc", "luve-nav-scrolled", "luve-navc-instant");
     };
 
     // 手機：其他程式對大 logo / burger / 兩粒掣嘅 gsap 動畫一律略過（側邊 menu 開住除外）
@@ -1364,12 +1350,11 @@ function initUnifiedMenuSystem() {
       };
     }
 
-    phoneMq.addEventListener
-      ? phoneMq.addEventListener("change", () => { if (!enabled()) off(); })
-      : phoneMq.addListener(() => { if (!enabled()) off(); });
+    const onMq = () => { if (!enabled()) off(); };
+    phoneMq.addEventListener ? phoneMq.addEventListener("change", onMq) : phoneMq.addListener(onMq);
 
     if (window.__luveNavc && window.__luveNavc.off) window.__luveNavc.off();
-    const api = { enabled, set, resync, off, build: () => enabled() && build() };
+    const api = { enabled, set, resync, off, build: () => {} };
     window.__luveNavc = api;
     return api;
   })();
@@ -4598,6 +4583,27 @@ window.addEventListener("load", function () {
 //   - 首次載入：slogan SplitText line-reveal（跟 Section 21）+ 頂部 bar + 右下細 spinner
 //   - 內部轉頁：去 spinner，overlay 淡入蓋上 → 新頁 Section 21 自動 reveal
 // =====================================================
+// 手機載入動畫唔窒：用瀏覽器內置動畫（Web Animations）只郁 opacity / 位移，
+// 交俾 GPU 自己行。網頁喺背景初始化（JavaScript 忙緊）時，動畫照樣順。
+// 完咗之後將最後狀態寫返落 style，再移除動畫，等其他程式可以照常改。
+const luveAnim = (el, frames, opt) => {
+  if (!el || !el.animate) return null;
+  const a = el.animate(frames, Object.assign({ fill: "both" }, opt));
+  a.finished
+    .then(() => {
+      try { a.commitStyles(); } catch (e) {}
+      a.cancel();
+    })
+    .catch(() => {});
+  return a;
+};
+const LUVE_EASE = {
+  out2: "cubic-bezier(.25,.46,.45,.94)",
+  in2: "cubic-bezier(.55,.085,.68,.53)",
+  inOut2: "cubic-bezier(.455,.03,.515,.955)",
+  out3: "cubic-bezier(.215,.61,.355,1)",
+};
+
 function initSmartLoader() {
   const loader = document.querySelector(".page-loader");
   if (!loader) {
@@ -4624,21 +4630,20 @@ function initSmartLoader() {
 
     if (progressBar) {
       // scaleX（GPU）代替 width，手機唔會每格重新排版
-      gsap.to(progressBar, {
-        scaleX: 1,
-        duration: 0.3,
-        ease: "power2.out",
-      });
+      if (barAnim) {
+        const now = getComputedStyle(progressBar).transform;
+        barAnim.cancel();
+        barAnim = null;
+        luaBar(now, "scaleX(1)", 300);
+      } else {
+        gsap.to(progressBar, { scaleX: 1, duration: 0.3, ease: "power2.out" });
+      }
     }
 
-    const exitTL = gsap.timeline({ delay: 0.1 });
-    exitTL
-      .to(content, { opacity: 0, y: -15, duration: 0.5, ease: "power2.in" })
-      .to(loader, {
-        opacity: 0,
-        duration: 0.6,
-        ease: "power2.inOut",
-        onComplete: () => {
+    let finished = false;
+    const finish = () => {
+          if (finished) return;
+          finished = true;
           loader.style.display = "none";
           window.__luveLoaderDone = true;
           window.dispatchEvent(new Event("luve:loader-done"));
@@ -4653,9 +4658,41 @@ function initSmartLoader() {
               if (target) window.lenis.scrollTo(target, { immediate: true });
             }, 100);
           }
-        },
-      });
+    };
+
+    if (content && loader.animate) {
+      // 字先淡出向上（0.5 秒），之後成個 loader 淡出（0.6 秒）
+      const c = luveAnim(
+        content,
+        [{ opacity: getComputedStyle(content).opacity, transform: "translateY(0)" },
+         { opacity: 0, transform: "translateY(-15px)" }],
+        { duration: 500, delay: 100, easing: LUVE_EASE.in2 }
+      );
+      c.finished
+        .then(() => {
+          const l = luveAnim(loader, [{ opacity: 1 }, { opacity: 0 }], {
+            duration: 600,
+            easing: LUVE_EASE.inOut2,
+          });
+          return l.finished;
+        })
+        .then(finish, finish);
+      // 保險：如果瀏覽器暫停咗動畫（例如載入中途轉咗 app），都會收起 loader
+      setTimeout(finish, 2500);
+    } else {
+      gsap
+        .timeline({ delay: 0.1 })
+        .to(content, { opacity: 0, y: -15, duration: 0.5, ease: "power2.in" })
+        .to(loader, { opacity: 0, duration: 0.6, ease: "power2.inOut", onComplete: finish });
+    }
   };
+
+  let barAnim = null;
+  const luaBar = (from, to, ms) =>
+    luveAnim(progressBar, [{ transform: from }, { transform: to }], {
+      duration: ms,
+      easing: LUVE_EASE.out2,
+    });
 
   // --- Full Intro（首次載入）：slogan line-reveal ---
   const playFullIntro = () => {
@@ -4663,7 +4700,14 @@ function initSmartLoader() {
 
     if (progressBar) {
       gsap.set(progressBar, { opacity: 1, width: "100%", scaleX: 0, transformOrigin: "0% 50%" });
-      gsap.to(progressBar, { scaleX: 0.85, duration: 2, ease: "power2.out" });
+      if (progressBar.animate) {
+        barAnim = progressBar.animate(
+          [{ transform: "scaleX(0)" }, { transform: "scaleX(.85)" }],
+          { duration: 2000, easing: LUVE_EASE.out2, fill: "forwards" }
+        );
+      } else {
+        gsap.to(progressBar, { scaleX: 0.85, duration: 2, ease: "power2.out" });
+      }
     }
 
     const loaderSlogan = document.querySelector(".loader-slogan");
@@ -4677,6 +4721,16 @@ function initSmartLoader() {
         onSplit: (self) => {
           // 拆完行、set 好起始位置後，先顯示容器（防閃現）
           if (loaderSlogan) gsap.set(loaderSlogan, { opacity: 1 });
+          if (self.lines.length && self.lines[0].animate) {
+            self.lines.forEach((line, i) =>
+              luveAnim(
+                line,
+                [{ transform: "translateY(110%)", opacity: 0 }, { transform: "translateY(0)", opacity: 1 }],
+                { duration: 1000, delay: i * 80, easing: LUVE_EASE.out3 }
+              )
+            );
+            return;
+          }
           return gsap.from(self.lines, {
             yPercent: 110,
             autoAlpha: 0,
