@@ -1277,6 +1277,10 @@ function initUnifiedMenuSystem() {
     const set = (visible, instant) => {
       if (!enabled()) return;
       document.documentElement.classList.add("luve-navc");
+      // 「即時」只用喺頁面一開嗰下。之後一律行動畫：iPhone Safari 返到頂時網址列
+      // 會彈返出嚟（觸發 resize），以前 resize 會叫「即時」轉狀態，令到遮罩
+      // 間中冇咗淡出、一下閃返普通 nav-bar。
+      if (tl) instant = false;
       build();
       want = visible;
       applyAttrs();
