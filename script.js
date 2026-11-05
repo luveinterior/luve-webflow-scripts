@@ -9868,6 +9868,51 @@ initPopupHoverReveal({
   } catch (e) {}
 })();
 
+// =====================================================
+// 49. GET IN TOUCH Panel — 手機 / 平板用返 Contact Page 嗰粒返回箭咀
+// 功能：手機（≤991px）同所有觸控平板，enq-panel 右上角嘅「CLOSE」字
+//       換成 Contact Page form 右上角同款返回箭咀（ct-arrow），
+//       同「PROJECT ENQUIRY」並排、上下置中。Desktop（有 mouse）照舊用 CLOSE 字。
+//       頂部高咗少少，所以表格底部預留嘅空位相應減少，手機唔使 scroll。
+// =====================================================
+(function enqCloseArrow() {
+  try {
+    const close = document.querySelector('[data-enq-panel] [data-enq-action="close"]');
+    if (!close) return;
+    if (!close.querySelector(".enq-close-arrow")) {
+      const text = document.createElement("span");
+      text.className = "enq-close-text";
+      text.textContent = close.textContent.trim() || "CLOSE";
+      close.textContent = "";
+      close.appendChild(text);
+      close.insertAdjacentHTML(
+        "beforeend",
+        '<span class="enq-close-arrow" aria-hidden="true"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14 4 9l5-5"></path><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"></path></svg></span>'
+      );
+    }
+    if (document.getElementById("luve-enq-close-arrow")) return;
+    const P = "[data-enq-panel]";
+    const HEAD = P + ">div:nth-child(2)";
+    const ACT = P + " form>div:last-child";
+    const rules = (pre) =>
+      pre + HEAD + "{align-items:center!important;padding-bottom:6px!important}" +
+      pre + P + " .enq-close{display:inline-flex!important;align-items:center!important;justify-content:flex-end!important;" +
+        "width:42px!important;height:42px!important;margin:-4px -4px -4px 0!important;color:rgb(121,94,73)!important;-webkit-tap-highlight-color:transparent}" +
+      pre + P + " .enq-close:after{display:none!important}" +
+      pre + P + " .enq-close .enq-close-text{display:none!important}" +
+      pre + P + " .enq-close .enq-close-arrow{display:inline-flex!important}" +
+      // 頂部高咗 → 底部按鈕列下面少留啲位
+      pre + ACT + "{padding-bottom:4px!important}";
+    const st = document.createElement("style");
+    st.id = "luve-enq-close-arrow";
+    st.textContent =
+      ".enq-close .enq-close-arrow{display:none}" +
+      "@media (max-width:991px){" + rules("html body ") + "}" +
+      rules("html.luve-touch body ");
+    document.head.appendChild(st);
+  } catch (e) {}
+})();
+
 }; // end window.__luveRun
 
 window.__luveLife.start();
