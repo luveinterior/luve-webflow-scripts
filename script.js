@@ -1192,7 +1192,7 @@ function initUnifiedMenuSystem() {
     // 返上頂時等 MENU / GET IN TOUCH 收起先再出返，兩組唔會疊埋
     if (floating) hideTopBurger();
     else if (navBurger.getAttribute("aria-hidden") === "true")
-      showTopBurger(instant || !STATE.floatingVisible ? 0 : NAV_SWAP_DELAY);
+      showTopBurger(instant || !STATE.floatingVisible ? 0 : 0.3);
 
     setFloatingVisible(floating, instant);
   };
