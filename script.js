@@ -843,7 +843,7 @@ if (window.__luveSameLogo) window.__luveSameLogo();
 //          同瀏覽器嘅「Please fill out this field.」提示。
 //       4. 密碼喺背景送出（fetch POST /.wf_auth），錯就唔使成頁重新載入：
 //          輸入框右上角出「*Incorrect password」，再打字就收埋。唔限次數、唔鎖。
-//          密碼啱先轉去個 page。
+//          密碼啱就用 Webflow 原本嘅表單 POST 送出，由 Webflow 轉頁。
 //       其他頁面完全唔受影響（冇 form.w-password-page 就即刻 return）。
 // =====================================================
 (function initPasswordPage() {
@@ -988,11 +988,9 @@ if (window.__luveSameLogo) window.__luveSameLogo();
           } catch (err) {}
           return;
         }
-        if (!res.ok) throw new Error("auth " + res.status); // 其他錯誤：照原本方法送出
-        // 密碼啱：Webflow 已經寫低 cookie，轉去原本要睇嘅 page
-        const pageInput = form.querySelector("input[name='page']") || form.querySelector("input[name='path']");
-        const dest = (res.url && !/\/\.wf_auth/.test(res.url) ? res.url : "") || (pageInput && pageInput.value) || location.pathname;
-        location.replace(dest);
+        // 密碼啱（或者任何其他情況）：用 Webflow 原本嘅表單 POST 正式送出，
+        // 由 Webflow 自己寫 cookie 同轉頁（唔觸發上面嘅 submit listener）。
+        HTMLFormElement.prototype.submit.call(form);
       })
       .catch(() => {
         // 網絡出錯：照 Webflow 原本方法送出
