@@ -835,10 +835,15 @@ if (window.__luveSameLogo) window.__luveSameLogo();
 //       呢度（喺所有 section 之前）：
 //       1. 補返網站嘅 .cursor（啡色波點）→ Section 08 照常接手
 //       2. Submit 換做網站嘅 CTA pill（.btn-wrapper.is-home + .btn-arrow + .btn-text）
-//          → Section 12 hover（推字 + 底線 + 波點 + 轉色）、Section 39 大細、
-//            Section 40 波點全部自動套用
-//       3. 「Protected Page」「Password」用 Brand Color Dark；輸入框跟
-//          GET IN TOUCH enquiry form 嘅 input；placeholder「same as company email」
+//          → Section 12 hover、Section 39 大細、Section 40 波點全部自動套用。
+//          Webflow 原本嘅 input[type=submit] 要保留（收埋）：Section 05 表單驗證
+//          會攔截所有 .btn-wrapper 嘅 click，驗證完再 click 呢個原本嘅 submit。
+//       3. 標題用 .cover-about-title；Password 欄跟足 GET IN TOUCH enquiry form：
+//          label、.enq-input 輸入框、右上角 .field-error-msg（*This field is required）
+//          同瀏覽器嘅「Please fill out this field.」提示。
+//       4. 密碼喺背景送出（fetch POST /.wf_auth），錯就唔使成頁重新載入：
+//          輸入框右上角出「*Incorrect password」，再打字就收埋。唔限次數、唔鎖。
+//          密碼啱先轉去個 page。
 //       其他頁面完全唔受影響（冇 form.w-password-page 就即刻 return）。
 // =====================================================
 (function initPasswordPage() {
@@ -855,7 +860,7 @@ if (window.__luveSameLogo) window.__luveSameLogo();
     document.body.appendChild(c);
   }
 
-  // 3. 字、輸入框、錯誤訊息
+  // 3. 樣式（數值量度自 GET IN TOUCH panel 嘅 Step 01）
   if (!document.getElementById("luve-pw-css")) {
     const P = "html.luve-pw ";
     const st = document.createElement("style");
@@ -864,31 +869,82 @@ if (window.__luveSameLogo) window.__luveSameLogo();
       P + ".utility-page-content{width:100%;max-width:400px;padding:0 20px;box-sizing:border-box}" +
       P + ".utility-page-form{display:flex;flex-direction:column;align-items:stretch;text-align:center}" +
       P + ".utility-page-form img{align-self:center;position:static!important;inset:auto!important;transform:none!important;margin:0!important}" +
-      P + ".utility-page-form h2{white-space:nowrap;color:var(--brand-color-dark,#795e49)!important;font-family:var(--_typography---h2-font-family,'Bauer Bodoni',serif);font-weight:400;font-size:clamp(2.2rem,1.9rem + 1.2vw,3rem);line-height:1.05em;letter-spacing:-.03em;margin:28px 0 32px}" +
-      // Password label = enquiry form 嘅 field label
-      P + "label.w-password-page{color:var(--brand-color-dark,#795e49)!important;font:600 14px/1.3 'Helvetica Neue',Arial,sans-serif!important;letter-spacing:.02em!important;text-transform:none!important;text-align:left;margin:0 0 8px}" +
-      // 輸入框 = enquiry form 嘅 .enq-input
-      P + "input.w-password-page.w-input{display:block!important;width:100%!important;height:auto!important;min-height:62px!important;margin:0 0 20px!important;padding:0 16px!important;box-sizing:border-box!important;border:1px solid rgba(121,94,73,.35)!important;border-radius:6px!important;background:rgba(121,94,73,.08)!important;color:var(--brand-color-dark,#795e49)!important;font:400 16px/1.35 'Helvetica Neue',Arial,sans-serif!important;outline:none!important;box-shadow:none!important;transition:border-color .2s ease!important}" +
+      // 標題：.cover-about-title（字型、大細、行高 1.2em 由 class 提供），只加位置
+      P + ".utility-page-form h2.cover-about-title{margin:28px 0 32px!important;text-align:center}" +
+      // Password 欄 = enquiry 嘅 label（相對定位，錯誤訊息喺右上角）
+      P + ".luve-pw-field{position:relative;display:block;text-align:left;margin:0 0 15px}" +
+      P + ".luve-pw-field label.w-password-page{display:block;margin:0 0 17px!important;color:var(--brand-color-dark,#795e49)!important;font:600 14px/1.3 'Helvetica Neue',Arial,sans-serif!important;letter-spacing:.02em!important;text-transform:none!important;text-align:left}" +
+      // 輸入框 = .enq-input（GET IN TOUCH panel）
+      P + "input.w-password-page.w-input{display:block!important;width:100%!important;height:auto!important;min-height:62px!important;margin:0!important;padding:0 16px!important;box-sizing:border-box!important;border:1px solid rgba(121,94,73,.35)!important;border-radius:6px!important;background:rgba(121,94,73,.08)!important;color:var(--brand-color-dark,#795e49)!important;font:400 16px/1.35 'Helvetica Neue',Arial,sans-serif!important;outline:none!important;box-shadow:none!important;transition:border-color .3s!important}" +
       P + "input.w-password-page.w-input:focus{border-color:var(--brand-color-dark,#795e49)!important}" +
       P + "input.w-password-page.w-input::placeholder{color:rgba(121,94,73,.55)!important;opacity:1!important}" +
-      // Submit pill：置中，掣本身唔要瀏覽器預設 border / font
+      // 錯誤訊息 = enquiry 嘅 .field-error-msg（右上角、紅色粗體）
+      P + ".luve-pw-field .field-error-msg{position:absolute!important;top:0!important;right:0!important;left:auto!important;bottom:auto!important;display:none;width:auto!important;max-width:60%!important;margin:0!important;padding:0!important;color:#d9534f!important;text-align:right!important;font-family:'Helvetica Neue',Arial,sans-serif!important;font-size:14px!important;font-weight:700!important;line-height:1.2!important;letter-spacing:-.01em!important;pointer-events:none!important;z-index:3!important}" +
+      // Webflow 自己嘅錯誤框唔再用（改用上面嘅欄位訊息）
+      P + ".w-password-page.w-form-fail{display:none!important}" +
       P + ".luve-pw-submit{align-self:center;margin:4px 0 0;border:0;font:inherit;-webkit-appearance:none;appearance:none}" +
-      P + ".w-password-page.w-form-fail{margin-top:20px;padding:12px 16px;border:1px solid rgba(121,94,73,.35);border-radius:6px;background:transparent;color:var(--brand-color-dark,#795e49);font:400 14px/1.35 'Helvetica Neue',Arial,sans-serif}" +
       "@media (max-width:991px){" +
       P + "input.w-password-page.w-input{min-height:clamp(50px,6.7dvh,56px)!important;padding:0 14px!important}" +
+      "}" +
+      "@media (max-width:479px){" +
+      P + ".luve-pw-field .field-error-msg{font-size:11px!important}" +
       "}";
     document.head.appendChild(st);
   }
 
+  const h2 = form.querySelector("h2");
+  if (h2) h2.classList.add("cover-about-title");
+
   const pass = form.querySelector("input[type='password']");
+  const label = form.querySelector("label.w-password-page");
+  let msg = null;
   if (pass) {
     pass.placeholder = "same as company email";
     pass.setAttribute("autocomplete", "current-password");
+    pass.required = true;
+    // label + 輸入框 + 錯誤訊息包埋一齊（同 enquiry 嘅 <label> 一樣）
+    const field = document.createElement("div");
+    field.className = "luve-pw-field";
+    pass.parentNode.insertBefore(field, label || pass);
+    if (label) field.appendChild(label);
+    field.appendChild(pass);
+    msg = document.createElement("div");
+    msg.className = "field-error-msg";
+    msg.setAttribute("role", "alert");
+    msg.style.display = "none";
+    field.appendChild(msg);
   }
 
-  // 2. Submit → CTA pill（同一個 form 照用 POST /.wf_auth）
-  // Webflow 原本嘅 input[type=submit] 要保留（收埋）：Section 05 表單驗證會攔截所有
-  // .btn-wrapper 嘅 click，驗證完再 click 呢個原本嘅 submit 先真正送出。
+  // 同 enquiry form 一樣嘅出 / 收錯誤訊息
+  const showError = (text) => {
+    if (!pass || !msg) return;
+    pass.classList.add("is-error");
+    msg.parentNode.classList.add("has-error");
+    msg.textContent = text;
+    msg.style.display = "block";
+    msg.style.opacity = "1";
+    msg.style.transform = "translateY(0)";
+  };
+  const clearError = () => {
+    if (!pass || !msg) return;
+    pass.classList.remove("is-error");
+    msg.parentNode.classList.remove("has-error");
+    msg.style.opacity = "0";
+    msg.style.transform = "translateY(-5px)";
+    setTimeout(() => {
+      if (!msg.parentNode.classList.contains("has-error")) msg.style.display = "none";
+    }, 300);
+  };
+  if (pass) {
+    pass.addEventListener("input", clearError);
+    pass.addEventListener("change", clearError);
+    // 冇輸入：瀏覽器提示 + 右上角 *This field is required（同 enquiry 一樣）
+    pass.addEventListener("invalid", () => showError("*This field is required"));
+  }
+  // 直接打開 ?e=1（例如舊連結）都用同一個訊息
+  if (/[?&]e=1(&|$)/.test(location.search)) showError("*Incorrect password");
+
+  // 2. Submit → CTA pill
   const old = form.querySelector("input[type='submit']");
   if (old && !form.querySelector(".luve-pw-submit")) {
     const btn = document.createElement("button");
@@ -901,13 +957,50 @@ if (window.__luveSameLogo) window.__luveSameLogo();
     old.setAttribute("aria-hidden", "true");
   }
 
-  // 密碼錯（Webflow 返嚟 ?e=1，佢自己會出 .w-form-fail）：一開始再打字就收埋訊息。
-  // 唔限次數、唔鎖。
-  const fail = form.querySelector(".w-form-fail");
-  if (pass && fail)
-    pass.addEventListener("input", () => {
-      fail.style.display = "none";
-    });
+  // 4. 背景送出密碼：錯就留喺原位出訊息，啱先轉頁
+  let busy = false;
+  form.addEventListener("submit", (e) => {
+    if (!window.fetch || !window.URLSearchParams) return; // 舊瀏覽器：照 Webflow 原本送出
+    e.preventDefault();
+    if (busy) return;
+    if (!pass || !pass.value) {
+      showError("*This field is required");
+      return;
+    }
+    busy = true;
+    form.setAttribute("aria-busy", "true");
+    const body = new URLSearchParams(new FormData(form));
+    fetch(form.getAttribute("action") || "/.wf_auth", {
+      method: "POST",
+      body,
+      credentials: "same-origin",
+      redirect: "follow",
+    })
+      .then((res) => {
+        const wrong = res.status === 401 || /[?&]e=1(&|$)/.test(res.url || "");
+        if (wrong) {
+          busy = false;
+          form.removeAttribute("aria-busy");
+          showError("*Incorrect password");
+          try {
+            pass.focus({ preventScroll: true });
+            pass.select();
+          } catch (err) {}
+          return;
+        }
+        if (!res.ok) throw new Error("auth " + res.status); // 其他錯誤：照原本方法送出
+        // 密碼啱：Webflow 已經寫低 cookie，轉去原本要睇嘅 page
+        const pageInput = form.querySelector("input[name='page']") || form.querySelector("input[name='path']");
+        const dest = (res.url && !/\/\.wf_auth/.test(res.url) ? res.url : "") || (pageInput && pageInput.value) || location.pathname;
+        location.replace(dest);
+      })
+      .catch(() => {
+        // 網絡出錯：照 Webflow 原本方法送出
+        busy = false;
+        form.removeAttribute("aria-busy");
+        HTMLFormElement.prototype.submit.call(form);
+      });
+  });
 })();
 
 // =====================================================
