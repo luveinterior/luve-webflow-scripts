@@ -51,6 +51,7 @@
 // 47. GET IN TOUCH Panel — Buttons, Cursor, Step 04, Others, Loader
 // 00. Page Transitions (Barba-style) — 喺最頂，包住成個 script（window.__luveRun）
 // 00a. Always the Latest Page (no Ctrl+Shift+R needed after a publish)
+// 00p. Password Page (Webflow Protected Page / 401) — cursor, CTA pill, inputs
 //
 // =============================================================================
 
@@ -826,6 +827,75 @@ if (window.__luveSameLogo) window.__luveSameLogo();
 (window.__luveKeepStyles || []).forEach(function (n) {
   if (!n.isConnected) document.head.appendChild(n);
 });
+
+// =====================================================
+// 00p. Password Page（Webflow Protected Page / 401）— LUVÉ look
+// 功能：Webflow 嘅 Protected Page 係 utility page，冇網站 Symbol（冇 .cursor），
+//       但全站 CSS 有 html,body{cursor:none}，所以入面連 cursor 都冇。
+//       呢度（喺所有 section 之前）：
+//       1. 補返網站嘅 .cursor（啡色波點）→ Section 08 照常接手
+//       2. Submit 換做網站嘅 CTA pill（.btn-wrapper.is-home + .btn-arrow + .btn-text）
+//          → Section 12 hover（推字 + 底線 + 波點 + 轉色）、Section 39 大細、
+//            Section 40 波點全部自動套用
+//       3. 「Protected Page」「Password」用 Brand Color Dark；輸入框跟
+//          GET IN TOUCH enquiry form 嘅 input；placeholder「same as company email」
+//       其他頁面完全唔受影響（冇 form.w-password-page 就即刻 return）。
+// =====================================================
+(function initPasswordPage() {
+  const form = document.querySelector("form.w-password-page");
+  if (!form || form.dataset.luvePw) return;
+  form.dataset.luvePw = "1";
+  document.documentElement.classList.add("luve-pw");
+
+  // 1. 網站 cursor
+  if (!document.querySelector(".cursor")) {
+    const c = document.createElement("div");
+    c.className = "cursor";
+    c.innerHTML = '<div class="cursor-text">EXPLORE</div>';
+    document.body.appendChild(c);
+  }
+
+  // 3. 字、輸入框、錯誤訊息
+  if (!document.getElementById("luve-pw-css")) {
+    const P = "html.luve-pw ";
+    const st = document.createElement("style");
+    st.id = "luve-pw-css";
+    st.textContent =
+      P + ".utility-page-content{width:100%;max-width:400px;padding:0 20px;box-sizing:border-box}" +
+      P + ".utility-page-form{display:flex;flex-direction:column;align-items:stretch;text-align:center}" +
+      P + ".utility-page-form img{align-self:center;position:static!important;inset:auto!important;transform:none!important;margin:0!important}" +
+      P + ".utility-page-form h2{color:var(--brand-color-dark,#795e49)!important;font-family:var(--_typography---h2-font-family,'Bauer Bodoni',serif);font-weight:400;font-size:clamp(2.2rem,1.9rem + 1.2vw,3rem);line-height:1.05em;letter-spacing:-.03em;margin:28px 0 32px}" +
+      // Password label = enquiry form 嘅 field label
+      P + "label.w-password-page{color:var(--brand-color-dark,#795e49)!important;font:600 14px/1.3 'Helvetica Neue',Arial,sans-serif!important;letter-spacing:.02em!important;text-transform:none!important;text-align:left;margin:0 0 8px}" +
+      // 輸入框 = enquiry form 嘅 .enq-input
+      P + "input.w-password-page.w-input{display:block!important;width:100%!important;height:auto!important;min-height:62px!important;margin:0 0 20px!important;padding:0 16px!important;box-sizing:border-box!important;border:1px solid rgba(121,94,73,.35)!important;border-radius:6px!important;background:rgba(121,94,73,.08)!important;color:var(--brand-color-dark,#795e49)!important;font:400 16px/1.35 'Helvetica Neue',Arial,sans-serif!important;outline:none!important;box-shadow:none!important;transition:border-color .2s ease!important}" +
+      P + "input.w-password-page.w-input:focus{border-color:var(--brand-color-dark,#795e49)!important}" +
+      P + "input.w-password-page.w-input::placeholder{color:rgba(121,94,73,.55)!important;opacity:1!important}" +
+      // Submit pill：置中，掣本身唔要瀏覽器預設 border / font
+      P + ".luve-pw-submit{align-self:center;margin:4px 0 0;border:0;font:inherit;-webkit-appearance:none;appearance:none}" +
+      P + ".w-password-page.w-form-fail{margin-top:20px;padding:12px 16px;border:1px solid rgba(121,94,73,.35);border-radius:6px;background:transparent;color:var(--brand-color-dark,#795e49);font:400 14px/1.35 'Helvetica Neue',Arial,sans-serif}" +
+      "@media (max-width:991px){" +
+      P + "input.w-password-page.w-input{min-height:clamp(50px,6.7dvh,56px)!important;padding:0 14px!important}" +
+      "}";
+    document.head.appendChild(st);
+  }
+
+  const pass = form.querySelector("input[type='password']");
+  if (pass) {
+    pass.placeholder = "same as company email";
+    pass.setAttribute("autocomplete", "current-password");
+  }
+
+  // 2. Submit → CTA pill（同一個 form 照用 POST /.wf_auth）
+  const old = form.querySelector("input[type='submit']");
+  if (old) {
+    const btn = document.createElement("button");
+    btn.type = "submit";
+    btn.className = "btn-wrapper is-home luve-pw-submit";
+    btn.innerHTML = '<div class="btn-arrow"></div><div class="btn-text">Submit</div>';
+    old.replaceWith(btn);
+  }
+})();
 
 // =====================================================
 // 01. LUVE Home — Card Hover Effects (True Mask Effect)
