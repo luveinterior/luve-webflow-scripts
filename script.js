@@ -864,7 +864,7 @@ if (window.__luveSameLogo) window.__luveSameLogo();
       P + ".utility-page-content{width:100%;max-width:400px;padding:0 20px;box-sizing:border-box}" +
       P + ".utility-page-form{display:flex;flex-direction:column;align-items:stretch;text-align:center}" +
       P + ".utility-page-form img{align-self:center;position:static!important;inset:auto!important;transform:none!important;margin:0!important}" +
-      P + ".utility-page-form h2{color:var(--brand-color-dark,#795e49)!important;font-family:var(--_typography---h2-font-family,'Bauer Bodoni',serif);font-weight:400;font-size:clamp(2.2rem,1.9rem + 1.2vw,3rem);line-height:1.05em;letter-spacing:-.03em;margin:28px 0 32px}" +
+      P + ".utility-page-form h2{white-space:nowrap;color:var(--brand-color-dark,#795e49)!important;font-family:var(--_typography---h2-font-family,'Bauer Bodoni',serif);font-weight:400;font-size:clamp(2.2rem,1.9rem + 1.2vw,3rem);line-height:1.05em;letter-spacing:-.03em;margin:28px 0 32px}" +
       // Password label = enquiry form 嘅 field label
       P + "label.w-password-page{color:var(--brand-color-dark,#795e49)!important;font:600 14px/1.3 'Helvetica Neue',Arial,sans-serif!important;letter-spacing:.02em!important;text-transform:none!important;text-align:left;margin:0 0 8px}" +
       // 輸入框 = enquiry form 嘅 .enq-input
@@ -887,14 +887,27 @@ if (window.__luveSameLogo) window.__luveSameLogo();
   }
 
   // 2. Submit → CTA pill（同一個 form 照用 POST /.wf_auth）
+  // Webflow 原本嘅 input[type=submit] 要保留（收埋）：Section 05 表單驗證會攔截所有
+  // .btn-wrapper 嘅 click，驗證完再 click 呢個原本嘅 submit 先真正送出。
   const old = form.querySelector("input[type='submit']");
-  if (old) {
+  if (old && !form.querySelector(".luve-pw-submit")) {
     const btn = document.createElement("button");
     btn.type = "submit";
     btn.className = "btn-wrapper is-home luve-pw-submit";
     btn.innerHTML = '<div class="btn-arrow"></div><div class="btn-text">Submit</div>';
-    old.replaceWith(btn);
+    old.parentNode.insertBefore(btn, old);
+    old.style.display = "none";
+    old.tabIndex = -1;
+    old.setAttribute("aria-hidden", "true");
   }
+
+  // 密碼錯（Webflow 返嚟 ?e=1，佢自己會出 .w-form-fail）：一開始再打字就收埋訊息。
+  // 唔限次數、唔鎖。
+  const fail = form.querySelector(".w-form-fail");
+  if (pass && fail)
+    pass.addEventListener("input", () => {
+      fail.style.display = "none";
+    });
 })();
 
 // =====================================================
