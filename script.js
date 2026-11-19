@@ -10118,11 +10118,11 @@ initPopupHoverReveal({
       st.id = "luve-reels-css";
       st.textContent =
         ".project-reels-section .projects-next-text{text-align:center}" +
-        ".project-reels-grid{display:grid;grid-template-columns:repeat(var(--reels-n,3),minmax(0,1fr));gap:24px;align-items:start}" +
+        // 每格最闊 400px（成段 reel 一眼睇晒，唔使上落 scroll），成行置中
+        ".project-reels-grid{display:grid;grid-template-columns:repeat(var(--reels-n,3),minmax(0,400px));justify-content:center;gap:24px;align-items:start}" +
         ".project-reels-item{min-width:0}" +
         ".project-reels-item .instagram-media{min-width:0!important;max-width:100%!important;width:100%!important;margin:0!important}" +
-        // 1 段：唔好成行咁闊，置中
-        ".project-reels-grid[data-n='1']{grid-template-columns:minmax(0,420px);justify-content:center}" +
+        
         // 平板 / 手機：一行左右掃，每格差唔多一部手機咁闊
         "@media (max-width:991px){.project-reels-grid,.project-reels-grid[data-n='1']{display:flex;gap:16px;overflow-x:auto;" +
         "scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;overscroll-behavior-x:contain;scrollbar-width:none;" +
