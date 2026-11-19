@@ -10089,6 +10089,90 @@ initPopupHoverReveal({
   } catch (e) {}
 })();
 
+// =====================================================
+// 50. Project Page — Instagram Reels（「IN MOTION」section）
+// 功能：Project CMS 嘅「Instagram Reels」欄（一行一條 reel link）有嘢，
+//       就喺 more-section 同 NEXT PROJECT 中間顯示嗰幾段 reel：
+//       電腦一行平均分（2 段 = 兩格、3 段 = 三格）；平板 / 手機一行左右掃。
+//       欄位留空 = 成個 section 唔出（section 預設 display:none）。
+// =====================================================
+(function projectReels() {
+  try {
+    const sec = document.querySelector(".project-reels-section");
+    if (!sec) return;
+    const grid = sec.querySelector(".project-reels-grid");
+    const src = sec.querySelector("[data-luve-reels-src]");
+    const raw = (src && src.getAttribute("data-luve-reels-src")) || "";
+    const ids = [];
+    raw.replace(/instagram\.com\/(?:[\w.]+\/)?(reel|reels|p|tv)\/([\w-]+)/gi, (m, kind, id) => {
+      const k = (kind.toLowerCase() === "p" ? "p" : "reel") + "/" + id;
+      if (ids.indexOf(k) < 0) ids.push(k);
+      return m;
+    });
+    if (!grid || !ids.length) {
+      sec.style.display = "none";
+      return;
+    }
+    if (!document.getElementById("luve-reels-css")) {
+      const st = document.createElement("style");
+      st.id = "luve-reels-css";
+      st.textContent =
+        ".project-reels-section .projects-next-text{text-align:center}" +
+        ".project-reels-grid{display:grid;grid-template-columns:repeat(var(--reels-n,3),minmax(0,1fr));gap:24px;align-items:start}" +
+        ".project-reels-item{min-width:0}" +
+        ".project-reels-item .instagram-media{min-width:0!important;max-width:100%!important;width:100%!important;margin:0!important}" +
+        // 1 段：唔好成行咁闊，置中
+        ".project-reels-grid[data-n='1']{grid-template-columns:minmax(0,420px);justify-content:center}" +
+        // 平板 / 手機：一行左右掃，每格差唔多一部手機咁闊
+        "@media (max-width:991px){.project-reels-grid,.project-reels-grid[data-n='1']{display:flex;gap:16px;overflow-x:auto;" +
+        "scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;overscroll-behavior-x:contain;scrollbar-width:none;" +
+        "margin-left:-1.25rem;margin-right:-1.25rem;padding:0 1.25rem 4px;scroll-padding:0 1.25rem}" +
+        ".project-reels-grid::-webkit-scrollbar{display:none}" +
+        ".project-reels-item{flex:0 0 min(78vw,340px);scroll-snap-align:start}" +
+        ".project-reels-grid[data-n='1']{justify-content:center}}" +
+        "@media (max-width:479px){.project-reels-grid,.project-reels-grid[data-n='1']{margin-left:-1rem;margin-right:-1rem;padding:0 1rem 4px;scroll-padding:0 1rem}}";
+      document.head.appendChild(st);
+    }
+    grid.style.setProperty("--reels-n", String(ids.length));
+    grid.setAttribute("data-n", String(ids.length));
+    grid.innerHTML = ids
+      .map((k) => {
+        const url = "https://www.instagram.com/" + k + "/?utm_source=ig_embed&utm_campaign=loading";
+        return (
+          '<div class="project-reels-item"><blockquote class="instagram-media" data-instgrm-permalink="' +
+          url +
+          '" data-instgrm-version="14" style="background:#FFF;border:0;border-radius:3px;margin:0;padding:0;width:100%">' +
+          '<a href="' + url + '" target="_blank" rel="noopener">View this post on Instagram</a></blockquote></div>'
+        );
+      })
+      .join("");
+    sec.style.display = "block";
+
+    // Instagram 官方 embed：已經載入過就直接處理，未就載一次
+    const run = () => {
+      try { window.instgrm && window.instgrm.Embeds.process(); } catch (e) {}
+    };
+    if (window.instgrm) run();
+    else if (!document.getElementById("luve-ig-embed")) {
+      const sc = document.createElement("script");
+      sc.id = "luve-ig-embed";
+      sc.async = true;
+      sc.src = "https://www.instagram.com/embed.js";
+      sc.onload = run;
+      document.body.appendChild(sc);
+    } else {
+      setTimeout(run, 800);
+    }
+    // reel 載入後高度會變：之後重新計 scroll 動畫位置
+    try {
+      const ro = new ResizeObserver(() => {
+        if (window.__luveSafeRefresh) window.__luveSafeRefresh();
+      });
+      ro.observe(grid);
+    } catch (e) {}
+  } catch (e) {}
+})();
+
 }; // end window.__luveRun
 
 window.__luveLife.start();
