@@ -10122,8 +10122,8 @@ initPopupHoverReveal({
       // 位置以舞台闊度 / 高度嘅百分比計，所以任何闊度都係同一個構圖
       st.textContent =
         ".project-reels-section .projects-next-text{text-align:center}" +
-        ".lm-stage{position:relative;width:100%;max-width:1200px;margin:2.5rem auto 0;aspect-ratio:16/10}" +
-        ".lm-stage[data-n='2']{aspect-ratio:16/10}" +
+        ".lm-stage{position:relative;width:100%;max-width:1200px;margin:2.5rem auto 0;aspect-ratio:16/11.5}" +
+        ".lm-stage[data-n='2']{aspect-ratio:16/11.5}" +
         ".lm-stage[data-n='1']{aspect-ratio:16/10}" +
         ".lm-text{position:absolute;left:50%;top:50%;width:min(62%,760px);transform:translate(-50%,-50%);margin:0;" +
         "font-family:'Helvetica Neue',Arial,sans-serif;font-weight:400;text-align:center;" +
@@ -10138,12 +10138,12 @@ initPopupHoverReveal({
         // 影片入面嗰層字：同底層一模一樣，位置由 JS 對齊；米色 + difference
         ".lm-tile .lm-text{color:#f0e8dd;mix-blend-mode:difference;transform:none;left:0;top:0;z-index:1}" +
         // 三段：右上 / 左中 / 右下（中心點）
-        ".lm-stage[data-n='3'] .lm-t1{left:80%;top:28.5%}" +
+        ".lm-stage[data-n='3'] .lm-t1{left:80%;top:24.75%}" +
         ".lm-stage[data-n='3'] .lm-t2{left:17%;top:50%}" +
-        ".lm-stage[data-n='3'] .lm-t3{left:71%;top:71.5%}" +
+        ".lm-stage[data-n='3'] .lm-t3{left:71%;top:75.25%}" +
         // 兩段：右上 / 左下
-        ".lm-stage[data-n='2'] .lm-t1{left:78%;top:28.5%}" +
-        ".lm-stage[data-n='2'] .lm-t2{left:22%;top:71.5%}" +
+        ".lm-stage[data-n='2'] .lm-t1{left:78%;top:24.75%}" +
+        ".lm-stage[data-n='2'] .lm-t2{left:22%;top:75.25%}" +
         // 一段：正中
         ".lm-stage[data-n='1']{--lm-w:22%}.lm-stage[data-n='1'] .lm-tile{left:50%;top:50%}" +
         "@media (max-width:767px){" +
