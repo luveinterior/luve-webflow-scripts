@@ -10122,36 +10122,36 @@ initPopupHoverReveal({
       // 位置以舞台闊度 / 高度嘅百分比計，所以任何闊度都係同一個構圖
       st.textContent =
         ".project-reels-section .projects-next-text{text-align:center}" +
-        ".lm-stage{position:relative;width:100%;max-width:1200px;margin:2.5rem auto 0;aspect-ratio:4/3}" +
-        ".lm-stage[data-n='2']{aspect-ratio:4/3}" +
+        ".lm-stage{position:relative;width:100%;max-width:1200px;margin:2.5rem auto 0;aspect-ratio:16/10}" +
+        ".lm-stage[data-n='2']{aspect-ratio:16/10}" +
         ".lm-stage[data-n='1']{aspect-ratio:16/10}" +
         ".lm-text{position:absolute;left:50%;top:50%;width:min(62%,760px);transform:translate(-50%,-50%);margin:0;" +
         "font-family:'Helvetica Neue',Arial,sans-serif;font-weight:400;text-align:center;" +
         "font-size:clamp(26px,3.6vw,52px);line-height:1.08;letter-spacing:-.035em;color:#795e49;z-index:1;pointer-events:none}" +
-        ".lm-tile{position:absolute;width:18%;aspect-ratio:9/16;overflow:hidden;z-index:2;background:#e6dccf;" +
+        ".lm-tile{position:absolute;width:15%;aspect-ratio:9/16;overflow:hidden;z-index:2;background:#e6dccf;" +
         "clip-path:inset(100% 0 0 0);transition:clip-path 1.1s cubic-bezier(.22,1,.36,1)}" +
         ".lm-stage.is-in .lm-tile{clip-path:inset(0 0 0 0)}" +
-        ".lm-stage.is-in .lm-tile:nth-child(2){transition-delay:.12s}.lm-stage.is-in .lm-tile:nth-child(3){transition-delay:.24s}" +
+        ".lm-stage.is-in .lm-t2{transition-delay:.12s}.lm-stage.is-in .lm-t3{transition-delay:.24s}" +
         ".lm-tile video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}" +
         // 影片入面嗰層字：同底層一模一樣，位置由 JS 對齊；米色 + difference
         ".lm-tile .lm-text{color:#f0e8dd;mix-blend-mode:difference;transform:none;left:0;top:0;z-index:1}" +
         // 三段：右上 / 左中 / 右下
-        ".lm-stage[data-n='3'] .lm-tile:nth-child(1){left:60%;top:0}" +
-        ".lm-stage[data-n='3'] .lm-tile:nth-child(2){left:14%;top:28%}" +
-        ".lm-stage[data-n='3'] .lm-tile:nth-child(3){left:55%;top:57.3%}" +
+        ".lm-stage[data-n='3'] .lm-t1{left:62%;top:0}" +
+        ".lm-stage[data-n='3'] .lm-t2{left:17%;top:27%}" +
+        ".lm-stage[data-n='3'] .lm-t3{left:55%;top:57.3%}" +
         // 兩段：右上 / 左下
-        ".lm-stage[data-n='2'] .lm-tile:nth-child(1){left:60%;top:0}" +
-        ".lm-stage[data-n='2'] .lm-tile:nth-child(2){left:20%;top:57.3%}" +
+        ".lm-stage[data-n='2'] .lm-t1{left:62%;top:0}" +
+        ".lm-stage[data-n='2'] .lm-t2{left:20%;top:57.3%}" +
         // 一段：正中
-        ".lm-stage[data-n='1'] .lm-tile{width:20%;left:40%;top:50%;margin-top:-17.8%}" +
+        ".lm-stage[data-n='1'] .lm-tile{width:18%;left:41%;top:50%;margin-top:-16%}" +
         "@media (max-width:767px){" +
         ".lm-stage,.lm-stage[data-n='2']{aspect-ratio:3/4.4}.lm-stage[data-n='1']{aspect-ratio:3/3.6}" +
         ".lm-tile{width:31%}.lm-text{width:88%;font-size:clamp(22px,6.4vw,34px)}" +
-        ".lm-stage[data-n='3'] .lm-tile:nth-child(1){left:63%;top:0}" +
-        ".lm-stage[data-n='3'] .lm-tile:nth-child(2){left:3%;top:31%}" +
-        ".lm-stage[data-n='3'] .lm-tile:nth-child(3){left:57%;top:62.5%}" +
-        ".lm-stage[data-n='2'] .lm-tile:nth-child(1){left:63%;top:0}" +
-        ".lm-stage[data-n='2'] .lm-tile:nth-child(2){left:6%;top:62.5%}" +
+        ".lm-stage[data-n='3'] .lm-t1{left:63%;top:0}" +
+        ".lm-stage[data-n='3'] .lm-t2{left:3%;top:31%}" +
+        ".lm-stage[data-n='3'] .lm-t3{left:57%;top:62.5%}" +
+        ".lm-stage[data-n='2'] .lm-t1{left:63%;top:0}" +
+        ".lm-stage[data-n='2'] .lm-t2{left:6%;top:62.5%}" +
         ".lm-stage[data-n='1'] .lm-tile{width:42%;left:29%;margin-top:-37.3%}}" +
         "@media (prefers-reduced-motion:reduce){.lm-tile{transition:none;clip-path:none}}";
       document.head.appendChild(st);
@@ -10169,9 +10169,9 @@ initPopupHoverReveal({
     base.className = "lm-text";
     base.textContent = desc;
     stage.appendChild(base);
-    const tiles = vids.map((url) => {
+    const tiles = vids.map((url, i) => {
       const t = document.createElement("div");
-      t.className = "lm-tile";
+      t.className = "lm-tile lm-t" + (i + 1);
       const v = document.createElement("video");
       v.muted = true;
       v.loop = true;
