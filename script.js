@@ -10090,86 +10090,163 @@ initPopupHoverReveal({
 })();
 
 // =====================================================
-// 50. Project Page — Instagram Reels（「IN MOTION」section）
-// 功能：Project CMS 嘅「Instagram Reels」欄（一行一條 reel link）有嘢，
-//       就喺 more-section 同 NEXT PROJECT 中間顯示嗰幾段 reel：
-//       電腦一行平均分（2 段 = 兩格、3 段 = 三格）；平板 / 手機一行左右掃。
-//       欄位留空 = 成個 section 唔出（section 預設 display:none）。
+// 50. Project Page — IN MOTION（項目影片 + 描述）
+// 功能：Project CMS「Project Videos」（一行一條影片 link，最多 3 條）有嘢就顯示：
+//   - 影片散落三個位置（右上 / 左中 / 右下），中間大字「Video Description」
+//   - 字疊喺影片上面嗰部分會反色（同 Profile 頁 services-list 一樣：
+//     底層啡色字 + 影片入面一層米色 difference 字）
+//   - 1 段片 = 放正中；2 段 = 右上 + 左下；冇片 = 成個 section 唔出
+//   - 影片靜音自動循環播放，捲到附近先載入，離開畫面就暫停（慳流量、慳電）
 // =====================================================
-(function projectReels() {
+(function projectMotion() {
   try {
     const sec = document.querySelector(".project-reels-section");
     if (!sec) return;
-    const grid = sec.querySelector(".project-reels-grid");
-    const src = sec.querySelector("[data-luve-reels-src]");
-    const raw = (src && src.getAttribute("data-luve-reels-src")) || "";
-    const ids = [];
-    raw.replace(/instagram\.com\/(?:[\w.]+\/)?(reel|reels|p|tv)\/([\w-]+)/gi, (m, kind, id) => {
-      const k = (kind.toLowerCase() === "p" ? "p" : "reel") + "/" + id;
-      if (ids.indexOf(k) < 0) ids.push(k);
-      return m;
-    });
-    if (!grid || !ids.length) {
+    const holder = sec.querySelector("[data-luve-videos-src]");
+    const raw = (holder && holder.getAttribute("data-luve-videos-src")) || "";
+    const desc = ((holder && holder.getAttribute("data-luve-videos-desc")) || "").trim();
+    const vids = raw
+      .split(/\s+/)
+      .map((x) => x.trim())
+      .filter((x) => /^https?:\/\/.+\.(mp4|webm|mov)(\?.*)?$/i.test(x))
+      .slice(0, 3);
+    if (!vids.length) {
       sec.style.display = "none";
       return;
     }
-    if (!document.getElementById("luve-reels-css")) {
+    const n = vids.length;
+
+    if (!document.getElementById("luve-motion-css")) {
       const st = document.createElement("style");
-      st.id = "luve-reels-css";
+      st.id = "luve-motion-css";
+      // 位置以舞台闊度 / 高度嘅百分比計，所以任何闊度都係同一個構圖
       st.textContent =
         ".project-reels-section .projects-next-text{text-align:center}" +
-        // 每格最闊 400px（成段 reel 一眼睇晒，唔使上落 scroll），成行置中
-        ".project-reels-grid{display:grid;grid-template-columns:repeat(var(--reels-n,3),minmax(0,400px));justify-content:center;gap:24px;align-items:start}" +
-        ".project-reels-item{min-width:0}" +
-        ".project-reels-item .instagram-media{min-width:0!important;max-width:100%!important;width:100%!important;margin:0!important}" +
-        
-        // 平板 / 手機：一行左右掃，每格差唔多一部手機咁闊
-        "@media (max-width:991px){.project-reels-grid,.project-reels-grid[data-n='1']{display:flex;gap:16px;overflow-x:auto;" +
-        "scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;overscroll-behavior-x:contain;scrollbar-width:none;" +
-        "margin-left:-1.25rem;margin-right:-1.25rem;padding:0 1.25rem 4px;scroll-padding:0 1.25rem}" +
-        ".project-reels-grid::-webkit-scrollbar{display:none}" +
-        ".project-reels-item{flex:0 0 min(78vw,340px);scroll-snap-align:start}" +
-        ".project-reels-grid[data-n='1']{justify-content:center}}" +
-        "@media (max-width:479px){.project-reels-grid,.project-reels-grid[data-n='1']{margin-left:-1rem;margin-right:-1rem;padding:0 1rem 4px;scroll-padding:0 1rem}}";
+        ".lm-stage{position:relative;width:100%;max-width:1200px;margin:2.5rem auto 0;aspect-ratio:4/3}" +
+        ".lm-stage[data-n='2']{aspect-ratio:4/3}" +
+        ".lm-stage[data-n='1']{aspect-ratio:16/10}" +
+        ".lm-text{position:absolute;left:50%;top:50%;width:min(62%,760px);transform:translate(-50%,-50%);margin:0;" +
+        "font-family:'Helvetica Neue',Arial,sans-serif;font-weight:400;text-align:center;" +
+        "font-size:clamp(26px,3.6vw,52px);line-height:1.08;letter-spacing:-.035em;color:#795e49;z-index:1;pointer-events:none}" +
+        ".lm-tile{position:absolute;width:18%;aspect-ratio:9/16;overflow:hidden;z-index:2;background:#e6dccf;" +
+        "clip-path:inset(100% 0 0 0);transition:clip-path 1.1s cubic-bezier(.22,1,.36,1)}" +
+        ".lm-stage.is-in .lm-tile{clip-path:inset(0 0 0 0)}" +
+        ".lm-stage.is-in .lm-tile:nth-child(2){transition-delay:.12s}.lm-stage.is-in .lm-tile:nth-child(3){transition-delay:.24s}" +
+        ".lm-tile video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}" +
+        // 影片入面嗰層字：同底層一模一樣，位置由 JS 對齊；米色 + difference
+        ".lm-tile .lm-text{color:#f0e8dd;mix-blend-mode:difference;transform:none;left:0;top:0;z-index:1}" +
+        // 三段：右上 / 左中 / 右下
+        ".lm-stage[data-n='3'] .lm-tile:nth-child(1){left:60%;top:0}" +
+        ".lm-stage[data-n='3'] .lm-tile:nth-child(2){left:14%;top:28%}" +
+        ".lm-stage[data-n='3'] .lm-tile:nth-child(3){left:55%;top:57.3%}" +
+        // 兩段：右上 / 左下
+        ".lm-stage[data-n='2'] .lm-tile:nth-child(1){left:60%;top:0}" +
+        ".lm-stage[data-n='2'] .lm-tile:nth-child(2){left:20%;top:57.3%}" +
+        // 一段：正中
+        ".lm-stage[data-n='1'] .lm-tile{width:20%;left:40%;top:50%;margin-top:-17.8%}" +
+        "@media (max-width:767px){" +
+        ".lm-stage,.lm-stage[data-n='2']{aspect-ratio:3/4.4}.lm-stage[data-n='1']{aspect-ratio:3/3.6}" +
+        ".lm-tile{width:31%}.lm-text{width:88%;font-size:clamp(22px,6.4vw,34px)}" +
+        ".lm-stage[data-n='3'] .lm-tile:nth-child(1){left:63%;top:0}" +
+        ".lm-stage[data-n='3'] .lm-tile:nth-child(2){left:3%;top:31%}" +
+        ".lm-stage[data-n='3'] .lm-tile:nth-child(3){left:57%;top:62.5%}" +
+        ".lm-stage[data-n='2'] .lm-tile:nth-child(1){left:63%;top:0}" +
+        ".lm-stage[data-n='2'] .lm-tile:nth-child(2){left:6%;top:62.5%}" +
+        ".lm-stage[data-n='1'] .lm-tile{width:42%;left:29%;margin-top:-37.3%}}" +
+        "@media (prefers-reduced-motion:reduce){.lm-tile{transition:none;clip-path:none}}";
       document.head.appendChild(st);
     }
-    grid.style.setProperty("--reels-n", String(ids.length));
-    grid.setAttribute("data-n", String(ids.length));
-    grid.innerHTML = ids
-      .map((k) => {
-        const url = "https://www.instagram.com/" + k + "/?utm_source=ig_embed&utm_campaign=loading";
-        return (
-          '<div class="project-reels-item"><blockquote class="instagram-media" data-instgrm-permalink="' +
-          url +
-          '" data-instgrm-version="14" style="background:#FFF;border:0;border-radius:3px;margin:0;padding:0;width:100%">' +
-          '<a href="' + url + '" target="_blank" rel="noopener">View this post on Instagram</a></blockquote></div>'
-        );
-      })
-      .join("");
+
+    // 舊版（IG embed）留低嘅嘢清走
+    sec.querySelectorAll(".project-reels-grid").forEach((g) => (g.style.display = "none"));
+    const old = sec.querySelector(".lm-stage");
+    if (old) old.remove();
+
+    const stage = document.createElement("div");
+    stage.className = "lm-stage";
+    stage.setAttribute("data-n", String(n));
+    const base = document.createElement("p");
+    base.className = "lm-text";
+    base.textContent = desc;
+    stage.appendChild(base);
+    const tiles = vids.map((url) => {
+      const t = document.createElement("div");
+      t.className = "lm-tile";
+      const v = document.createElement("video");
+      v.muted = true;
+      v.loop = true;
+      v.playsInline = true;
+      v.setAttribute("muted", "");
+      v.setAttribute("playsinline", "");
+      v.setAttribute("preload", "none");
+      v.setAttribute("aria-hidden", "true");
+      v.dataset.src = url;
+      t.appendChild(v);
+      if (desc) {
+        const c = document.createElement("p");
+        c.className = "lm-text";
+        c.setAttribute("aria-hidden", "true");
+        c.textContent = desc;
+        t.appendChild(c);
+      }
+      stage.appendChild(t);
+      return t;
+    });
+    const holderEl = sec.querySelector(".project-reels-grid") || holder;
+    holderEl.parentNode.insertBefore(stage, holderEl);
     sec.style.display = "block";
 
-    // Instagram 官方 embed：已經載入過就直接處理，未就載一次
-    const run = () => {
-      try { window.instgrm && window.instgrm.Embeds.process(); } catch (e) {}
-    };
-    if (window.instgrm) run();
-    else if (!document.getElementById("luve-ig-embed")) {
-      const sc = document.createElement("script");
-      sc.id = "luve-ig-embed";
-      sc.async = true;
-      sc.src = "https://www.instagram.com/embed.js";
-      sc.onload = run;
-      document.body.appendChild(sc);
-    } else {
-      setTimeout(run, 800);
-    }
-    // reel 載入後高度會變：之後重新計 scroll 動畫位置
-    try {
-      const ro = new ResizeObserver(() => {
-        if (window.__luveSafeRefresh) window.__luveSafeRefresh();
+    // 影片入面嗰層字對齊底層字（一樣闊、一樣位置）
+    const align = () => {
+      const s = base.getBoundingClientRect();
+      tiles.forEach((t) => {
+        const c = t.querySelector(".lm-text");
+        if (!c) return;
+        const r = t.getBoundingClientRect();
+        c.style.width = s.width + "px";
+        c.style.left = s.left - r.left + "px";
+        c.style.top = s.top - r.top + "px";
       });
-      ro.observe(grid);
-    } catch (e) {}
+    };
+    align();
+    try { new ResizeObserver(align).observe(stage); } catch (e) { window.addEventListener("resize", align); }
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(align);
+
+    // 捲到附近先載入；入畫先播，出畫暫停
+    const play = (v) => {
+      if (!v.src) {
+        v.src = v.dataset.src;
+        v.load();
+      }
+      const p = v.play();
+      if (p && p.catch) p.catch(() => {});
+    };
+    try {
+      const io = new IntersectionObserver(
+        (es) =>
+          es.forEach((e) => {
+            const v = e.target.querySelector("video");
+            if (e.isIntersecting) play(v);
+            else if (!v.paused) v.pause();
+          }),
+        { rootMargin: "300px 0px" }
+      );
+      tiles.forEach((t) => io.observe(t));
+      const ioIn = new IntersectionObserver(
+        (es) => {
+          if (es.some((e) => e.isIntersecting)) {
+            stage.classList.add("is-in");
+            ioIn.disconnect();
+          }
+        },
+        { threshold: 0.15 }
+      );
+      ioIn.observe(stage);
+    } catch (e) {
+      stage.classList.add("is-in");
+      tiles.forEach((t) => play(t.querySelector("video")));
+    }
+    if (window.__luveSafeRefresh) window.__luveSafeRefresh();
   } catch (e) {}
 })();
 
