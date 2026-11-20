@@ -10122,8 +10122,8 @@ initPopupHoverReveal({
       // 位置以舞台闊度 / 高度嘅百分比計，所以任何闊度都係同一個構圖
       st.textContent =
         ".project-reels-section .projects-next-text{text-align:center}" +
-        ".lm-stage{position:relative;width:100%;max-width:1200px;margin:2.5rem auto 0;aspect-ratio:16/11.5}" +
-        ".lm-stage[data-n='2']{aspect-ratio:16/11.5}" +
+        ".lm-stage{position:relative;width:100%;max-width:1200px;margin:2.5rem auto 0;aspect-ratio:16/13.5}" +
+        ".lm-stage[data-n='2']{aspect-ratio:16/13.5}" +
         ".lm-stage[data-n='1']{aspect-ratio:16/10}" +
         ".lm-text{position:absolute;left:50%;top:50%;width:min(62%,760px);transform:translate(-50%,-50%);margin:0;" +
         "font-family:'Helvetica Neue',Arial,sans-serif;font-weight:400;text-align:center;" +
@@ -10138,12 +10138,12 @@ initPopupHoverReveal({
         // 影片入面嗰層字：同底層一模一樣，位置由 JS 對齊；米色 + difference
         ".lm-tile .lm-text{color:#f0e8dd;mix-blend-mode:difference;transform:none;left:0;top:0;z-index:1}" +
         // 三段：右上 / 左中 / 右下（中心點）
-        ".lm-stage[data-n='3'] .lm-t1{left:80%;top:24.75%}" +
+        ".lm-stage[data-n='3'] .lm-t1{left:80%;top:21%}" +
         ".lm-stage[data-n='3'] .lm-t2{left:17%;top:50%}" +
-        ".lm-stage[data-n='3'] .lm-t3{left:71%;top:75.25%}" +
+        ".lm-stage[data-n='3'] .lm-t3{left:71%;top:79%}" +
         // 兩段：右上 / 左下
-        ".lm-stage[data-n='2'] .lm-t1{left:78%;top:24.75%}" +
-        ".lm-stage[data-n='2'] .lm-t2{left:22%;top:75.25%}" +
+        ".lm-stage[data-n='2'] .lm-t1{left:78%;top:21%}" +
+        ".lm-stage[data-n='2'] .lm-t2{left:22%;top:79%}" +
         // 一段：正中
         ".lm-stage[data-n='1']{--lm-w:22%}.lm-stage[data-n='1'] .lm-tile{left:50%;top:50%}" +
         "@media (max-width:767px){" +
@@ -10223,18 +10223,19 @@ initPopupHoverReveal({
         return;
       }
       let target = K0, cur = K0, raf = 0, done = false;
-      const easeOut = (x) => 1 - Math.pow(1 - x, 3);
       const measure = () => {
         const r = stage.getBoundingClientRect();
         const vh = window.innerHeight || 800;
-        // 舞台頂入到畫面底 = 0；舞台頂到畫面 15% 高 = 1
-        const p = Math.min(1, Math.max(0, (vh - r.top) / (vh * 0.85)));
-        const t = K0 + (1 - K0) * easeOut(p);
+        // 跟住捲動距離放大：舞台頂去到畫面 90% 高開始，
+        // 舞台中間去到畫面 40% 高先到最大（即係要捲過大半個 section）
+        const start = vh * 0.9, end = vh * 0.4 - r.height / 2;
+        const p = Math.min(1, Math.max(0, (start - r.top) / (start - end)));
+        const t = K0 + (1 - K0) * p;
         if (t > target) target = t;
       };
       const tick = () => {
         raf = 0;
-        cur += (target - cur) * 0.09;
+        cur += (target - cur) * 0.12;
         if (target - cur < 0.0008) cur = target;
         stage.style.setProperty("--lm-k", cur.toFixed(4));
         align();
