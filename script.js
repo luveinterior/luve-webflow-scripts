@@ -10128,32 +10128,33 @@ initPopupHoverReveal({
         ".lm-text{position:absolute;left:50%;top:50%;width:min(62%,760px);transform:translate(-50%,-50%);margin:0;" +
         "font-family:'Helvetica Neue',Arial,sans-serif;font-weight:400;text-align:center;" +
         "font-size:clamp(26px,3.6vw,52px);line-height:1.08;letter-spacing:-.035em;color:#795e49;z-index:1;pointer-events:none}" +
-        ".lm-tile{position:absolute;width:15%;aspect-ratio:9/16;overflow:hidden;z-index:2;background:#e6dccf;" +
-        "clip-path:inset(100% 0 0 0);transition:clip-path 1.1s cubic-bezier(.22,1,.36,1)}" +
+        // 每格用「中心點」定位；闊度 = 最終闊度 × --lm-k（0.82 → 1，捲動時慢慢放大）
+        ".lm-stage{--lm-k:.82}" +
+        ".lm-tile{position:absolute;width:calc(var(--lm-w,20%) * var(--lm-k));aspect-ratio:9/16;overflow:hidden;z-index:2;background:#e6dccf;" +
+        "transform:translate(-50%,-50%);clip-path:inset(100% 0 0 0);transition:clip-path 1.1s cubic-bezier(.22,1,.36,1)}" +
         ".lm-stage.is-in .lm-tile{clip-path:inset(0 0 0 0)}" +
         ".lm-stage.is-in .lm-t2{transition-delay:.12s}.lm-stage.is-in .lm-t3{transition-delay:.24s}" +
         ".lm-tile video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}" +
         // 影片入面嗰層字：同底層一模一樣，位置由 JS 對齊；米色 + difference
         ".lm-tile .lm-text{color:#f0e8dd;mix-blend-mode:difference;transform:none;left:0;top:0;z-index:1}" +
-        // 三段：右上 / 左中 / 右下
-        ".lm-stage[data-n='3'] .lm-t1{left:62%;top:0}" +
-        ".lm-stage[data-n='3'] .lm-t2{left:17%;top:27%}" +
-        ".lm-stage[data-n='3'] .lm-t3{left:55%;top:57.3%}" +
+        // 三段：右上 / 左中 / 右下（中心點）
+        ".lm-stage[data-n='3'] .lm-t1{left:80%;top:28.5%}" +
+        ".lm-stage[data-n='3'] .lm-t2{left:17%;top:50%}" +
+        ".lm-stage[data-n='3'] .lm-t3{left:71%;top:71.5%}" +
         // 兩段：右上 / 左下
-        ".lm-stage[data-n='2'] .lm-t1{left:62%;top:0}" +
-        ".lm-stage[data-n='2'] .lm-t2{left:20%;top:57.3%}" +
+        ".lm-stage[data-n='2'] .lm-t1{left:78%;top:28.5%}" +
+        ".lm-stage[data-n='2'] .lm-t2{left:22%;top:71.5%}" +
         // 一段：正中
-        ".lm-stage[data-n='1'] .lm-tile{width:18%;left:41%;top:50%;margin-top:-16%}" +
+        ".lm-stage[data-n='1']{--lm-w:22%}.lm-stage[data-n='1'] .lm-tile{left:50%;top:50%}" +
         "@media (max-width:767px){" +
-        ".lm-stage,.lm-stage[data-n='2']{aspect-ratio:3/4.4}.lm-stage[data-n='1']{aspect-ratio:3/3.6}" +
-        ".lm-tile{width:31%}.lm-text{width:88%;font-size:clamp(22px,6.4vw,34px)}" +
-        ".lm-stage[data-n='3'] .lm-t1{left:63%;top:0}" +
-        ".lm-stage[data-n='3'] .lm-t2{left:3%;top:31%}" +
-        ".lm-stage[data-n='3'] .lm-t3{left:57%;top:62.5%}" +
-        ".lm-stage[data-n='2'] .lm-t1{left:63%;top:0}" +
-        ".lm-stage[data-n='2'] .lm-t2{left:6%;top:62.5%}" +
-        ".lm-stage[data-n='1'] .lm-tile{width:42%;left:29%;margin-top:-37.3%}}" +
-        "@media (prefers-reduced-motion:reduce){.lm-tile{transition:none;clip-path:none}}";
+        ".lm-stage,.lm-stage[data-n='2']{aspect-ratio:3/5;--lm-w:38%}.lm-stage[data-n='1']{aspect-ratio:3/3.8;--lm-w:52%}" +
+        ".lm-text{width:88%;font-size:clamp(22px,6.4vw,34px)}" +
+        ".lm-stage[data-n='3'] .lm-t1{left:78%;top:20.3%}" +
+        ".lm-stage[data-n='3'] .lm-t2{left:21%;top:50%}" +
+        ".lm-stage[data-n='3'] .lm-t3{left:74%;top:79.7%}" +
+        ".lm-stage[data-n='2'] .lm-t1{left:76%;top:20.3%}" +
+        ".lm-stage[data-n='2'] .lm-t2{left:24%;top:79.7%}}" +
+        "@media (prefers-reduced-motion:reduce){.lm-tile{transition:none;clip-path:none}.lm-stage{--lm-k:1}}";
       document.head.appendChild(st);
     }
 
@@ -10211,6 +10212,47 @@ initPopupHoverReveal({
     align();
     try { new ResizeObserver(align).observe(stage); } catch (e) { window.addEventListener("resize", align); }
     if (document.fonts && document.fonts.ready) document.fonts.ready.then(align);
+
+    // 捲落去時影片慢慢放大到最終大細（只會變大、唔會因為捲返上而縮細），
+    // 用平滑追趕（每格追近目標 9%），所以就算捲得好快都係柔和咁放大
+    (function grow() {
+      const K0 = 0.82;
+      if (window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches) {
+        stage.style.setProperty("--lm-k", "1");
+        align();
+        return;
+      }
+      let target = K0, cur = K0, raf = 0, done = false;
+      const easeOut = (x) => 1 - Math.pow(1 - x, 3);
+      const measure = () => {
+        const r = stage.getBoundingClientRect();
+        const vh = window.innerHeight || 800;
+        // 舞台頂入到畫面底 = 0；舞台頂到畫面 15% 高 = 1
+        const p = Math.min(1, Math.max(0, (vh - r.top) / (vh * 0.85)));
+        const t = K0 + (1 - K0) * easeOut(p);
+        if (t > target) target = t;
+      };
+      const tick = () => {
+        raf = 0;
+        cur += (target - cur) * 0.09;
+        if (target - cur < 0.0008) cur = target;
+        stage.style.setProperty("--lm-k", cur.toFixed(4));
+        align();
+        if (cur >= 0.9995) {
+          done = true;
+          window.removeEventListener("scroll", onScroll);
+          return;
+        }
+        if (cur < target) raf = requestAnimationFrame(tick);
+      };
+      const onScroll = () => {
+        if (done) return;
+        measure();
+        if (!raf && cur < target) raf = requestAnimationFrame(tick);
+      };
+      window.addEventListener("scroll", onScroll, { passive: true });
+      onScroll();
+    })();
 
     // 捲到附近先載入；入畫先播，出畫暫停
     const play = (v) => {
