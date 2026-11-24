@@ -10129,11 +10129,9 @@ initPopupHoverReveal({
         "font-family:'Helvetica Neue',Arial,sans-serif;font-weight:400;text-align:center;" +
         "font-size:clamp(26px,3.6vw,52px);line-height:1.08;letter-spacing:-.035em;color:#795e49;z-index:1;pointer-events:none}" +
         // 每格用「中心點」定位；闊度 = 最終闊度 × --lm-k（0.82 → 1，捲動時慢慢放大）
-        ".lm-stage{--lm-k:.82}" +
+        ".lm-stage{--lm-k:.72}" +
         ".lm-tile{position:absolute;width:calc(var(--lm-w,20%) * var(--lm-k));aspect-ratio:9/16;overflow:hidden;z-index:2;background:#e6dccf;" +
-        "transform:translate(-50%,-50%);clip-path:inset(100% 0 0 0);transition:clip-path 1.1s cubic-bezier(.22,1,.36,1)}" +
-        ".lm-stage.is-in .lm-tile{clip-path:inset(0 0 0 0)}" +
-        ".lm-stage.is-in .lm-t2{transition-delay:.12s}.lm-stage.is-in .lm-t3{transition-delay:.24s}" +
+        "transform:translate(-50%,-50%);clip-path:inset(100% 0 0 0)}" +
         ".lm-tile video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}" +
         // 影片入面嗰層字：同底層一模一樣，位置由 JS 對齊；米色 + difference
         ".lm-tile .lm-text{color:#f0e8dd;mix-blend-mode:difference;transform:none;left:0;top:0;z-index:1}" +
@@ -10154,7 +10152,7 @@ initPopupHoverReveal({
         ".lm-stage[data-n='3'] .lm-t3{left:74%;top:79.7%}" +
         ".lm-stage[data-n='2'] .lm-t1{left:76%;top:20.3%}" +
         ".lm-stage[data-n='2'] .lm-t2{left:24%;top:79.7%}}" +
-        "@media (prefers-reduced-motion:reduce){.lm-tile{transition:none;clip-path:none}.lm-stage{--lm-k:1}}";
+        "@media (prefers-reduced-motion:reduce){.lm-tile{clip-path:none!important}.lm-stage{--lm-k:1}}";
       document.head.appendChild(st);
     }
 
@@ -10213,33 +10211,42 @@ initPopupHoverReveal({
     try { new ResizeObserver(align).observe(stage); } catch (e) { window.addEventListener("resize", align); }
     if (document.fonts && document.fonts.ready) document.fonts.ready.then(align);
 
-    // 捲落去時影片慢慢放大到最終大細（只會變大、唔會因為捲返上而縮細），
-    // 用平滑追趕（每格追近目標 9%），所以就算捲得好快都係柔和咁放大
-    (function grow() {
-      const K0 = 0.82;
-      if (window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches) {
-        stage.style.setProperty("--lm-k", "1");
+    // 全部跟住滾輪 / 手指捲動（scrub）：
+    //   捲得越落，影片由下而上揭開得越多、放得越大；停手就停。
+    //   只會向前：捲返上去唔會縮細 / 收返埋。
+    //   用平滑追趕（每格追近 15%），滾輪一格格咁跳都係柔和咁郁。
+    (function scrub() {
+      const K0 = 0.72;
+      const DELAY = [0, 0.07, 0.14]; // 三段片揭開時間錯開少少
+      const render = (q) => {
+        stage.style.setProperty("--lm-k", (K0 + (1 - K0) * q).toFixed(4));
+        tiles.forEach((t, i) => {
+          const r = Math.min(1, Math.max(0, (q - DELAY[i]) / 0.32));
+          const e = 1 - Math.pow(1 - r, 3);
+          t.style.clipPath = r >= 1 ? "inset(0 0 0 0)" : "inset(" + ((1 - e) * 100).toFixed(2) + "% 0 0 0)";
+        });
         align();
+      };
+      if (window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches) {
+        render(1);
         return;
       }
-      let target = K0, cur = K0, raf = 0, done = false;
+      let target = 0, cur = 0, raf = 0, done = false;
       const measure = () => {
         const r = stage.getBoundingClientRect();
         const vh = window.innerHeight || 800;
-        // 跟住捲動距離放大：舞台頂去到畫面 90% 高開始，
-        // 舞台中間去到畫面 40% 高先到最大（即係要捲過大半個 section）
-        const start = vh * 0.9, end = vh * 0.4 - r.height / 2;
-        const p = Math.min(1, Math.max(0, (start - r.top) / (start - end)));
-        const t = K0 + (1 - K0) * p;
-        if (t > target) target = t;
+        // 舞台頂去到畫面 95% 高開始；舞台中間去到畫面 45% 高先完全揭開兼放到最大
+        const start = vh * 0.95, end = vh * 0.45 - r.height / 2;
+        const q = Math.min(1, Math.max(0, (start - r.top) / (start - end)));
+        if (q > target) target = q;
       };
       const tick = () => {
         raf = 0;
-        cur += (target - cur) * 0.12;
-        if (target - cur < 0.0008) cur = target;
-        stage.style.setProperty("--lm-k", cur.toFixed(4));
-        align();
+        cur += (target - cur) * 0.15;
+        if (target - cur < 0.0006) cur = target;
+        render(cur);
         if (cur >= 0.9995) {
+          render(1);
           done = true;
           window.removeEventListener("scroll", onScroll);
           return;
@@ -10251,7 +10258,11 @@ initPopupHoverReveal({
         measure();
         if (!raf && cur < target) raf = requestAnimationFrame(tick);
       };
+      render(0);
       window.addEventListener("scroll", onScroll, { passive: true });
+      if (window.lenis && window.lenis.on) {
+        try { window.lenis.on("scroll", onScroll); } catch (e) {}
+      }
       onScroll();
     })();
 
@@ -10275,18 +10286,7 @@ initPopupHoverReveal({
         { rootMargin: "300px 0px" }
       );
       tiles.forEach((t) => io.observe(t));
-      const ioIn = new IntersectionObserver(
-        (es) => {
-          if (es.some((e) => e.isIntersecting)) {
-            stage.classList.add("is-in");
-            ioIn.disconnect();
-          }
-        },
-        { threshold: 0.15 }
-      );
-      ioIn.observe(stage);
     } catch (e) {
-      stage.classList.add("is-in");
       tiles.forEach((t) => play(t.querySelector("video")));
     }
     if (window.__luveSafeRefresh) window.__luveSafeRefresh();
