@@ -10144,8 +10144,16 @@ initPopupHoverReveal({
         ".lm-stage[data-n='2'] .lm-t2{left:22%;top:79%}" +
         // 一段：正中
         ".lm-stage[data-n='1']{--lm-w:22%}.lm-stage[data-n='1'] .lm-tile{left:50%;top:50%}" +
+        // 一段片：描述拆開兩邊（左段靠右、右段靠左，高低錯開），片喺中間唔被遮
+        ".lm-stage[data-n='1'] .lm-text{width:32%;transform:none;font-size:clamp(22px,2.9vw,42px)}" +
+        ".lm-stage[data-n='1'] .lm-a{left:4%;top:25%;text-align:right}" +
+        ".lm-stage[data-n='1'] .lm-b{left:64%;top:auto;bottom:22%;text-align:left}" +
         "@media (max-width:767px){" +
-        ".lm-stage,.lm-stage[data-n='2']{aspect-ratio:3/5;--lm-w:38%}.lm-stage[data-n='1']{aspect-ratio:3/3.8;--lm-w:52%}" +
+        ".lm-stage,.lm-stage[data-n='2']{aspect-ratio:3/5;--lm-w:38%}" +
+        // 手機一段片：上段字 → 片 → 下段字
+        ".lm-stage[data-n='1']{aspect-ratio:auto;--lm-w:56%;display:flex;flex-direction:column;align-items:center;gap:22px}" +
+        ".lm-stage[data-n='1'] .lm-text{position:relative;left:auto;top:auto;bottom:auto;width:92%;text-align:center;font-size:clamp(22px,6.4vw,34px)}" +
+        ".lm-stage[data-n='1'] .lm-tile{position:relative;left:auto;top:auto;transform:none;flex:none}" +
         ".lm-text{width:88%;font-size:clamp(22px,6.4vw,34px)}" +
         ".lm-stage[data-n='3'] .lm-t1{left:78%;top:20.3%}" +
         ".lm-stage[data-n='3'] .lm-t2{left:21%;top:50%}" +
@@ -10167,6 +10175,39 @@ initPopupHoverReveal({
     const base = document.createElement("p");
     base.className = "lm-text";
     base.textContent = desc;
+    // 一段片：描述拆做兩段。CMS 入面可以用「|」自己揀拆位；
+    // 冇嘅話，自動喺中間附近嘅標點（: ; , —）拆，再唔得就喺中間嘅字之間拆
+    let partB = null;
+    if (n === 1 && desc) {
+      let a = desc, b = "";
+      if (desc.indexOf("|") >= 0) {
+        const k = desc.indexOf("|");
+        a = desc.slice(0, k).trim();
+        b = desc.slice(k + 1).trim();
+      } else {
+        const mid = desc.length * 0.45;
+        let best = -1;
+        desc.replace(/[:;,—–](\s)/g, (m, sp, i) => {
+          if (best < 0 || Math.abs(i - mid) < Math.abs(best - mid)) best = i;
+          return m;
+        });
+        if (best < 0 || Math.abs(best - mid) > desc.length * 0.25) {
+          best = desc.lastIndexOf(" ", Math.round(desc.length / 2));
+          a = desc.slice(0, best).trim();
+          b = desc.slice(best).trim();
+        } else {
+          a = desc.slice(0, best + 1).trim();
+          b = desc.slice(best + 1).trim();
+        }
+      }
+      base.textContent = a;
+      base.classList.add("lm-a");
+      partB = document.createElement("p");
+      partB.className = "lm-text lm-b";
+      partB.textContent = b;
+    } else if (desc) {
+      base.textContent = desc.replace(/\s*\|\s*/g, " ");
+    }
     stage.appendChild(base);
     const tiles = vids.map((url, i) => {
       const t = document.createElement("div");
@@ -10181,16 +10222,17 @@ initPopupHoverReveal({
       v.setAttribute("aria-hidden", "true");
       v.dataset.src = url;
       t.appendChild(v);
-      if (desc) {
+      if (desc && n > 1) {
         const c = document.createElement("p");
         c.className = "lm-text";
         c.setAttribute("aria-hidden", "true");
-        c.textContent = desc;
+        c.textContent = base.textContent;
         t.appendChild(c);
       }
       stage.appendChild(t);
       return t;
     });
+    if (partB) stage.appendChild(partB);
     const holderEl = sec.querySelector(".project-reels-grid") || holder;
     holderEl.parentNode.insertBefore(stage, holderEl);
     sec.style.display = "block";
