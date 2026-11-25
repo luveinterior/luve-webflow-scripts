@@ -10090,248 +10090,36 @@ initPopupHoverReveal({
 })();
 
 // =====================================================
-// 50. Project Page — IN MOTION（項目影片 + 描述）
-// 功能：Project CMS「Project Videos」（一行一條影片 link，最多 3 條）有嘢就顯示：
-//   - 影片散落三個位置（右上 / 左中 / 右下），中間大字「Video Description」
-//   - 字疊喺影片上面嗰部分會反色（同 Profile 頁 services-list 一樣：
-//     底層啡色字 + 影片入面一層米色 difference 字）
-//   - 1 段片 = 放正中；2 段 = 右上 + 左下；冇片 = 成個 section 唔出
-//   - 影片靜音自動循環播放，捲到附近先載入，離開畫面就暫停（慳流量、慳電）
+// 50. Project Page — A CLOSER LOOK（項目影片）
+// 結構、字、位置、版面全部喺 Webflow Designer 度做（section「A Closer Look」，
+// CMS：Video 1–3、Video Text 1–2、Closer Look 版面開關）；
+// 捲動揭開 / 放大係 Webflow Interaction「A Closer Look – scroll reveal」。
+// 呢度只係負責播片：捲到附近先載入，入畫先播、出畫暫停（慳流量、慳電）。
 // =====================================================
-(function projectMotion() {
+(function closerLookVideos() {
   try {
-    const sec = document.querySelector(".project-reels-section");
-    if (!sec) return;
-    const holder = sec.querySelector("[data-luve-videos-src]");
-    const raw = (holder && holder.getAttribute("data-luve-videos-src")) || "";
-    const desc = ((holder && holder.getAttribute("data-luve-videos-desc")) || "").trim();
-    const vids = raw
-      .split(/\s+/)
-      .map((x) => x.trim())
-      .filter((x) => /^https?:\/\/.+\.(mp4|webm|mov)(\?.*)?$/i.test(x))
-      .slice(0, 3);
-    if (!vids.length) {
-      sec.style.display = "none";
-      return;
-    }
-    const n = vids.length;
-
-    if (!document.getElementById("luve-motion-css")) {
-      const st = document.createElement("style");
-      st.id = "luve-motion-css";
-      // 位置以舞台闊度 / 高度嘅百分比計，所以任何闊度都係同一個構圖
-      st.textContent =
-        ".project-reels-section .projects-next-text{text-align:center}" +
-        ".lm-stage{position:relative;width:100%;max-width:1200px;margin:2.5rem auto 0;aspect-ratio:16/13.5}" +
-        ".lm-stage[data-n='2']{aspect-ratio:16/13.5}" +
-        ".lm-stage[data-n='1']{aspect-ratio:16/10}" +
-        ".lm-text{position:absolute;left:50%;top:50%;width:min(62%,760px);transform:translate(-50%,-50%);margin:0;" +
-        "font-family:'Helvetica Neue',Arial,sans-serif;font-weight:400;text-align:center;" +
-        "font-size:clamp(26px,3.6vw,52px);line-height:1.08;letter-spacing:-.035em;color:#795e49;z-index:1;pointer-events:none}" +
-        // 每格用「中心點」定位；闊度 = 最終闊度 × --lm-k（0.82 → 1，捲動時慢慢放大）
-        ".lm-stage{--lm-k:.72}" +
-        ".lm-tile{position:absolute;width:calc(var(--lm-w,20%) * var(--lm-k));aspect-ratio:9/16;overflow:hidden;z-index:2;background:#e6dccf;" +
-        "transform:translate(-50%,-50%);clip-path:inset(100% 0 0 0)}" +
-        ".lm-tile video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}" +
-        // 影片入面嗰層字：同底層一模一樣，位置由 JS 對齊；米色 + difference
-        ".lm-tile .lm-text{color:#f0e8dd;mix-blend-mode:difference;transform:none;left:0;top:0;z-index:1}" +
-        // 三段：右上 / 左中 / 右下（中心點）
-        ".lm-stage[data-n='3'] .lm-t1{left:80%;top:21%}" +
-        ".lm-stage[data-n='3'] .lm-t2{left:17%;top:50%}" +
-        ".lm-stage[data-n='3'] .lm-t3{left:71%;top:79%}" +
-        // 兩段：右上 / 左下
-        ".lm-stage[data-n='2'] .lm-t1{left:78%;top:21%}" +
-        ".lm-stage[data-n='2'] .lm-t2{left:22%;top:79%}" +
-        // 一段：正中
-        ".lm-stage[data-n='1']{--lm-w:22%}.lm-stage[data-n='1'] .lm-tile{left:50%;top:50%}" +
-        // 一段片：描述拆開兩邊（左段靠右、右段靠左，高低錯開），片喺中間唔被遮
-        ".lm-stage[data-n='1'] .lm-text{width:32%;transform:none;font-size:clamp(22px,2.9vw,42px)}" +
-        ".lm-stage[data-n='1'] .lm-a{left:4%;top:25%;text-align:right}" +
-        ".lm-stage[data-n='1'] .lm-b{left:64%;top:auto;bottom:22%;text-align:left}" +
-        "@media (max-width:767px){" +
-        ".lm-stage,.lm-stage[data-n='2']{aspect-ratio:3/5;--lm-w:38%}" +
-        // 手機一段片：上段字 → 片 → 下段字
-        ".lm-stage[data-n='1']{aspect-ratio:auto;--lm-w:56%;display:flex;flex-direction:column;align-items:center;gap:22px}" +
-        ".lm-stage[data-n='1'] .lm-text{position:relative;left:auto;top:auto;bottom:auto;width:92%;text-align:center;font-size:clamp(22px,6.4vw,34px)}" +
-        ".lm-stage[data-n='1'] .lm-tile{position:relative;left:auto;top:auto;transform:none;flex:none}" +
-        ".lm-text{width:88%;font-size:clamp(22px,6.4vw,34px)}" +
-        ".lm-stage[data-n='3'] .lm-t1{left:78%;top:20.3%}" +
-        ".lm-stage[data-n='3'] .lm-t2{left:21%;top:50%}" +
-        ".lm-stage[data-n='3'] .lm-t3{left:74%;top:79.7%}" +
-        ".lm-stage[data-n='2'] .lm-t1{left:76%;top:20.3%}" +
-        ".lm-stage[data-n='2'] .lm-t2{left:24%;top:79.7%}}" +
-        "@media (prefers-reduced-motion:reduce){.lm-tile{clip-path:none!important}.lm-stage{--lm-k:1}}";
-      document.head.appendChild(st);
-    }
-
-    // 舊版（IG embed）留低嘅嘢清走
-    sec.querySelectorAll(".project-reels-grid").forEach((g) => (g.style.display = "none"));
-    const old = sec.querySelector(".lm-stage");
-    if (old) old.remove();
-
-    const stage = document.createElement("div");
-    stage.className = "lm-stage";
-    stage.setAttribute("data-n", String(n));
-    const base = document.createElement("p");
-    base.className = "lm-text";
-    base.textContent = desc;
-    // 一段片：描述拆做兩段。CMS 入面可以用「|」自己揀拆位；
-    // 冇嘅話，自動喺中間附近嘅標點（: ; , —）拆，再唔得就喺中間嘅字之間拆
-    let partB = null;
-    if (n === 1 && desc) {
-      let a = desc, b = "";
-      if (desc.indexOf("|") >= 0) {
-        const k = desc.indexOf("|");
-        a = desc.slice(0, k).trim();
-        b = desc.slice(k + 1).trim();
-      } else {
-        const mid = desc.length * 0.45;
-        let best = -1;
-        desc.replace(/[:;,—–](\s)/g, (m, sp, i) => {
-          if (best < 0 || Math.abs(i - mid) < Math.abs(best - mid)) best = i;
-          return m;
-        });
-        if (best < 0 || Math.abs(best - mid) > desc.length * 0.25) {
-          best = desc.lastIndexOf(" ", Math.round(desc.length / 2));
-          a = desc.slice(0, best).trim();
-          b = desc.slice(best).trim();
-        } else {
-          a = desc.slice(0, best + 1).trim();
-          b = desc.slice(best + 1).trim();
-        }
-      }
-      base.textContent = a;
-      base.classList.add("lm-a");
-      partB = document.createElement("p");
-      partB.className = "lm-text lm-b";
-      partB.textContent = b;
-    } else if (desc) {
-      base.textContent = desc.replace(/\s*\|\s*/g, " ");
-    }
-    stage.appendChild(base);
-    const tiles = vids.map((url, i) => {
-      const t = document.createElement("div");
-      t.className = "lm-tile lm-t" + (i + 1);
-      const v = document.createElement("video");
+    const vids = Array.prototype.slice.call(document.querySelectorAll('video[data-acl="video"]'))
+      .filter((v) => v.getAttribute("src") && v.offsetParent !== null);
+    if (!vids.length) return;
+    vids.forEach((v) => {
       v.muted = true;
       v.loop = true;
       v.playsInline = true;
-      v.setAttribute("muted", "");
-      v.setAttribute("playsinline", "");
-      v.setAttribute("preload", "none");
-      v.setAttribute("aria-hidden", "true");
-      v.dataset.src = url;
-      t.appendChild(v);
-      if (desc && n > 1) {
-        const c = document.createElement("p");
-        c.className = "lm-text";
-        c.setAttribute("aria-hidden", "true");
-        c.textContent = base.textContent;
-        t.appendChild(c);
-      }
-      stage.appendChild(t);
-      return t;
     });
-    if (partB) stage.appendChild(partB);
-    const holderEl = sec.querySelector(".project-reels-grid") || holder;
-    holderEl.parentNode.insertBefore(stage, holderEl);
-    sec.style.display = "block";
-
-    // 影片入面嗰層字對齊底層字（一樣闊、一樣位置）
-    const align = () => {
-      const s = base.getBoundingClientRect();
-      tiles.forEach((t) => {
-        const c = t.querySelector(".lm-text");
-        if (!c) return;
-        const r = t.getBoundingClientRect();
-        c.style.width = s.width + "px";
-        c.style.left = s.left - r.left + "px";
-        c.style.top = s.top - r.top + "px";
-      });
-    };
-    align();
-    try { new ResizeObserver(align).observe(stage); } catch (e) { window.addEventListener("resize", align); }
-    if (document.fonts && document.fonts.ready) document.fonts.ready.then(align);
-
-    // 全部跟住滾輪 / 手指捲動（scrub）：
-    //   捲得越落，影片由下而上揭開得越多、放得越大；停手就停。
-    //   只會向前：捲返上去唔會縮細 / 收返埋。
-    //   用平滑追趕（每格追近 15%），滾輪一格格咁跳都係柔和咁郁。
-    (function scrub() {
-      const K0 = 0.72;
-      const DELAY = [0, 0.07, 0.14]; // 三段片揭開時間錯開少少
-      const render = (q) => {
-        stage.style.setProperty("--lm-k", (K0 + (1 - K0) * q).toFixed(4));
-        tiles.forEach((t, i) => {
-          const r = Math.min(1, Math.max(0, (q - DELAY[i]) / 0.32));
-          const e = 1 - Math.pow(1 - r, 3);
-          t.style.clipPath = r >= 1 ? "inset(0 0 0 0)" : "inset(" + ((1 - e) * 100).toFixed(2) + "% 0 0 0)";
-        });
-        align();
-      };
-      if (window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches) {
-        render(1);
-        return;
-      }
-      let target = 0, cur = 0, raf = 0, done = false;
-      const measure = () => {
-        const r = stage.getBoundingClientRect();
-        const vh = window.innerHeight || 800;
-        // 舞台頂去到畫面 95% 高開始；舞台中間去到畫面 45% 高先完全揭開兼放到最大
-        const start = vh * 0.95, end = vh * 0.45 - r.height / 2;
-        const q = Math.min(1, Math.max(0, (start - r.top) / (start - end)));
-        if (q > target) target = q;
-      };
-      const tick = () => {
-        raf = 0;
-        cur += (target - cur) * 0.15;
-        if (target - cur < 0.0006) cur = target;
-        render(cur);
-        if (cur >= 0.9995) {
-          render(1);
-          done = true;
-          window.removeEventListener("scroll", onScroll);
-          return;
-        }
-        if (cur < target) raf = requestAnimationFrame(tick);
-      };
-      const onScroll = () => {
-        if (done) return;
-        measure();
-        if (!raf && cur < target) raf = requestAnimationFrame(tick);
-      };
-      render(0);
-      window.addEventListener("scroll", onScroll, { passive: true });
-      if (window.lenis && window.lenis.on) {
-        try { window.lenis.on("scroll", onScroll); } catch (e) {}
-      }
-      onScroll();
-    })();
-
-    // 捲到附近先載入；入畫先播，出畫暫停
     const play = (v) => {
-      if (!v.src) {
-        v.src = v.dataset.src;
-        v.load();
-      }
+      if (v.preload !== "auto") v.preload = "auto";
       const p = v.play();
       if (p && p.catch) p.catch(() => {});
     };
-    try {
-      const io = new IntersectionObserver(
-        (es) =>
-          es.forEach((e) => {
-            const v = e.target.querySelector("video");
-            if (e.isIntersecting) play(v);
-            else if (!v.paused) v.pause();
-          }),
-        { rootMargin: "300px 0px" }
-      );
-      tiles.forEach((t) => io.observe(t));
-    } catch (e) {
-      tiles.forEach((t) => play(t.querySelector("video")));
+    if (!("IntersectionObserver" in window)) {
+      vids.forEach(play);
+      return;
     }
-    if (window.__luveSafeRefresh) window.__luveSafeRefresh();
+    const io = new IntersectionObserver(
+      (es) => es.forEach((e) => (e.isIntersecting ? play(e.target) : e.target.paused || e.target.pause())),
+      { rootMargin: "300px 0px" }
+    );
+    vids.forEach((v) => io.observe(v));
   } catch (e) {}
 })();
 
