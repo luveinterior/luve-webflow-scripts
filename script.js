@@ -10192,10 +10192,8 @@ initPopupHoverReveal({
       ghosts.forEach((o) => {
         const r = o.src.getBoundingClientRect();
         const m = o.mask.getBoundingClientRect();
-        let k = 1;
-        try {
-          if (window.gsap) k = +gsap.getProperty(o.tile, "scaleX") || 1;
-        } catch (e) {}
+        // 用實際大細計縮放（唔靠 GSAP 快取；ScrollTrigger refresh 期間都唔會錯位）
+        const k = o.mask.offsetWidth ? m.width / o.mask.offsetWidth || 1 : 1;
         o.g.style.width = r.width + "px";
         o.g.style.transform =
           "translate(" + (r.left - m.left) / k + "px," + (r.top - m.top) / k + "px) scale(" + 1 / k + ")";
@@ -10204,6 +10202,18 @@ initPopupHoverReveal({
 
     apply(false);
     buildGhosts();
+    // 片格喺畫面入面嘅時候逐格對齊（只得幾粒字，好輕）；出咗畫就停
+    let rafOn = false, rafId = 0;
+    const loop = () => {
+      align();
+      rafId = rafOn ? requestAnimationFrame(loop) : 0;
+    };
+    try {
+      new IntersectionObserver((es) => {
+        rafOn = es.some((e) => e.isIntersecting);
+        if (rafOn && !rafId) rafId = requestAnimationFrame(loop);
+      }).observe(stage);
+    } catch (e) {}
     try {
       new ResizeObserver(() => buildGhosts()).observe(stage);
     } catch (e) {
