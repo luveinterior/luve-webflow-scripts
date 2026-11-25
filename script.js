@@ -10098,6 +10098,17 @@ initPopupHoverReveal({
 // =====================================================
 (function closerLookVideos() {
   try {
+    // 每個 Project 只顯示 CMS「Video Layout」揀咗嗰個版面（Designer 入面五個版面照樣見到）
+    if (!document.getElementById("luve-acl-layout")) {
+      const st = document.createElement("style");
+      st.id = "luve-acl-layout";
+      const L = [["3 vertical", "3-vertical"], ["2 vertical", "2-vertical"], ["1 vertical", "1-vertical"],
+        ["1 landscape", "1-landscape"], ["1 landscape + 2 vertical", "landscape-2-vertical"]];
+      st.textContent = ".acl-section .acl-layout{display:none}" +
+        L.map((x) => '.acl-layout-switch[data-acl-active="' + x[0] + '"]+.acl-section [data-acl-layout="' + x[1] + '"]').join(",") +
+        "{display:block}";
+      document.head.appendChild(st);
+    }
     const vids = Array.prototype.slice.call(document.querySelectorAll('video[data-acl="video"]'))
       .filter((v) => v.getAttribute("src") && v.offsetParent !== null);
     if (!vids.length) return;
