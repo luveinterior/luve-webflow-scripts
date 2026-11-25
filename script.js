@@ -10157,13 +10157,66 @@ initPopupHoverReveal({
         if (t2) t2.className = "acl-line";
       }
     };
+    // 字疊喺片上面嗰部分：好似 Profile 頁 services-list 咁，片格入面有一層米色（Brand Light）
+    // difference 字，位置同底層啡色字完全重疊 → 片入面嘅字會「反光」。
+    let ghosts = [];
+    const buildGhosts = () => {
+      ghosts.forEach((o) => o.g.remove());
+      ghosts = [];
+      if (!copy || copy.style.display === "none") return;
+      const split = copy.classList.contains("is-split");
+      const srcs = (split ? [t1, t2] : [copy]).filter((e) => e && e.style.display !== "none");
+      used.forEach((tile) => {
+        const mask = tile.querySelector('[data-acl="mask"]') || tile;
+        srcs.forEach((src) => {
+          const g = src.cloneNode(true);
+          g.removeAttribute("data-acl");
+          g.querySelectorAll("[data-acl]").forEach((e) => e.removeAttribute("data-acl"));
+          const cs = getComputedStyle(src);
+          g.className = "acl-ghost";
+          g.setAttribute("aria-hidden", "true");
+          Object.assign(g.style, {
+            position: "absolute", left: "0px", top: "0px", margin: "0", maxWidth: "none",
+            transformOrigin: "0 0", pointerEvents: "none", zIndex: "2", whiteSpace: cs.whiteSpace,
+            color: "#f0e8dd", mixBlendMode: "difference", display: "block",
+            fontFamily: cs.fontFamily, fontSize: cs.fontSize, lineHeight: cs.lineHeight,
+            letterSpacing: cs.letterSpacing, fontWeight: cs.fontWeight, textAlign: cs.textAlign,
+          });
+          mask.appendChild(g);
+          ghosts.push({ g, src, tile, mask });
+        });
+      });
+      align();
+    };
+    const align = () => {
+      ghosts.forEach((o) => {
+        const r = o.src.getBoundingClientRect();
+        const m = o.mask.getBoundingClientRect();
+        let k = 1;
+        try {
+          if (window.gsap) k = +gsap.getProperty(o.tile, "scaleX") || 1;
+        } catch (e) {}
+        o.g.style.width = r.width + "px";
+        o.g.style.transform =
+          "translate(" + (r.left - m.left) / k + "px," + (r.top - m.top) / k + "px) scale(" + 1 / k + ")";
+      });
+    };
+
     apply(false);
+    buildGhosts();
+    try {
+      new ResizeObserver(() => buildGhosts()).observe(stage);
+    } catch (e) {
+      window.addEventListener("resize", buildGhosts);
+    }
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(buildGhosts);
 
     // Video 1 係咪橫片：等片嘅資料（幾 KB）到咗就知；橫片就轉版面
     const first = used[0].querySelector("video");
     const check = () => {
       if (first.videoWidth && first.videoWidth > first.videoHeight) {
         apply(true);
+        buildGhosts();
         try {
           if (window.ScrollTrigger) ScrollTrigger.refresh();
         } catch (e) {}
@@ -10184,11 +10237,15 @@ initPopupHoverReveal({
       if (window.gsap && window.ScrollTrigger && !reduce) {
         gsap.registerPlugin(ScrollTrigger);
         gsap
-          .timeline({ scrollTrigger: { trigger: stage, start: "top 90%", end: "center 45%", scrub: 0.8 } })
+          .timeline({
+            scrollTrigger: { trigger: stage, start: "top 90%", end: "center 45%", scrub: 0.8 },
+            onUpdate: align,
+          })
           .fromTo(used, { scale: 0.72 }, { scale: 1, ease: "none", duration: 1 }, 0)
           .fromTo(masks, { yPercent: 100 }, { yPercent: 0, ease: "power3.out", duration: 0.45 }, 0)
           .fromTo(movers, { yPercent: -100 }, { yPercent: 0, ease: "power3.out", duration: 0.45 }, 0);
       }
+      align();
     } catch (e) {}
 
     // 播片：捲到附近先載入；入畫播、出畫停
