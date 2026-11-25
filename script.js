@@ -10158,7 +10158,7 @@ initPopupHoverReveal({
       }
     };
     // 字疊喺片上面嗰部分：好似 Profile 頁 services-list 咁，片格入面有一層米色（Brand Light）
-    // difference 字，位置同底層啡色字完全重疊 → 片入面嘅字會「反光」。
+    // 實色字，位置同底層啡色字完全重疊 → 片入面嘅字會「反光」。
     let ghosts = [];
     const buildGhosts = () => {
       ghosts.forEach((o) => o.g.remove());
@@ -10178,7 +10178,11 @@ initPopupHoverReveal({
           Object.assign(g.style, {
             position: "absolute", left: "0px", top: "0px", margin: "0", maxWidth: "none",
             transformOrigin: "0 0", pointerEvents: "none", zIndex: "2", whiteSpace: cs.whiteSpace,
-            color: "#f0e8dd", mixBlendMode: "difference", display: "block",
+            // 實色 Brand Light（米色），唔用 difference：片多數好光，difference 會變深藍／黑，
+            // 睇落似「透背景」；實色先會好似 Profile services-list 咁一律變米色。
+            // 柔和陰影係為咗喺好光嘅片（白牆）上面都睇得清。
+            color: "#f0e8dd", mixBlendMode: "normal", display: "block",
+            textShadow: "0 0 2px rgba(79,60,46,.45), 0 1px 12px rgba(79,60,46,.55), 0 0 36px rgba(79,60,46,.4)",
             fontFamily: cs.fontFamily, fontSize: cs.fontSize, lineHeight: cs.lineHeight,
             letterSpacing: cs.letterSpacing, fontWeight: cs.fontWeight, textAlign: cs.textAlign,
           });
