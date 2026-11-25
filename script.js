@@ -10106,7 +10106,7 @@ initPopupHoverReveal({
 //      2 段直 → is-2a/2b｜3 段直 → is-3a/3b/3c
 //      Video 1 橫 + 其他直 → is-mix｜冇片 → 成個 section 唔出
 //   2. 播片：捲到附近先載入，入畫先播、出畫暫停
-// 捲動揭開 / 放大 = Webflow Interaction「A Closer Look – scroll reveal」
+//   3. 捲動揭開 / 放大（GSAP scrub）
 // =====================================================
 (function closerLook() {
   try {
@@ -10172,6 +10172,24 @@ initPopupHoverReveal({
     if (first.readyState >= 1) check();
     else first.addEventListener("loadedmetadata", check, { once: true });
     if (first.preload === "none") first.preload = "metadata";
+
+    // 捲動揭開 + 放大（跟住滾輪 / 手指 scrub）
+    // 註：之前用 Webflow Interaction，但經網站轉頁入嚟時 Webflow 唔會載入 Interaction 引擎，
+    //     片格會一直收埋（要 Ctrl+Shift+R 先出）；所以改用網站本身已載入嘅 GSAP。
+    //     想調節奏：改下面 start / end / scrub，或者 0.72（開始大細）同 0.45（揭開所佔比例）
+    try {
+      const masks = used.map((t) => t.querySelector('[data-acl="mask"]')).filter(Boolean);
+      const movers = used.map((t) => t.querySelector("video"));
+      const reduce = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
+      if (window.gsap && window.ScrollTrigger && !reduce) {
+        gsap.registerPlugin(ScrollTrigger);
+        gsap
+          .timeline({ scrollTrigger: { trigger: stage, start: "top 90%", end: "center 45%", scrub: 0.8 } })
+          .fromTo(used, { scale: 0.72 }, { scale: 1, ease: "none", duration: 1 }, 0)
+          .fromTo(masks, { yPercent: 100 }, { yPercent: 0, ease: "power3.out", duration: 0.45 }, 0)
+          .fromTo(movers, { yPercent: -100 }, { yPercent: 0, ease: "power3.out", duration: 0.45 }, 0);
+      }
+    } catch (e) {}
 
     // 播片：捲到附近先載入；入畫播、出畫停
     const vids = used.map((t) => t.querySelector("video"));
