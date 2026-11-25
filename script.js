@@ -4255,6 +4255,9 @@ document.fonts.ready.then(() => {
     // 手動剔除（想邊個元素完全唔做 masking，喺 Designer 加呢個 class）
     if (el.closest(".no-line-reveal")) return false;
 
+    // 剔除 A CLOSER LOOK（版面由 Section 50 按片數決定，橫片要等片資料先知，拆行會錯位）
+    if (el.closest('[data-acl="section"]')) return false;
+
     // 剔除 Process FAQ 隱藏 CMS 來源（.lfq embed 會讀佢原本嘅 HTML）
     if (el.closest(".faq-wrapper") || el.closest(".lfq")) return false;
 
@@ -10091,27 +10094,87 @@ initPopupHoverReveal({
 
 // =====================================================
 // 50. Project Page — A CLOSER LOOK（項目影片）
-// 結構、字、位置、版面全部喺 Webflow Designer 度做（section「A Closer Look」，
-// CMS：Video 1–3、Video Text 1–2、Closer Look 版面開關）；
-// 捲動揭開 / 放大係 Webflow Interaction「A Closer Look – scroll reveal」。
-// 呢度只係負責播片：捲到附近先載入，入畫先播、出畫暫停（慳流量、慳電）。
+// Designer：Project template 得一個「A Closer Look」section（3 格片 + 兩段字），
+//   所有版面樣式都係 Webflow class，可以喺 Style panel 直接改：
+//     stage：acl-stage + is-3 / is-1v / is-1h / is-mix
+//     片格：acl-tile + is-3a/3b/3c、is-2a/2b、is-1v、is-1h、is-mh/ma/mb
+//     字　：acl-text + is-center / is-mixc / is-1va / is-1vb / is-1ha / is-1hb
+// CMS：Video 1–3（片 link）、Video Text 1–2。
+// 呢度只做兩樣嘢：
+//   1. 按「有幾多段片」+「Video 1 係咪橫片」揀版面，套返上面啲 class
+//      1 段直 → is-1v（字拆兩邊）｜1 段橫 → is-1h
+//      2 段直 → is-2a/2b｜3 段直 → is-3a/3b/3c
+//      Video 1 橫 + 其他直 → is-mix｜冇片 → 成個 section 唔出
+//   2. 播片：捲到附近先載入，入畫先播、出畫暫停
+// 捲動揭開 / 放大 = Webflow Interaction「A Closer Look – scroll reveal」
 // =====================================================
-(function closerLookVideos() {
+(function closerLook() {
   try {
-    // 每個 Project 只顯示 CMS「Video Layout」揀咗嗰個版面（Designer 入面五個版面照樣見到）
-    if (!document.getElementById("luve-acl-layout")) {
-      const st = document.createElement("style");
-      st.id = "luve-acl-layout";
-      const L = [["3 vertical", "3-vertical"], ["2 vertical", "2-vertical"], ["1 vertical", "1-vertical"],
-        ["1 landscape", "1-landscape"], ["1 landscape + 2 vertical", "landscape-2-vertical"]];
-      st.textContent = ".acl-section .acl-layout{display:none}" +
-        L.map((x) => '.acl-layout-switch[data-acl-active="' + x[0] + '"]+.acl-section [data-acl-layout="' + x[1] + '"]').join(",") +
-        "{display:block}";
-      document.head.appendChild(st);
+    const sec = document.querySelector('[data-acl="section"]');
+    if (!sec) return;
+    const stage = sec.querySelector('[data-acl="stage"]');
+    const copy = sec.querySelector('[data-acl="copy"]');
+    const t1 = sec.querySelector('[data-acl="text-1"]');
+    const t2 = sec.querySelector('[data-acl="text-2"]');
+    const tiles = Array.prototype.slice.call(sec.querySelectorAll('[data-acl="tile"]'));
+    const used = tiles.filter((t) => {
+      const v = t.querySelector("video");
+      return v && (v.getAttribute("src") || "").trim();
+    });
+    if (!stage || !used.length) {
+      sec.style.display = "none";
+      return;
     }
-    const vids = Array.prototype.slice.call(document.querySelectorAll('video[data-acl="video"]'))
-      .filter((v) => v.getAttribute("src") && v.offsetParent !== null);
-    if (!vids.length) return;
+    tiles.forEach((t) => {
+      if (used.indexOf(t) < 0) t.style.display = "none";
+    });
+    const n = Math.min(used.length, 3);
+    const hasT1 = t1 && t1.textContent.trim(), hasT2 = t2 && t2.textContent.trim();
+    if (t1 && !hasT1) t1.style.display = "none";
+    if (t2 && !hasT2) t2.style.display = "none";
+    if (copy && !hasT1 && !hasT2) copy.style.display = "none";
+
+    const L = {
+      v1: { stage: "is-1v", tiles: ["is-1v"], split: ["is-1va", "is-1vb"] },
+      h1: { stage: "is-1h", tiles: ["is-1h"], split: ["is-1ha", "is-1hb"] },
+      v2: { stage: "is-3", tiles: ["is-2a", "is-2b"], center: "is-center" },
+      h2: { stage: "is-mix", tiles: ["is-mh", "is-ma"], center: "is-mixc" },
+      v3: { stage: "is-3", tiles: ["is-3a", "is-3b", "is-3c"], center: "is-center" },
+      h3: { stage: "is-mix", tiles: ["is-mh", "is-ma", "is-mb"], center: "is-mixc" },
+    };
+    const apply = (land) => {
+      const c = L[(land ? "h" : "v") + n];
+      stage.className = "acl-stage " + c.stage;
+      used.slice(0, 3).forEach((t, i) => (t.className = "acl-tile " + c.tiles[i]));
+      if (!copy) return;
+      if (c.split) {
+        copy.className = "acl-copy is-split";
+        if (t1) t1.className = "acl-text " + c.split[0];
+        if (t2) t2.className = "acl-text " + c.split[1];
+      } else {
+        copy.className = "acl-text " + c.center;
+        if (t1) t1.className = "acl-line";
+        if (t2) t2.className = "acl-line";
+      }
+    };
+    apply(false);
+
+    // Video 1 係咪橫片：等片嘅資料（幾 KB）到咗就知；橫片就轉版面
+    const first = used[0].querySelector("video");
+    const check = () => {
+      if (first.videoWidth && first.videoWidth > first.videoHeight) {
+        apply(true);
+        try {
+          if (window.ScrollTrigger) ScrollTrigger.refresh();
+        } catch (e) {}
+      }
+    };
+    if (first.readyState >= 1) check();
+    else first.addEventListener("loadedmetadata", check, { once: true });
+    if (first.preload === "none") first.preload = "metadata";
+
+    // 播片：捲到附近先載入；入畫播、出畫停
+    const vids = used.map((t) => t.querySelector("video"));
     vids.forEach((v) => {
       v.muted = true;
       v.loop = true;
@@ -10124,13 +10187,16 @@ initPopupHoverReveal({
     };
     if (!("IntersectionObserver" in window)) {
       vids.forEach(play);
-      return;
+    } else {
+      const io = new IntersectionObserver(
+        (es) => es.forEach((e) => (e.isIntersecting ? play(e.target) : e.target.paused || e.target.pause())),
+        { rootMargin: "300px 0px" }
+      );
+      vids.forEach((v) => io.observe(v));
     }
-    const io = new IntersectionObserver(
-      (es) => es.forEach((e) => (e.isIntersecting ? play(e.target) : e.target.paused || e.target.pause())),
-      { rootMargin: "300px 0px" }
-    );
-    vids.forEach((v) => io.observe(v));
+    try {
+      if (window.ScrollTrigger) ScrollTrigger.refresh();
+    } catch (e) {}
   } catch (e) {}
 })();
 
