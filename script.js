@@ -4764,7 +4764,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
     const sync = () => {
       // 掣上面已經有「Size / Style」字：冇揀 = All，揀一個 = 名，多個 = 「2 selected」
-      if (val) val.textContent = !set.size ? "All" : set.size === 1 ? Array.from(set)[0] : set.size + " selected";
+      if (val) val.textContent = !set.size ? "All" : set.size === 1 ? Array.from(set)[0] : phone.matches ? String(set.size) : set.size + " selected";
       btn.classList.toggle("is-set", set.size > 0);
       Array.from(menu.children).forEach((b) => {
         const v = b.getAttribute("data-value");
