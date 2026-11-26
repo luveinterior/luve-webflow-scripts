@@ -4750,9 +4750,24 @@ document.addEventListener("DOMContentLoaded", function () {
       const n = t.querySelector(".flt-tab-n");
       const count = flt[key] ? flt[key].size : 0;
       if (n) {
-        n.textContent = count ? String(count) : "";
-        n.classList.toggle("is-on", count > 0);
+        // tab 闊度固定：數字唔再「撐大」粒掣，而係喺 tab 入面滑出 / 收埋，字跟住輕輕讓位
+        const prev = +(n.dataset.c || 0);
+        n.dataset.c = String(count);
         n.classList.toggle("is-inv", on);
+        if (count) n.textContent = String(count);
+        const w = count > 9 ? 26 : 20;
+        if (!G) {
+          n.style.width = count ? w + "px" : "0px";
+          n.style.marginLeft = count ? "0px" : "-8px";
+          n.style.opacity = count ? "1" : "0";
+        } else if (count && !prev) {
+          G.fromTo(n, { width: 0, marginLeft: -8, opacity: 0, scale: 0.6 }, { width: w, marginLeft: 0, opacity: 1, scale: 1, duration: 0.55, ease: "power3.out", overwrite: true });
+        } else if (!count && prev) {
+          G.to(n, { width: 0, marginLeft: -8, opacity: 0, scale: 0.6, duration: 0.4, ease: "power2.inOut", overwrite: true, onComplete: () => (n.textContent = "") });
+        } else if (count && count !== prev) {
+          G.to(n, { width: w, duration: 0.3, ease: "power2.out", overwrite: true });
+          G.fromTo(n, { scale: 0.7 }, { scale: 1, duration: 0.45, ease: "back.out(2.6)" });
+        }
       }
     });
   };
@@ -4838,6 +4853,7 @@ document.addEventListener("DOMContentLoaded", function () {
     syncTabs();
     renderChips();
   };
+  let lastAdded = null;
   function renderChips() {
     if (!chipsBox) return;
     chipsBox.innerHTML = "";
@@ -4851,6 +4867,7 @@ document.addEventListener("DOMContentLoaded", function () {
       const x = document.createElement("span");
       x.className = "flt-chip-x";
       x.innerHTML = CROSS;
+      b.setAttribute("data-value", value);
       b.appendChild(t);
       b.appendChild(x);
       b.addEventListener("click", (e) => {
@@ -4896,7 +4913,18 @@ document.addEventListener("DOMContentLoaded", function () {
       });
       chipsBox.appendChild(c);
     }
-    requestAnimationFrame(chipsEdge);
+    requestAnimationFrame(() => {
+      chipsEdge();
+      // 啱啱加嘅 chip 如果喺視線外，順滑咁捲過去 → 一睇就知呢行可以左右拉
+      const added = lastAdded && Array.from(chipsBox.children).find((c) => c.getAttribute("data-value") === lastAdded);
+      lastAdded = null;
+      if (!added || !chipsBox.classList.contains("is-overflow")) return;
+      const clr = chipsBox.querySelector(".is-clear");
+      const room = chipsBox.clientWidth - (clr ? clr.offsetWidth : 0) - 8;
+      const left = added.offsetLeft - chipsBox.offsetLeft;
+      if (left < chipsBox.scrollLeft || left + added.offsetWidth > chipsBox.scrollLeft + room)
+        chipsBox.scrollTo({ left: Math.max(0, left + added.offsetWidth - room), behavior: "smooth" });
+    });
   }
   // chips 太多：一行過左右滑（手機用手指；電腦滾輪都得），兩邊淡出提示仲有
   function chipsEdge() {
@@ -4904,6 +4932,7 @@ document.addEventListener("DOMContentLoaded", function () {
     const over = chipsBox.scrollWidth > chipsBox.clientWidth + 2;
     chipsBox.classList.toggle("is-overflow", over);
     if (!over) chipsBox.scrollLeft = 0;
+    chipsBox.classList.toggle("is-scrolled", over && chipsBox.scrollLeft > 2); // 左邊淡出 = 前面仲有
   }
   if (chipsBox) {
     chipsBox.addEventListener(
@@ -4919,6 +4948,7 @@ document.addEventListener("DOMContentLoaded", function () {
       },
       { passive: false }
     );
+    chipsBox.addEventListener("scroll", chipsEdge, { passive: true });
     window.addEventListener("resize", chipsEdge);
   }
 
@@ -4966,7 +4996,10 @@ document.addEventListener("DOMContentLoaded", function () {
         e.stopPropagation();
         if (isAll) set.clear();
         else if (set.has(o.value)) set.delete(o.value);
-        else set.add(o.value);
+        else {
+          set.add(o.value);
+          lastAdded = o.value;
+        }
         syncAll();
         run();
         if (isAll) closePanel();
@@ -4990,6 +5023,19 @@ document.addEventListener("DOMContentLoaded", function () {
   document.addEventListener("click", (e) => {
     if (!seg.contains(e.target)) closePanel();
   });
+  // 觸控（手機 / iPad）：清單開住時撳出面任何位置 = 只係收埋清單，
+  // 唔會誤撳到 logo、選單或者下面嘅 project（呢一下會被食咗）
+  window.addEventListener(
+    "click",
+    (e) => {
+      if (active === null || canHover.matches || seg.contains(e.target)) return;
+      e.preventDefault();
+      e.stopPropagation();
+      e.stopImmediatePropagation();
+      closePanel();
+    },
+    true
+  );
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape") closePanel();
   });
