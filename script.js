@@ -4574,12 +4574,13 @@ document.addEventListener("DOMContentLoaded", function () {
       if (onScreen.length)
         gsap.fromTo(
           onScreen,
-          { opacity: 0, y: 24 },
-          { opacity: 1, y: 0, duration: 0.6, ease: "power3.out", stagger: 0.06 }
+          { opacity: 0, y: 28 },
+          { opacity: 1, y: 0, duration: 0.9, ease: "power3.out", stagger: 0.08, delay: 0.06 }
         );
-      if (grid) gsap.to(grid, { opacity: 1, duration: 0.25, ease: "power1.out", overwrite: true });
+      if (grid) gsap.to(grid, { opacity: 1, duration: 0.45, ease: "power2.out", overwrite: true });
     };
-    if (grid) gsap.to(grid, { opacity: 0, duration: 0.16, ease: "power1.out", overwrite: true, onComplete: apply });
+    // 先等一拍（揀選項嘅剔號先出），再慢慢淡出 → 換內容 → 淡入
+    if (grid) gsap.to(grid, { opacity: 0, duration: 0.32, delay: 0.1, ease: "power2.inOut", overwrite: true, onComplete: apply });
     else apply();
   }
 
@@ -4624,6 +4625,7 @@ document.addEventListener("DOMContentLoaded", function () {
   const search = form.querySelector('[data-flt="search"]');
   const input = search && search.querySelector("input");
   const ring = search && search.querySelector(".flt-ring");
+  const glow = search && search.querySelector(".flt-glow");
   const selectsWrap = form.querySelector(".flt-selects");
   const phone = window.matchMedia("(max-width: 767px)");
   const canHover = window.matchMedia("(hover: hover) and (pointer: fine)");
@@ -4652,20 +4654,21 @@ document.addEventListener("DOMContentLoaded", function () {
   let ringTween = null;
   let ringIdle = null;
   let ringStop = null;
+  const fx = [ring, glow].filter(Boolean);
   const ringOn = (on) => {
-    if (!ring) return;
-    ring.classList.toggle("is-on", on);
+    if (!fx.length) return;
+    fx.forEach((el) => el.classList.toggle("is-on", on));
     if (G && !ringTween)
-      ringTween = G.fromTo(ring, { backgroundPosition: "0% 0%" }, { backgroundPosition: "100% 0%", duration: 2.6, ease: "none", repeat: -1, paused: true });
+      ringTween = G.fromTo(fx, { backgroundPosition: "0% 0%" }, { backgroundPosition: "100% 0%", duration: 2.4, ease: "none", repeat: -1, paused: true });
     clearTimeout(ringStop);
     if (on) ringTween && ringTween.play();
-    else ringStop = setTimeout(() => ringTween && ringTween.pause(), 1000);
+    else ringStop = setTimeout(() => ringTween && ringTween.pause(), 1300);
   };
   const ringTyping = () => {
     clearTimeout(ringIdle);
     if (!hasText()) return ringOn(false);
     ringOn(true);
-    ringIdle = setTimeout(() => ringOn(false), 1200);
+    ringIdle = setTimeout(() => ringOn(false), 1500);
   };
 
   if (search && input) {
@@ -4728,6 +4731,12 @@ document.addEventListener("DOMContentLoaded", function () {
   };
 
   const syncTabs = () => {
+    syncTabsInner();
+    // 數字 badge 出現 / 消失會改變 tab 闊度 → 啡色底色跟住伸縮，唔會遮住粒數字
+    const cur = tabs.find((t) => t.getAttribute("data-tab") === active);
+    if (cur) moveInd(cur);
+  };
+  const syncTabsInner = () => {
     tabs.forEach((t) => {
       const key = t.getAttribute("data-tab");
       const on = key === active;
@@ -4788,6 +4797,9 @@ document.addEventListener("DOMContentLoaded", function () {
   tabs.forEach((t) => {
     const key = t.getAttribute("data-tab");
     t.setAttribute("aria-haspopup", "listbox");
+    // 全站 cursor（Section 08）會將每個 span 設做 cursor:none，但 button 本身係 pointer
+    // → 喺字上同字旁邊會一時有手指一時冇。清走 inline，等成粒 tab 一致跟 button。
+    [t].concat(Array.from(t.querySelectorAll("*"))).forEach((el) => (el.style.cursor = ""));
     t.addEventListener("mouseenter", () => {
       if (canHover.matches) openTab(key);
     });
@@ -4847,11 +4859,28 @@ document.addEventListener("DOMContentLoaded", function () {
     };
     flt.size.forEach((v) => add("size", v));
     flt.style.forEach((v) => add("style", v));
+    if (chipsBox.firstChild) chipsBox.firstChild.classList.add("is-lead"); // 電腦版靠右；太多會左右滑，唔會隔行推低 projects
     if (flt.size.size + flt.style.size > 1) {
       const c = document.createElement("button");
       c.type = "button";
       c.className = "flt-chip is-clear";
-      c.textContent = "Clear all";
+      // 同全站文字連結一樣：平時冇底線，hover 由左掃入、離開向右掃走
+      const line = document.createElement("span");
+      line.className = "hover-line-effect";
+      line.textContent = "Clear all";
+      line.style.setProperty("--hover-underline-color", "#795e49");
+      line.style.setProperty("--underline-offset", "-3px");
+      c.appendChild(line);
+      if (G) {
+        c.addEventListener("mouseenter", () => {
+          G.set(line, { "--line-left": "0", "--line-right": "auto" });
+          G.to(line, { "--line-width": "100%", duration: 0.6, ease: "expo.out", overwrite: "auto" });
+        });
+        c.addEventListener("mouseleave", () => {
+          G.set(line, { "--line-left": "auto", "--line-right": "0" });
+          G.to(line, { "--line-width": "0%", duration: 0.6, ease: "expo.out", overwrite: "auto" });
+        });
+      }
       c.addEventListener("click", (e) => {
         e.preventDefault();
         e.stopPropagation();
