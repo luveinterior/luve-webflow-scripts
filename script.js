@@ -10148,6 +10148,8 @@ initPopupHoverReveal({
     const VARIANTS = {
       v3: {
         Cascade: { stage: "is-cascade", tiles: ["is-ca1", "is-ca2", "is-ca3"], center: "is-ca", lines: ["is-ca1", "is-ca2"] },
+        Poster: { stage: "is-poster", tiles: ["is-po1", "is-po2", "is-po3"], center: "is-po", lines: ["is-po1", "is-po2"] },
+        Editorial: { stage: "is-editorial", tiles: ["is-ed1", "is-ed2", "is-ed3"], center: "is-ed", lines: ["is-ed1", "is-ed2"] },
       },
     };
     const pick = (sec.getAttribute("data-acl-m") || "").trim();
