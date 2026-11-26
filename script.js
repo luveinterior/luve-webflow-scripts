@@ -254,7 +254,7 @@ window.__luveTouchWide = function () {
         continue;
       }
       if (/jquery/i.test(f)) continue;
-      if ((SRC && f.indexOf(SRC) > -1) || f.indexOf("luve-webflow-scripts") > -1) return true;
+      if ((SRC && f.indexOf(SRC) > -1) || f.indexOf("luve-webflow-scripts") > -1 || /csb\.app\/shop\.js/.test(f)) return true;
       return f.indexOf(location.origin + "/") > -1 && !/\.js[?:]/.test(f);
     }
     return false;
@@ -434,6 +434,7 @@ window.__luveTouchWide = function () {
     if (nl) nl.remove();
     var inline = [],
       ext = [];
+    L.late = [];
     [].slice.call(doc.body.querySelectorAll("script")).forEach(function (s) {
       var src = s.getAttribute("src");
       if (src) {
@@ -442,7 +443,11 @@ window.__luveTouchWide = function () {
         // start a second Webflow runtime) or the site script itself
         // page scripts kept in our GitHub (e.g. Digital Card) run on every visit
         var ours = abs.indexOf("luve-webflow-scripts") > -1 && !/\/script(\.min)?\.js/.test(abs);
-        if (ours) ext.push(abs);
+        // Furniture 頁嘅 shop.js（CodeSandbox）：每次入 Furniture / 產品頁都要行，
+        // 而且要喺全站 script 啟動之後先行（同正常載入一樣嘅次序）。
+        // 之前冇行 → 目錄一直等 shop.js 加 is-ready → 撳完密碼入去成頁空白。
+        if (/csb\.app\/shop\.js/.test(abs)) L.late.push(abs);
+        else if (ours) ext.push(abs);
         else if (
           !loaded.has(abs) &&
           abs.indexOf("luve-webflow-scripts") < 0 &&
@@ -695,6 +700,14 @@ window.__luveTouchWide = function () {
         webflowReinit(doc);
         L.start();
         marquees(true);
+        var late = (L.late || []).splice(0);
+        return late.reduce(function (p, src) {
+          return p.then(function () {
+            return loadScript(src);
+          });
+        }, Promise.resolve());
+      })
+      .then(function () {
         heroEntrance();
         // Webflow background videos: autoplay without the page's own video module
         document.querySelectorAll("video[autoplay]").forEach(function (v) {
