@@ -4650,7 +4650,8 @@ document.addEventListener("DOMContentLoaded", function () {
     if (selectsWrap) selectsWrap.classList.toggle("is-collapsed", open && phone.matches);
   };
 
-  // 動態圍邊：打字時 on，停手 1.2 秒 / 清空 / 離開就 off（淡出期間 gradient 繼續流，淡晒先停）
+  // 動態圍邊 + 入面柔光：有字 + 喺打字狀態就淡入並一直流動；
+  // 打緊字時流快啲，停手後慢慢減速返正常；清空 / 撳走先淡出（淡出期間繼續流，淡晒先停）
   let ringTween = null;
   let ringIdle = null;
   let ringStop = null;
@@ -4668,7 +4669,10 @@ document.addEventListener("DOMContentLoaded", function () {
     clearTimeout(ringIdle);
     if (!hasText()) return ringOn(false);
     ringOn(true);
-    ringIdle = setTimeout(() => ringOn(false), 1500);
+    if (G && ringTween) {
+      G.to(ringTween, { timeScale: 2.2, duration: 0.35, ease: "power2.out", overwrite: true });
+      ringIdle = setTimeout(() => G.to(ringTween, { timeScale: 1, duration: 1.4, ease: "power2.inOut", overwrite: true }), 500);
+    }
   };
 
   if (search && input) {
@@ -4678,6 +4682,7 @@ document.addEventListener("DOMContentLoaded", function () {
     input.addEventListener("focus", () => {
       closePanel(true);
       setSearch(true);
+      if (hasText()) ringTyping();
     });
     input.addEventListener("blur", () => {
       setTimeout(() => {
@@ -4891,6 +4896,30 @@ document.addEventListener("DOMContentLoaded", function () {
       });
       chipsBox.appendChild(c);
     }
+    requestAnimationFrame(chipsEdge);
+  }
+  // chips 太多：一行過左右滑（手機用手指；電腦滾輪都得），兩邊淡出提示仲有
+  function chipsEdge() {
+    if (!chipsBox) return;
+    const over = chipsBox.scrollWidth > chipsBox.clientWidth + 2;
+    chipsBox.classList.toggle("is-overflow", over);
+    if (!over) chipsBox.scrollLeft = 0;
+  }
+  if (chipsBox) {
+    chipsBox.addEventListener(
+      "wheel",
+      (e) => {
+        if (!chipsBox.classList.contains("is-overflow") || Math.abs(e.deltaX) > Math.abs(e.deltaY)) return;
+        const max = chipsBox.scrollWidth - chipsBox.clientWidth;
+        const next = Math.max(0, Math.min(max, chipsBox.scrollLeft + e.deltaY));
+        if (next === chipsBox.scrollLeft) return;
+        e.preventDefault();
+        e.stopPropagation();
+        chipsBox.scrollLeft = next;
+      },
+      { passive: false }
+    );
+    window.addEventListener("resize", chipsEdge);
   }
 
   // 每邊嘅選項：用隱藏原生 <select> 做資料來源
