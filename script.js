@@ -4517,69 +4517,83 @@ document.addEventListener("DOMContentLoaded", function () {
   });
 
   // --- Filter Logic ---
+  // 揀選（可以多選）：Size / Style 各自一個 Set，由 23b 嘅玻璃選單更新。
+  // 冇揀 = All。舊嘅原生 <select> 仍然支援（Set 係空先睇 select）。
+  const flt = (window.__luveFlt = window.__luveFlt || { size: new Set(), style: new Set() });
+  const grid = document.querySelector(".project-list-grid");
+  const INFO = ".project-info-wrap, .project-info-wrap-mobile";
+  let filterGen = 0;
+
+  // 之前慢 / 空白嘅原因：未捲到嘅卡一開始係透明（等 ScrollTrigger 入畫先出），
+  // 篩選之後佢哋位置變咗，但 ScrollTrigger 喺啲卡未收起之前已經重新計算，
+  // 所以要捲好遠先觸發 → 好似卡住咗。而家：成格淡出 → 一次過換好顯示 →
+  // 所有合資格卡直接設為「已出現」→ 重新計算 → 畫面入面嘅卡輕輕升上嚟。
   function runFilter() {
-    // [修改 2] 獲取當前輸入值 (隨便拿一個 Input 的值，因為我們會同步)
-    // 如果找不到 input，就預設空字串
     const searchValue =
       searchInputs.length > 0 ? searchInputs[0].value.toLowerCase().trim() : "";
+    const sizeSet = flt.size.size ? flt.size : null;
+    const styleSet = flt.style.size ? flt.style : null;
+    const catValue = !styleSet && catFilter ? catFilter.value : "All";
+    const sizeValue = !sizeSet && sizeFilter ? sizeFilter.value : "All";
 
-    const catValue = catFilter ? catFilter.value : "All";
-    const sizeValue = sizeFilter ? sizeFilter.value : "All";
-
+    const show = [];
+    const hide = [];
     items.forEach((item) => {
       const itemCat = (item.getAttribute("data-category") || "").trim();
       const itemSize = (item.getAttribute("data-size") || "").trim();
       const titleEl = item.querySelector(CONFIG.titleSelector);
       const itemTitle = titleEl ? titleEl.innerText.toLowerCase() : "";
-
-      const matchSearch = itemTitle.includes(searchValue);
-      const matchCat = catValue === "All" || (itemCat && itemCat === catValue);
-      const matchSize =
-        sizeValue === "All" || (itemSize && itemSize === sizeValue);
-
-      if (matchSearch && matchCat && matchSize) {
-        if (item.style.display === "none") {
-          item.style.display = "block";
-          // make sure a card that was never scrolled to is fully revealed
-          gsap.set(item.querySelectorAll(".project-info-wrap, .project-info-wrap-mobile"), { opacity: 1, y: 0 });
-          const w0 = item.querySelector(CONFIG.imgWrapClass);
-          if (w0) gsap.set(w0, { clipPath: "inset(0% 0% 0% 0%)" });
-          gsap.fromTo(
-            item,
-            { opacity: 0, y: 30 },
-            { opacity: 1, y: 0, duration: 0.5, ease: "power2.out" }
-          );
-        }
-      } else {
-        if (item.style.display !== "none") {
-          gsap.to(item, {
-            opacity: 0,
-            scale: 0.95,
-            duration: 0.3,
-            onComplete: () => {
-              item.style.display = "none";
-            },
-          });
-        }
-      }
+      const ok =
+        itemTitle.includes(searchValue) &&
+        (styleSet ? styleSet.has(itemCat) : catValue === "All" || itemCat === catValue) &&
+        (sizeSet ? sizeSet.has(itemSize) : sizeValue === "All" || itemSize === sizeValue);
+      (ok ? show : hide).push(item);
     });
 
-    // 觸發 ScrollTrigger 刷新，確保佈局正確
-    ScrollTrigger.refresh();
+    const my = ++filterGen;
+    const apply = () => {
+      if (my !== filterGen) return;
+      gsap.killTweensOf(items);
+      hide.forEach((it) => (it.style.display = "none"));
+      show.forEach((it) => {
+        it.style.display = "block";
+        gsap.set(it, { opacity: 1, y: 0, scale: 1 });
+        const w = it.querySelector(CONFIG.imgWrapClass);
+        if (w) gsap.set(w, { clipPath: "inset(0% 0% 0% 0%)" });
+        const info = it.querySelectorAll(INFO);
+        if (info.length) gsap.set(info, { opacity: 1, y: 0 });
+      });
+      try {
+        ScrollTrigger.refresh();
+      } catch (e) {}
+      const vh = window.innerHeight;
+      const onScreen = show.filter((it) => {
+        const r = it.getBoundingClientRect();
+        return r.top < vh && r.bottom > 0;
+      });
+      if (onScreen.length)
+        gsap.fromTo(
+          onScreen,
+          { opacity: 0, y: 24 },
+          { opacity: 1, y: 0, duration: 0.6, ease: "power3.out", stagger: 0.06 }
+        );
+      if (grid) gsap.to(grid, { opacity: 1, duration: 0.25, ease: "power1.out", overwrite: true });
+    };
+    if (grid) gsap.to(grid, { opacity: 0, duration: 0.16, ease: "power1.out", overwrite: true, onComplete: apply });
+    else apply();
   }
 
   // --- Event Listeners ---
-
-  // [修改 3] 為所有 Input 綁定事件 & 數值同步
+  let typeTimer = 0;
   if (searchInputs.length > 0) {
     searchInputs.forEach((input) => {
       input.addEventListener("input", (e) => {
         const val = e.target.value;
-        // 同步所有搜尋框的值 (Desktop 打字 Mobile 都會見到)
         searchInputs.forEach((el) => {
           if (el !== e.target) el.value = val;
         });
-        runFilter();
+        clearTimeout(typeTimer);
+        typeTimer = setTimeout(runFilter, 140); // 打字停一停先篩，唔會每粒字閃一次
       });
     });
   }
@@ -4592,7 +4606,7 @@ document.addEventListener("DOMContentLoaded", function () {
 });
 
 // =====================================================
-// 23b. Projects Page — 半透玻璃 Search + Size / Style 選擇器
+// 23b. Projects Page — 半透玻璃 Search + Size / Style 多選 + 已揀 chips
 // 結構同樣式全部喺 Designer（flt-search / flt-select / flt-btn / flt-menu / flt-opt…）
 // 呢度只負責：
 //   1. Search：撳落去先變長（.is-open，CSS transition 做 easing）；
@@ -4670,6 +4684,64 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   }
 
+  // 多選：Size / Style 各自一個 Set（23 嘅 runFilter 會讀）
+  const flt = (window.__luveFlt = window.__luveFlt || { size: new Set(), style: new Set() });
+  const chipsBox = form.querySelector('[data-flt="chips"]');
+  const run = () => window.runProjectFilter && window.runProjectFilter();
+  const TICK =
+    '<svg width="10" height="10" viewBox="0 0 10 10" fill="none" aria-hidden="true"><path d="M2 5.2l2 2L8 3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  const CROSS =
+    '<svg width="8" height="8" viewBox="0 0 8 8" fill="none" aria-hidden="true"><path d="M1.5 1.5l5 5M6.5 1.5l-5 5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>';
+  const syncers = [];
+  const syncAll = () => {
+    syncers.forEach((f) => f());
+    renderChips();
+  };
+
+  // 已揀選項：一粒粒玻璃 chip，撳 × 移除；兩粒或以上會有「Clear all」
+  function renderChips() {
+    if (!chipsBox) return;
+    chipsBox.innerHTML = "";
+    const add = (key, value) => {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "flt-chip";
+      b.setAttribute("aria-label", "Remove " + value);
+      const t = document.createElement("span");
+      t.textContent = value;
+      const x = document.createElement("span");
+      x.className = "flt-chip-x";
+      x.innerHTML = CROSS;
+      b.appendChild(t);
+      b.appendChild(x);
+      b.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        flt[key].delete(value);
+        syncAll();
+        run();
+      });
+      chipsBox.appendChild(b);
+    };
+    flt.size.forEach((v) => add("size", v));
+    flt.style.forEach((v) => add("style", v));
+    if (flt.size.size + flt.style.size > 1) {
+      const c = document.createElement("button");
+      c.type = "button";
+      c.className = "flt-chip is-clear";
+      c.textContent = "Clear all";
+      c.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        flt.size.clear();
+        flt.style.clear();
+        syncAll();
+        run();
+      });
+      chipsBox.appendChild(c);
+    }
+  }
+
   pickers.forEach((p) => {
     const sel = document.getElementById(p.getAttribute("data-flt-target") || "");
     const btn = p.querySelector(".flt-btn");
@@ -4680,52 +4752,68 @@ document.addEventListener("DOMContentLoaded", function () {
       return;
     }
     const isSize = sel.id === "size-select";
+    const key = isSize ? "size" : "style";
+    const set = flt[key];
     const attr = isSize ? "data-size" : "data-category";
-    const allText = "All"; // 掣上面已經有「Size / Style」字，所以只寫 All
     // 特別 case：唔喺選單出現嘅風格（project 照樣喺 All 入面見到）
     const HIDE = ["AI-generated Public Art"];
-    Array.from(sel.options).forEach((o) => {
-      if (HIDE.indexOf(o.value) > -1 && sel.value !== o.value) o.remove();
-    });
+    menu.setAttribute("aria-multiselectable", "true");
     btn.removeAttribute("href");
     btn.setAttribute("role", "button");
     btn.setAttribute("tabindex", "0");
 
     const sync = () => {
-      const o = sel.options[sel.selectedIndex];
-      if (val) val.textContent = !o || o.value === "All" ? allText : o.textContent;
-      btn.classList.toggle("is-set", !!o && o.value !== "All");
+      // 掣上面已經有「Size / Style」字：冇揀 = All，揀一個 = 名，多個 = 「2 selected」
+      if (val) val.textContent = !set.size ? "All" : set.size === 1 ? Array.from(set)[0] : set.size + " selected";
+      btn.classList.toggle("is-set", set.size > 0);
       Array.from(menu.children).forEach((b) => {
-        const on = b.getAttribute("data-value") === sel.value;
+        const v = b.getAttribute("data-value");
+        const on = v === "All" ? set.size === 0 : set.has(v);
         b.classList.toggle("is-active", on);
         b.setAttribute("aria-selected", on ? "true" : "false");
+        const ck = b.querySelector(".flt-check");
+        if (ck) ck.classList.toggle("is-on", on);
       });
     };
+    syncers.push(sync);
+
     menu.innerHTML = "";
     Array.from(sel.options).forEach((o) => {
+      if (HIDE.indexOf(o.value) > -1) return;
+      const isAll = o.value === "All";
       const b = document.createElement("button");
       b.type = "button";
       b.className = "flt-opt";
       b.setAttribute("role", "option");
       b.setAttribute("data-value", o.value);
-      const n =
-        o.value === "All"
-          ? items.length
-          : items.filter((it) => (it.getAttribute(attr) || "").trim() === o.value).length;
+      const n = isAll
+        ? items.length
+        : items.filter((it) => (it.getAttribute(attr) || "").trim() === o.value).length;
+      const left = document.createElement("span");
+      left.className = "flt-opt-l";
+      if (!isAll) {
+        const ck = document.createElement("span");
+        ck.className = "flt-check";
+        ck.innerHTML = TICK;
+        left.appendChild(ck);
+      }
       const t = document.createElement("span");
-      t.textContent = o.value === "All" ? allText : o.textContent;
+      t.textContent = isAll ? "All" : o.textContent;
+      left.appendChild(t);
       const c = document.createElement("span");
       c.className = "flt-count";
       c.textContent = String(n);
-      b.appendChild(t);
+      b.appendChild(left);
       b.appendChild(c);
       b.addEventListener("click", (e) => {
         e.preventDefault();
         e.stopPropagation();
-        sel.value = o.value;
-        sel.dispatchEvent(new Event("change", { bubbles: true }));
-        sync();
-        toggle(p, false);
+        if (isAll) set.clear();
+        else if (set.has(o.value)) set.delete(o.value);
+        else set.add(o.value);
+        syncAll();
+        run();
+        if (isAll) toggle(p, false); // 揀 All 就收埋；多選嘅時候選單保持打開
       });
       menu.appendChild(b);
     });
@@ -4744,6 +4832,7 @@ document.addEventListener("DOMContentLoaded", function () {
       if (e.key === "Enter" || e.key === " ") tap(e);
     });
   });
+  renderChips();
 
   document.addEventListener("click", (e) => {
     if (!form.contains(e.target)) closeAll();
