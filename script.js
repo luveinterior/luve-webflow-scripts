@@ -655,7 +655,8 @@ window.__luveTouchWide = function () {
           location.href = url; // → normal page load
           return;
         }
-        if (!opt.pop) history.pushState({ luve: 1, y: 0 }, "", url);
+        if (opt.replace) history.replaceState({ luve: 1, y: 0 }, "", url);
+        else if (!opt.pop) history.pushState({ luve: 1, y: 0 }, "", url);
         return render(doc, url, opt);
       })
       .catch(function (e) {
@@ -663,6 +664,14 @@ window.__luveTouchWide = function () {
         location.href = url;
       });
   }
+
+  // Password page（00p）：密碼啱之後用同一套轉頁入去（唔使成頁 reload / slogan loader）
+  L.go = function (url, opt) {
+    try {
+      cache.delete(String(url).split("#")[0]);
+    } catch (e) {}
+    go(url, opt);
+  };
 
   function render(doc, url, opt) {
     L.stage = "cleanup";
@@ -883,6 +892,19 @@ if (window.__luveSameLogo) window.__luveSameLogo();
       // Webflow 自己嘅錯誤框唔再用（改用上面嘅欄位訊息）
       P + ".w-password-page.w-form-fail{display:none!important}" +
       P + ".luve-pw-submit{align-self:center;margin:4px 0 0;border:0;font:inherit;-webkit-appearance:none;appearance:none}" +
+      // 輸入框 + 眼仔（顯示 / 收埋密碼）
+      P + ".luve-pw-wrap{position:relative}" +
+      P + ".luve-pw-wrap input.w-password-page.w-input{padding-right:52px!important}" +
+      P + ".luve-pw-eye{position:absolute;top:50%;right:8px;width:40px;height:40px;margin:-20px 0 0;padding:0;display:flex;align-items:center;justify-content:center;border:0;border-radius:50%;background:transparent;color:var(--brand-color-dark,#795e49);opacity:.6;cursor:pointer;transition:opacity .3s ease,background-color .3s ease;-webkit-appearance:none;appearance:none}" +
+      P + ".luve-pw-eye:hover," + P + ".luve-pw-eye:focus-visible{opacity:1;background:rgba(121,94,73,.08);outline:none}" +
+      P + ".luve-pw-eye svg{display:block;width:20px;height:20px}" +
+      P + ".luve-pw-eye .eye-off{display:none}" +
+      P + ".luve-pw-eye.is-shown .eye-on{display:none}" +
+      P + ".luve-pw-eye.is-shown .eye-off{display:block}" +
+      // 錯誤訊息淡入淡出（有 easing）
+      P + ".luve-pw-field .field-error-msg{opacity:0;transform:translateY(-6px);transition:opacity .5s cubic-bezier(.22,1,.36,1),transform .5s cubic-bezier(.22,1,.36,1)!important}" +
+      P + ".luve-pw-field .field-error-msg.is-shown{opacity:1;transform:none}" +
+      P + "form.w-password-page[aria-busy='true'] .luve-pw-submit{opacity:.6;pointer-events:none;transition:opacity .3s ease}" +
       "@media (max-width:991px){" +
       P + "input.w-password-page.w-input{min-height:clamp(50px,6.7dvh,56px)!important;padding:0 14px!important}" +
       "}" +
@@ -907,7 +929,32 @@ if (window.__luveSameLogo) window.__luveSameLogo();
     field.className = "luve-pw-field";
     pass.parentNode.insertBefore(field, label || pass);
     if (label) field.appendChild(label);
-    field.appendChild(pass);
+    const wrap = document.createElement("div");
+    wrap.className = "luve-pw-wrap";
+    wrap.appendChild(pass);
+    field.appendChild(wrap);
+    // 眼仔：撳一下顯示密碼，再撳收埋
+    const eye = document.createElement("button");
+    eye.type = "button";
+    eye.className = "luve-pw-eye";
+    eye.setAttribute("aria-label", "Show password");
+    eye.innerHTML =
+      '<svg class="eye-on" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>' +
+      '<svg class="eye-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3l18 18"/><path d="M10.6 5.1A10.7 10.7 0 0 1 12 5c6.4 0 10 7 10 7a17.6 17.6 0 0 1-3.2 4.1M6.6 6.6C3.7 8.4 2 12 2 12s3.6 7 10 7c1.6 0 3-.4 4.3-1"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/></svg>';
+    eye.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const show = pass.type === "password";
+      pass.type = show ? "text" : "password";
+      eye.classList.toggle("is-shown", show);
+      eye.setAttribute("aria-label", show ? "Hide password" : "Show password");
+      try {
+        const n = pass.value.length;
+        pass.focus({ preventScroll: true });
+        pass.setSelectionRange(n, n);
+      } catch (err) {}
+    });
+    wrap.appendChild(eye);
     msg = document.createElement("div");
     msg.className = "field-error-msg";
     msg.setAttribute("role", "alert");
@@ -916,26 +963,43 @@ if (window.__luveSameLogo) window.__luveSameLogo();
   }
 
   // 同 enquiry form 一樣嘅出 / 收錯誤訊息
+  // 錯誤訊息：淡入（向下滑少少）/ 淡出（向上收），CSS transition 做 easing
+  let hideT = 0;
   const showError = (text) => {
     if (!pass || !msg) return;
+    clearTimeout(hideT);
     pass.classList.add("is-error");
     msg.parentNode.classList.add("has-error");
+    const again = msg.classList.contains("is-shown");
     msg.textContent = text;
     msg.style.display = "block";
-    msg.style.opacity = "1";
-    msg.style.transform = "translateY(0)";
+    if (again) {
+      // 再錯一次：輕輕閃一下，話俾人知已經再試過
+      msg.classList.remove("is-shown");
+      void msg.offsetWidth;
+      setTimeout(() => msg.classList.add("is-shown"), 180);
+    } else {
+      void msg.offsetWidth; // 由 display:none 出嚟要先 reflow，transition 先會行
+      msg.classList.add("is-shown");
+    }
   };
   const clearError = () => {
-    if (!pass || !msg) return;
+    if (!pass || !msg || !msg.classList.contains("is-shown")) return;
     pass.classList.remove("is-error");
     msg.parentNode.classList.remove("has-error");
-    msg.style.opacity = "0";
-    msg.style.transform = "translateY(-5px)";
-    setTimeout(() => {
+    msg.classList.remove("is-shown");
+    clearTimeout(hideT);
+    hideT = setTimeout(() => {
       if (!msg.parentNode.classList.contains("has-error")) msg.style.display = "none";
-    }, 300);
+    }, 520);
   };
   if (pass) {
+    // 喺密碼欄撳 Enter = 撳 Submit
+    pass.addEventListener("keydown", (e) => {
+      if (e.key !== "Enter" || e.isComposing) return;
+      e.preventDefault();
+      send();
+    });
     pass.addEventListener("input", clearError);
     pass.addEventListener("change", clearError);
     // 冇輸入：瀏覽器提示 + 右上角 *This field is required（同 enquiry 一樣）
@@ -957,27 +1021,50 @@ if (window.__luveSameLogo) window.__luveSameLogo();
     old.setAttribute("aria-hidden", "true");
   }
 
-  // 4. 背景送出密碼：錯就留喺原位出訊息，啱先轉頁
+  // 4. 背景送出密碼：錯就留喺原位出訊息；啱就用網站嘅轉頁（Section 00）直接入去，
+  //    唔再成頁 reload（之前要再 POST 多次，有時卡住冇反應，又會出 slogan loader）。
   let busy = false;
-  form.addEventListener("submit", (e) => {
-    if (!window.fetch || !window.URLSearchParams) return; // 舊瀏覽器：照 Webflow 原本送出
-    e.preventDefault();
+  function nativeSubmit() {
+    busy = false;
+    form.removeAttribute("aria-busy");
+    HTMLFormElement.prototype.submit.call(form);
+  }
+  function send() {
     if (busy) return;
     if (!pass || !pass.value) {
       showError("*This field is required");
+      try {
+        pass.focus({ preventScroll: true });
+      } catch (err) {}
       return;
     }
+    if (!window.fetch || !window.URLSearchParams) return nativeSubmit(); // 舊瀏覽器
     busy = true;
     form.setAttribute("aria-busy", "true");
+    const pageInput = form.querySelector("input[name='page']");
+    const target = (pageInput && pageInput.value) || location.pathname + location.search;
     const body = new URLSearchParams(new FormData(form));
+    let settled = false;
+    const guard = setTimeout(() => {
+      if (!settled) nativeSubmit(); // 網絡太慢：照 Webflow 原本方法
+    }, 9000);
     fetch(form.getAttribute("action") || "/.wf_auth", {
       method: "POST",
       body,
       credentials: "same-origin",
       redirect: "follow",
+      cache: "no-store",
     })
-      .then((res) => {
-        const wrong = res.status === 401 || /[?&]e=1(&|$)/.test(res.url || "");
+      .then((res) =>
+        res.text().then((html) => ({ res, html }))
+      )
+      .then(({ res, html }) => {
+        settled = true;
+        clearTimeout(guard);
+        const wrong =
+          res.status === 401 ||
+          /[?&]e=1(&|$)/.test(res.url || "") ||
+          /class="[^"]*w-password-page/.test(html);
         if (wrong) {
           busy = false;
           form.removeAttribute("aria-busy");
@@ -988,16 +1075,24 @@ if (window.__luveSameLogo) window.__luveSameLogo();
           } catch (err) {}
           return;
         }
-        // 密碼啱（或者任何其他情況）：用 Webflow 原本嘅表單 POST 正式送出，
-        // 由 Webflow 自己寫 cookie 同轉頁（唔觸發上面嘅 submit listener）。
-        HTMLFormElement.prototype.submit.call(form);
+        // 密碼啱：cookie 已經寫好 → 用網站轉頁入去（同 Home → Projects 一樣）
+        const life = window.__luveLife;
+        if (life && life.enabled && life.go) {
+          busy = false;
+          life.go(new URL(target, location.href).href, { replace: true });
+        } else {
+          location.replace(target);
+        }
       })
       .catch(() => {
-        // 網絡出錯：照 Webflow 原本方法送出
-        busy = false;
-        form.removeAttribute("aria-busy");
-        HTMLFormElement.prototype.submit.call(form);
+        settled = true;
+        clearTimeout(guard);
+        nativeSubmit(); // 網絡出錯：照 Webflow 原本方法送出
       });
+  }
+  form.addEventListener("submit", (e) => {
+    e.preventDefault();
+    send();
   });
 })();
 
@@ -4586,13 +4681,34 @@ document.addEventListener("DOMContentLoaded", function () {
         const r = it.getBoundingClientRect();
         return r.top < vh && r.bottom > 0;
       });
-      if (onScreen.length)
-        gsap.fromTo(
-          onScreen,
-          { opacity: 0, y: 28 },
-          { opacity: 1, y: 0, duration: 0.9, ease: "power3.out", stagger: 0.08, delay: 0.06 }
-        );
-      if (grid) gsap.to(grid, { opacity: 1, duration: 0.45, ease: "power2.out", overwrite: true });
+      // 另一個「閃多一下」嘅成因：卡收埋（display:none）之後，瀏覽器會丟咗張相嘅
+      // 解碼結果；再顯示時要重新解碼，期間張相會空白一兩格 → 淡入到一半突然光一下。
+      // 所以先等畫面入面啲相解碼好（最多 0.45 秒），先開始淡入。
+      if (onScreen.length) gsap.set(onScreen, { opacity: 0, y: 28 });
+      const imgs = [];
+      onScreen.forEach((it) => {
+        it.querySelectorAll("img").forEach((im) => {
+          if (im.loading === "lazy") im.loading = "eager";
+          imgs.push(im);
+        });
+      });
+      const decoded = Promise.all(
+        imgs.map((im) =>
+          im.complete && im.naturalWidth && im.decode ? im.decode().catch(() => {}) : new Promise((res) => {
+            im.addEventListener("load", res, { once: true });
+            im.addEventListener("error", res, { once: true });
+          })
+        )
+      );
+      const reveal = () => {
+        if (my !== filterGen) return;
+        if (onScreen.length)
+          gsap.to(onScreen, { opacity: 1, y: 0, duration: 0.9, ease: "power3.out", stagger: 0.08, overwrite: true });
+        if (grid) gsap.to(grid, { opacity: 1, duration: 0.45, ease: "power2.out", overwrite: true });
+      };
+      Promise.race([decoded, new Promise((res) => setTimeout(res, 450))]).then(() =>
+        requestAnimationFrame(() => requestAnimationFrame(reveal))
+      );
     };
     // 先等一拍（揀選項嘅剔號先出），再慢慢淡出 → 換內容 → 淡入
     if (grid) gsap.to(grid, { opacity: 0, duration: 0.32, delay: 0.1, ease: "power2.inOut", overwrite: true, onComplete: apply });
@@ -4624,11 +4740,10 @@ document.addEventListener("DOMContentLoaded", function () {
 // =====================================================
 // 23b. Projects Page — 半透玻璃 Search + Size / Style 合一切換 + 已揀 chips
 // 結構同樣式全部喺 Designer：
-//   flt-search（+ flt-ring 動態圍邊）/ flt-seg（flt-seg-ind 滑動底色、flt-tab × 2、
+//   flt-search（+ flt-glow 柔光）/ flt-seg（flt-seg-ind 滑動底色、flt-tab × 2、
 //   flt-panel 共用下拉、flt-pane × 2）/ flt-opt / flt-check / flt-chips
 // 呢度只負責：
-//   1. Search：撳落去先變長（.is-open）；打字時圍邊 gradient 慢慢流動，
-//      停手 ~1.2 秒後先淡出（.flt-ring.is-on，CSS 做 fade + delay）
+//   1. Search：撳落去先變長（.is-open）+ 淡入一層好慢咁飄嘅 Brand Light 柔光（.flt-glow.is-on）
 //   2. Size / Style 合成一粒：電腦 hover 切換、手機撳切換；
 //      啡色底色滑去揀緊嗰邊，下面共用清單高度跟住變（GSAP）
 //   3. 多選：Set 存 → 23 嘅 runFilter 讀；chips 撳 × 移除
@@ -4639,7 +4754,6 @@ document.addEventListener("DOMContentLoaded", function () {
   if (!form || !seg) return;
   const search = form.querySelector('[data-flt="search"]');
   const input = search && search.querySelector("input");
-  const ring = search && search.querySelector(".flt-ring");
   const glow = search && search.querySelector(".flt-glow");
   const selectsWrap = form.querySelector(".flt-selects");
   const phone = window.matchMedia("(max-width: 767px)");
@@ -4665,29 +4779,18 @@ document.addEventListener("DOMContentLoaded", function () {
     if (selectsWrap) selectsWrap.classList.toggle("is-collapsed", open && phone.matches);
   };
 
-  // 動態圍邊 + 入面柔光：有字 + 喺打字狀態就淡入並一直流動；
-  // 打緊字時流快啲，停手後慢慢減速返正常；清空 / 撳走先淡出（淡出期間繼續流，淡晒先停）
-  let ringTween = null;
-  let ringIdle = null;
-  let ringStop = null;
-  const fx = [ring, glow].filter(Boolean);
-  const ringOn = (on) => {
-    if (!fx.length) return;
-    fx.forEach((el) => el.classList.toggle("is-on", on));
-    if (G && !ringTween)
-      ringTween = G.fromTo(fx, { backgroundPosition: "0% 0%" }, { backgroundPosition: "100% 0%", duration: 2.4, ease: "none", repeat: -1, paused: true });
-    clearTimeout(ringStop);
-    if (on) ringTween && ringTween.play();
-    else ringStop = setTimeout(() => ringTween && ringTween.pause(), 1300);
-  };
-  const ringTyping = () => {
-    clearTimeout(ringIdle);
-    if (!hasText()) return ringOn(false);
-    ringOn(true);
-    if (G && ringTween) {
-      G.to(ringTween, { timeScale: 2.2, duration: 0.35, ease: "power2.out", overwrite: true });
-      ringIdle = setTimeout(() => G.to(ringTween, { timeScale: 1, duration: 1.4, ease: "power2.inOut", overwrite: true }), 500);
-    }
+  // 撳落 search 就淡入一層 Brand Light 柔光，好慢咁左右飄（約 16 秒一個來回）；
+  // 撳走先慢慢淡出（淡晒先停）。唔再有圍邊。
+  let glowTween = null;
+  let glowStop = null;
+  const glowOn = (on) => {
+    if (!glow) return;
+    glow.classList.toggle("is-on", on);
+    if (G && !glowTween)
+      glowTween = G.fromTo(glow, { backgroundPosition: "0% 50%" }, { backgroundPosition: "100% 50%", duration: 8, ease: "sine.inOut", repeat: -1, yoyo: true, paused: true });
+    clearTimeout(glowStop);
+    if (on) glowTween && glowTween.play();
+    else glowStop = setTimeout(() => glowTween && glowTween.pause(), 1400);
   };
 
   if (search && input) {
@@ -4697,20 +4800,18 @@ document.addEventListener("DOMContentLoaded", function () {
     input.addEventListener("focus", () => {
       closePanel(true);
       setSearch(true);
-      if (hasText()) ringTyping();
+      glowOn(true);
     });
     input.addEventListener("blur", () => {
       setTimeout(() => {
         if (document.activeElement !== input) {
           setSearch(false);
-          clearTimeout(ringIdle);
-          ringOn(false);
+          glowOn(false);
         }
       }, 80);
     });
     input.addEventListener("input", () => {
       search.classList.toggle("has-value", hasText());
-      ringTyping();
     });
     input.addEventListener("keydown", (e) => {
       if (e.key === "Escape") {
