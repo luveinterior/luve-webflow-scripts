@@ -10142,8 +10142,18 @@ initPopupHoverReveal({
       v3: { stage: "is-3", tiles: ["is-3a", "is-3b", "is-3c"], center: "is-center" },
       h3: { stage: "is-mix", tiles: ["is-mh", "is-ma", "is-mb"], center: "is-mixc" },
     };
+    // 手機版排法選項（CMS「A Closer Look Mobile Layout」→ section 嘅 data-acl-m）
+    // 只用喺 3 段直片；桌面版位置同 Default 一樣，淨係 phone breakpoint 唔同。
+    // 想加新排法：Designer 整好一套 combo class，再喺度加一行。
+    const VARIANTS = {
+      v3: {
+        Cascade: { stage: "is-cascade", tiles: ["is-ca1", "is-ca2", "is-ca3"], center: "is-ca", lines: ["is-ca1", "is-ca2"] },
+      },
+    };
+    const pick = (sec.getAttribute("data-acl-m") || "").trim();
     const apply = (land) => {
-      const c = L[(land ? "h" : "v") + n];
+      const key = (land ? "h" : "v") + n;
+      const c = (VARIANTS[key] && VARIANTS[key][pick]) || L[key];
       stage.className = "acl-stage " + c.stage;
       used.slice(0, 3).forEach((t, i) => (t.className = "acl-tile " + c.tiles[i]));
       if (!copy) return;
@@ -10153,8 +10163,9 @@ initPopupHoverReveal({
         if (t2) t2.className = "acl-text " + c.split[1];
       } else {
         copy.className = "acl-text " + c.center;
-        if (t1) t1.className = "acl-line";
-        if (t2) t2.className = "acl-line";
+        const ln = c.lines || [];
+        if (t1) t1.className = "acl-line" + (ln[0] ? " " + ln[0] : "");
+        if (t2) t2.className = "acl-line" + (ln[1] ? " " + ln[1] : "");
       }
     };
     // 字疊喺片上面嗰部分：好似 Profile 頁 services-list 咁，片格入面有一層米色（Brand Light）
@@ -10164,7 +10175,8 @@ initPopupHoverReveal({
       ghosts.forEach((o) => o.g.remove());
       ghosts = [];
       if (!copy || copy.style.display === "none") return;
-      const split = copy.classList.contains("is-split");
+      // 字分開兩段擺（is-split，或者手機版 display:contents 嘅排法）→ 每段各自一層
+      const split = copy.classList.contains("is-split") || getComputedStyle(copy).display === "contents";
       const srcs = (split ? [t1, t2] : [copy]).filter((e) => e && e.style.display !== "none");
       used.forEach((tile) => {
         const mask = tile.querySelector('[data-acl="mask"]') || tile;
