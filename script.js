@@ -4606,33 +4606,39 @@ document.addEventListener("DOMContentLoaded", function () {
 });
 
 // =====================================================
-// 23b. Projects Page — 半透玻璃 Search + Size / Style 多選 + 已揀 chips
-// 結構同樣式全部喺 Designer（flt-search / flt-select / flt-btn / flt-menu / flt-opt…）
+// 23b. Projects Page — 半透玻璃 Search + Size / Style 合一切換 + 已揀 chips
+// 結構同樣式全部喺 Designer：
+//   flt-search（+ flt-ring 動態圍邊）/ flt-seg（flt-seg-ind 滑動底色、flt-tab × 2、
+//   flt-panel 共用下拉、flt-pane × 2）/ flt-opt / flt-check / flt-chips
 // 呢度只負責：
-//   1. Search：撳落去先變長（.is-open，CSS transition 做 easing）；
-//      電話版打開時 Size / Style 暫時收埋（.flt-selects.is-collapsed）
-//   2. Size / Style：用隱藏咗嘅原生 <select> 做資料來源，
-//      生成玻璃選單（每項顯示有幾多個 project），揀完同步返 <select> → 原本 filter 照跑
+//   1. Search：撳落去先變長（.is-open）；打字時圍邊 gradient 慢慢流動，
+//      停手 ~1.2 秒後先淡出（.flt-ring.is-on，CSS 做 fade + delay）
+//   2. Size / Style 合成一粒：電腦 hover 切換、手機撳切換；
+//      啡色底色滑去揀緊嗰邊，下面共用清單高度跟住變（GSAP）
+//   3. 多選：Set 存 → 23 嘅 runFilter 讀；chips 撳 × 移除
 // =====================================================
 document.addEventListener("DOMContentLoaded", function () {
   const form = document.querySelector(".filter-group");
-  if (!form || !form.querySelector(".flt-select")) return;
+  const seg = form && form.querySelector('[data-flt="seg"]');
+  if (!form || !seg) return;
   const search = form.querySelector('[data-flt="search"]');
   const input = search && search.querySelector("input");
+  const ring = search && search.querySelector(".flt-ring");
   const selectsWrap = form.querySelector(".flt-selects");
   const phone = window.matchMedia("(max-width: 767px)");
+  const canHover = window.matchMedia("(hover: hover) and (pointer: fine)");
   const items = Array.from(document.querySelectorAll(".project-card-item"));
-  // Placeholder（Designer 入面改咗就用 Designer 嗰個；仲係舊預設先換）
-  if (form.querySelector("#search-input") && /^search projects/i.test(form.querySelector("#search-input").placeholder || ""))
-    form.querySelector("#search-input").placeholder = "Find a home by name";
+  const G = window.gsap;
 
-  // 撳 Enter 唔好提交表格（呢個 form 只係用嚟 filter）
+  // Placeholder（Designer 改咗做其他字就用 Designer 嗰個）
+  if (input && /^(search projects|find a home)/i.test(input.placeholder || "")) input.placeholder = "Search by project name";
+
   form.addEventListener("submit", (e) => {
     e.preventDefault();
     if (input) input.blur();
   });
 
-  // ── Search：focus 先展開 ──
+  // ── Search ──
   const hasText = () => !!(input && input.value.trim());
   const setSearch = (focused) => {
     if (!search) return;
@@ -4641,20 +4647,48 @@ document.addEventListener("DOMContentLoaded", function () {
     search.classList.toggle("has-value", hasText());
     if (selectsWrap) selectsWrap.classList.toggle("is-collapsed", open && phone.matches);
   };
+
+  // 動態圍邊：打字時 on，停手 1.2 秒 / 清空 / 離開就 off（淡出期間 gradient 繼續流，淡晒先停）
+  let ringTween = null;
+  let ringIdle = null;
+  let ringStop = null;
+  const ringOn = (on) => {
+    if (!ring) return;
+    ring.classList.toggle("is-on", on);
+    if (G && !ringTween)
+      ringTween = G.fromTo(ring, { backgroundPosition: "0% 0%" }, { backgroundPosition: "100% 0%", duration: 2.6, ease: "none", repeat: -1, paused: true });
+    clearTimeout(ringStop);
+    if (on) ringTween && ringTween.play();
+    else ringStop = setTimeout(() => ringTween && ringTween.pause(), 1000);
+  };
+  const ringTyping = () => {
+    clearTimeout(ringIdle);
+    if (!hasText()) return ringOn(false);
+    ringOn(true);
+    ringIdle = setTimeout(() => ringOn(false), 1200);
+  };
+
   if (search && input) {
     search.addEventListener("click", () => {
       if (document.activeElement !== input) input.focus();
     });
     input.addEventListener("focus", () => {
-      closeAll();
+      closePanel(true);
       setSearch(true);
     });
     input.addEventListener("blur", () => {
       setTimeout(() => {
-        if (document.activeElement !== input) setSearch(false);
+        if (document.activeElement !== input) {
+          setSearch(false);
+          clearTimeout(ringIdle);
+          ringOn(false);
+        }
       }, 80);
     });
-    input.addEventListener("input", () => search.classList.toggle("has-value", hasText()));
+    input.addEventListener("input", () => {
+      search.classList.toggle("has-value", hasText());
+      ringTyping();
+    });
     input.addEventListener("keydown", (e) => {
       if (e.key === "Escape") {
         input.value = "";
@@ -4665,26 +4699,14 @@ document.addEventListener("DOMContentLoaded", function () {
     setSearch(false);
   }
 
-  // ── Size / Style 玻璃選單 ──
-  const pickers = Array.from(form.querySelectorAll(".flt-select"));
-  function toggle(p, open) {
-    const btn = p.querySelector(".flt-btn");
-    const menu = p.querySelector(".flt-menu");
-    const chev = p.querySelector(".flt-chev");
-    if (menu) menu.classList.toggle("is-open", open);
-    if (btn) {
-      btn.classList.toggle("is-open", open);
-      btn.setAttribute("aria-expanded", open ? "true" : "false");
-    }
-    if (chev) chev.classList.toggle("is-open", open);
-  }
-  function closeAll(except) {
-    pickers.forEach((p) => {
-      if (p !== except) toggle(p, false);
-    });
-  }
+  // ── Size / Style 合一切換 ──
+  const ind = seg.querySelector(".flt-seg-ind");
+  const tabs = Array.from(seg.querySelectorAll(".flt-tab"));
+  const panel = seg.querySelector(".flt-panel");
+  const panes = {};
+  seg.querySelectorAll(".flt-pane").forEach((p) => (panes[p.getAttribute("data-pane")] = p));
+  let active = null; // "size" | "style" | null（null = 收埋）
 
-  // 多選：Size / Style 各自一個 Set（23 嘅 runFilter 會讀）
   const flt = (window.__luveFlt = window.__luveFlt || { size: new Set(), style: new Set() });
   const chipsBox = form.querySelector('[data-flt="chips"]');
   const run = () => window.runProjectFilter && window.runProjectFilter();
@@ -4692,13 +4714,113 @@ document.addEventListener("DOMContentLoaded", function () {
     '<svg width="10" height="10" viewBox="0 0 10 10" fill="none" aria-hidden="true"><path d="M2 5.2l2 2L8 3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
   const CROSS =
     '<svg width="8" height="8" viewBox="0 0 8 8" fill="none" aria-hidden="true"><path d="M1.5 1.5l5 5M6.5 1.5l-5 5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>';
+
+  const moveInd = (tab, instant) => {
+    if (!ind || !tab) return;
+    const x = tab.offsetLeft;
+    const w = tab.offsetWidth;
+    if (G && !instant) G.to(ind, { x: x, width: w, duration: 0.5, ease: "power3.out", overwrite: true });
+    else if (G) G.set(ind, { x: x, width: w });
+    else {
+      ind.style.transform = "translateX(" + x + "px)";
+      ind.style.width = w + "px";
+    }
+  };
+
+  const syncTabs = () => {
+    tabs.forEach((t) => {
+      const key = t.getAttribute("data-tab");
+      const on = key === active;
+      t.classList.toggle("is-active", on);
+      t.setAttribute("aria-expanded", on ? "true" : "false");
+      const n = t.querySelector(".flt-tab-n");
+      const count = flt[key] ? flt[key].size : 0;
+      if (n) {
+        n.textContent = count ? String(count) : "";
+        n.classList.toggle("is-on", count > 0);
+        n.classList.toggle("is-inv", on);
+      }
+    });
+  };
+
+  function showPane(key) {
+    if (!panel) return;
+    const wasOpen = panel.classList.contains("is-open");
+    const h0 = panel.offsetHeight;
+    Object.keys(panes).forEach((k) => panes[k].classList.toggle("is-hidden", k !== key));
+    if (!G || !wasOpen) return;
+    const h1 = panel.offsetHeight;
+    if (h0 !== h1) G.fromTo(panel, { height: h0 }, { height: h1, duration: 0.45, ease: "power3.out", overwrite: true, clearProps: "height" });
+    const dir = key === "style" ? 1 : -1;
+    G.fromTo(panes[key], { opacity: 0, x: 14 * dir }, { opacity: 1, x: 0, duration: 0.4, ease: "power3.out", overwrite: true, clearProps: "opacity,transform" });
+  }
+
+  function openTab(key) {
+    if (!panel || !panes[key]) return;
+    cancelClose();
+    if (key === active) return;
+    const first = active === null;
+    active = key;
+    if (input && document.activeElement === input) input.blur();
+    const tab = tabs.find((t) => t.getAttribute("data-tab") === key);
+    moveInd(tab, first);
+    if (ind) ind.classList.add("is-on");
+    showPane(key);
+    panel.classList.add("is-open");
+    syncTabs();
+  }
+
+  function closePanel() {
+    cancelClose();
+    if (active === null) return;
+    active = null;
+    if (panel) panel.classList.remove("is-open");
+    if (ind) ind.classList.remove("is-on");
+    syncTabs();
+  }
+  let closeT = null;
+  const cancelClose = () => clearTimeout(closeT);
+  const closeSoon = () => {
+    cancelClose();
+    closeT = setTimeout(closePanel, 260);
+  };
+
+  tabs.forEach((t) => {
+    const key = t.getAttribute("data-tab");
+    t.setAttribute("aria-haspopup", "listbox");
+    t.addEventListener("mouseenter", () => {
+      if (canHover.matches) openTab(key);
+    });
+    t.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      // 撳同一邊 = 收埋；撳另一邊 = 切換（電腦 hover 已經開咗就唔好即刻收）
+      if (active === key && !canHover.matches) closePanel();
+      else if (active === key && canHover.matches) return;
+      else openTab(key);
+    });
+    t.addEventListener("keydown", (e) => {
+      if (e.key === "ArrowRight" || e.key === "ArrowLeft") {
+        const other = tabs[(tabs.indexOf(t) + 1) % tabs.length];
+        other.focus();
+        openTab(other.getAttribute("data-tab"));
+      }
+    });
+  });
+  seg.addEventListener("mouseenter", () => canHover.matches && cancelClose());
+  seg.addEventListener("mouseleave", () => canHover.matches && closeSoon());
+  window.addEventListener("resize", () => {
+    const tab = tabs.find((t) => t.getAttribute("data-tab") === active);
+    if (tab) moveInd(tab, true);
+  });
+
+  // 已揀選項 chips
   const syncers = [];
   const syncAll = () => {
     syncers.forEach((f) => f());
+    syncTabs();
     renderChips();
   };
-
-  // 已揀選項：一粒粒玻璃 chip，撳 × 移除；兩粒或以上會有「Clear all」
   function renderChips() {
     if (!chipsBox) return;
     chipsBox.innerHTML = "";
@@ -4742,42 +4864,20 @@ document.addEventListener("DOMContentLoaded", function () {
     }
   }
 
-  pickers.forEach((p) => {
-    const sel = document.getElementById(p.getAttribute("data-flt-target") || "");
-    const btn = p.querySelector(".flt-btn");
-    const menu = p.querySelector(".flt-menu");
-    const val = p.querySelector(".flt-value");
-    if (!sel || !btn || !menu) {
-      p.style.display = "none";
+  // 每邊嘅選項：用隱藏原生 <select> 做資料來源
+  tabs.forEach((tab) => {
+    const key = tab.getAttribute("data-tab");
+    const pane = panes[key];
+    const sel = document.getElementById(tab.getAttribute("data-flt-target") || "");
+    if (!pane || !sel) {
+      tab.style.display = "none";
       return;
     }
-    const isSize = sel.id === "size-select";
-    const key = isSize ? "size" : "style";
     const set = flt[key];
-    const attr = isSize ? "data-size" : "data-category";
+    const attr = key === "size" ? "data-size" : "data-category";
     // 特別 case：唔喺選單出現嘅風格（project 照樣喺 All 入面見到）
     const HIDE = ["AI-generated Public Art"];
-    menu.setAttribute("aria-multiselectable", "true");
-    btn.removeAttribute("href");
-    btn.setAttribute("role", "button");
-    btn.setAttribute("tabindex", "0");
-
-    const sync = () => {
-      // 掣上面已經有「Size / Style」字：冇揀 = All，揀一個 = 名，多個 = 「2 selected」
-      if (val) val.textContent = !set.size ? "All" : set.size === 1 ? Array.from(set)[0] : phone.matches ? String(set.size) : set.size + " selected";
-      btn.classList.toggle("is-set", set.size > 0);
-      Array.from(menu.children).forEach((b) => {
-        const v = b.getAttribute("data-value");
-        const on = v === "All" ? set.size === 0 : set.has(v);
-        b.classList.toggle("is-active", on);
-        b.setAttribute("aria-selected", on ? "true" : "false");
-        const ck = b.querySelector(".flt-check");
-        if (ck) ck.classList.toggle("is-on", on);
-      });
-    };
-    syncers.push(sync);
-
-    menu.innerHTML = "";
+    pane.innerHTML = "";
     Array.from(sel.options).forEach((o) => {
       if (HIDE.indexOf(o.value) > -1) return;
       const isAll = o.value === "All";
@@ -4786,9 +4886,7 @@ document.addEventListener("DOMContentLoaded", function () {
       b.className = "flt-opt";
       b.setAttribute("role", "option");
       b.setAttribute("data-value", o.value);
-      const n = isAll
-        ? items.length
-        : items.filter((it) => (it.getAttribute(attr) || "").trim() === o.value).length;
+      const n = isAll ? items.length : items.filter((it) => (it.getAttribute(attr) || "").trim() === o.value).length;
       const left = document.createElement("span");
       left.className = "flt-opt-l";
       if (!isAll) {
@@ -4813,32 +4911,29 @@ document.addEventListener("DOMContentLoaded", function () {
         else set.add(o.value);
         syncAll();
         run();
-        if (isAll) toggle(p, false); // 揀 All 就收埋；多選嘅時候選單保持打開
+        if (isAll) closePanel();
       });
-      menu.appendChild(b);
+      pane.appendChild(b);
     });
-    sync();
-
-    const tap = (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      const open = !menu.classList.contains("is-open");
-      closeAll(p);
-      if (input && document.activeElement === input) input.blur();
-      toggle(p, open);
-    };
-    btn.addEventListener("click", tap);
-    btn.addEventListener("keydown", (e) => {
-      if (e.key === "Enter" || e.key === " ") tap(e);
+    syncers.push(() => {
+      Array.from(pane.children).forEach((b) => {
+        const v = b.getAttribute("data-value");
+        const on = v === "All" ? set.size === 0 : set.has(v);
+        b.classList.toggle("is-active", on);
+        b.setAttribute("aria-selected", on ? "true" : "false");
+        const ck = b.querySelector(".flt-check");
+        if (ck) ck.classList.toggle("is-on", on);
+      });
     });
   });
-  renderChips();
+  Object.keys(panes).forEach((k, i) => panes[k].classList.toggle("is-hidden", i > 0));
+  syncAll();
 
   document.addEventListener("click", (e) => {
-    if (!form.contains(e.target)) closeAll();
+    if (!seg.contains(e.target)) closePanel();
   });
   document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape") closeAll();
+    if (e.key === "Escape") closePanel();
   });
 });
 
