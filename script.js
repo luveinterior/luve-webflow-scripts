@@ -4608,6 +4608,9 @@ document.addEventListener("DOMContentLoaded", function () {
   const selectsWrap = form.querySelector(".flt-selects");
   const phone = window.matchMedia("(max-width: 767px)");
   const items = Array.from(document.querySelectorAll(".project-card-item"));
+  // Placeholder（Designer 入面改咗就用 Designer 嗰個；仲係舊預設先換）
+  if (form.querySelector("#search-input") && /^search projects/i.test(form.querySelector("#search-input").placeholder || ""))
+    form.querySelector("#search-input").placeholder = "Find a home by name";
 
   // 撳 Enter 唔好提交表格（呢個 form 只係用嚟 filter）
   form.addEventListener("submit", (e) => {
@@ -4678,7 +4681,12 @@ document.addEventListener("DOMContentLoaded", function () {
     }
     const isSize = sel.id === "size-select";
     const attr = isSize ? "data-size" : "data-category";
-    const allText = isSize ? "All sizes" : "All styles";
+    const allText = "All"; // 掣上面已經有「Size / Style」字，所以只寫 All
+    // 特別 case：唔喺選單出現嘅風格（project 照樣喺 All 入面見到）
+    const HIDE = ["AI-generated Public Art"];
+    Array.from(sel.options).forEach((o) => {
+      if (HIDE.indexOf(o.value) > -1 && sel.value !== o.value) o.remove();
+    });
     btn.removeAttribute("href");
     btn.setAttribute("role", "button");
     btn.setAttribute("tabindex", "0");
@@ -4686,6 +4694,7 @@ document.addEventListener("DOMContentLoaded", function () {
     const sync = () => {
       const o = sel.options[sel.selectedIndex];
       if (val) val.textContent = !o || o.value === "All" ? allText : o.textContent;
+      btn.classList.toggle("is-set", !!o && o.value !== "All");
       Array.from(menu.children).forEach((b) => {
         const on = b.getAttribute("data-value") === sel.value;
         b.classList.toggle("is-active", on);
