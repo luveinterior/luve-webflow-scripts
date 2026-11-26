@@ -4463,6 +4463,7 @@ document.addEventListener("DOMContentLoaded", function () {
   // 圖由上下向中間打開（clip-path），成張卡同時輕輕升上嚟，
   // 文字只係慢少少淡入，同一個節奏，唔再逐行分開出。
   // 用 ScrollTrigger.batch：同一行一齊入畫面嘅卡，左至右相隔 0.12 秒。
+  let revealTriggers = [];
   if (items.length > 0) {
     items.forEach((item) => {
       const wrap = item.querySelector(CONFIG.imgWrapClass);
@@ -4473,7 +4474,7 @@ document.addEventListener("DOMContentLoaded", function () {
       if (wrap) gsap.set(wrap, { clipPath: "inset(8% 0% 8% 0%)" });
       if (info.length) gsap.set(info, { opacity: 0, y: 12 });
     });
-    ScrollTrigger.batch(items, {
+    revealTriggers = ScrollTrigger.batch(items, {
       start: "top 92%",
       once: true,
       onEnter: (batch) => {
@@ -4553,7 +4554,21 @@ document.addEventListener("DOMContentLoaded", function () {
     const my = ++filterGen;
     const apply = () => {
       if (my !== filterGen) return;
+      // 有時閃多一下嘅原因：未捲到過嘅卡仲掛住「入畫先出」嘅 reveal（ScrollTrigger.batch）。
+      // 篩選後佢哋走入畫面，refresh 會觸發嗰個 reveal，同下面嘅淡入撞埋 →
+      // 張卡先出咗少少、再被打返 0 → 閃一下。篩選一開始就取消晒呢啲 reveal，
+      // 之後所有卡只由篩選動畫負責。
+      if (revealTriggers.length) {
+        revealTriggers.forEach((st) => st.kill());
+        revealTriggers = [];
+      }
       gsap.killTweensOf(items);
+      items.forEach((it) => {
+        const w = it.querySelector(CONFIG.imgWrapClass);
+        if (w) gsap.killTweensOf(w);
+        const inf = it.querySelectorAll(INFO);
+        if (inf.length) gsap.killTweensOf(inf);
+      });
       hide.forEach((it) => (it.style.display = "none"));
       show.forEach((it) => {
         it.style.display = "block";
