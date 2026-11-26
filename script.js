@@ -851,8 +851,9 @@ if (window.__luveSameLogo) window.__luveSameLogo();
 //          label、.enq-input 輸入框、右上角 .field-error-msg（*This field is required）
 //          同瀏覽器嘅「Please fill out this field.」提示。
 //       4. 密碼喺背景送出（fetch POST /.wf_auth），錯就唔使成頁重新載入：
-//          輸入框右上角出「*Incorrect password」，再打字就收埋。唔限次數、唔鎖。
-//          密碼啱就用 Webflow 原本嘅表單 POST 送出，由 Webflow 轉頁。
+//          輸入框右上角淡入「*Incorrect password」，再打字就淡出。唔限次數、唔鎖。
+//          密碼啱就用網站轉頁（Section 00，同 Home → Projects 一樣）入去，冇 slogan loader。
+//       5. 密碼欄撳 Enter = Submit；右邊眼仔可以顯示 / 收埋密碼。
 //       其他頁面完全唔受影響（冇 form.w-password-page 就即刻 return）。
 // =====================================================
 (function initPasswordPage() {
