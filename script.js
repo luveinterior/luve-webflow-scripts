@@ -4592,6 +4592,159 @@ document.addEventListener("DOMContentLoaded", function () {
 });
 
 // =====================================================
+// 23b. Projects Page — 半透玻璃 Search + Size / Style 選擇器
+// 結構同樣式全部喺 Designer（flt-search / flt-select / flt-btn / flt-menu / flt-opt…）
+// 呢度只負責：
+//   1. Search：撳落去先變長（.is-open，CSS transition 做 easing）；
+//      電話版打開時 Size / Style 暫時收埋（.flt-selects.is-collapsed）
+//   2. Size / Style：用隱藏咗嘅原生 <select> 做資料來源，
+//      生成玻璃選單（每項顯示有幾多個 project），揀完同步返 <select> → 原本 filter 照跑
+// =====================================================
+document.addEventListener("DOMContentLoaded", function () {
+  const form = document.querySelector(".filter-group");
+  if (!form || !form.querySelector(".flt-select")) return;
+  const search = form.querySelector('[data-flt="search"]');
+  const input = search && search.querySelector("input");
+  const selectsWrap = form.querySelector(".flt-selects");
+  const phone = window.matchMedia("(max-width: 767px)");
+  const items = Array.from(document.querySelectorAll(".project-card-item"));
+
+  // 撳 Enter 唔好提交表格（呢個 form 只係用嚟 filter）
+  form.addEventListener("submit", (e) => {
+    e.preventDefault();
+    if (input) input.blur();
+  });
+
+  // ── Search：focus 先展開 ──
+  const hasText = () => !!(input && input.value.trim());
+  const setSearch = (focused) => {
+    if (!search) return;
+    const open = focused || (!phone.matches && hasText());
+    search.classList.toggle("is-open", open);
+    search.classList.toggle("has-value", hasText());
+    if (selectsWrap) selectsWrap.classList.toggle("is-collapsed", open && phone.matches);
+  };
+  if (search && input) {
+    search.addEventListener("click", () => {
+      if (document.activeElement !== input) input.focus();
+    });
+    input.addEventListener("focus", () => {
+      closeAll();
+      setSearch(true);
+    });
+    input.addEventListener("blur", () => {
+      setTimeout(() => {
+        if (document.activeElement !== input) setSearch(false);
+      }, 80);
+    });
+    input.addEventListener("input", () => search.classList.toggle("has-value", hasText()));
+    input.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") {
+        input.value = "";
+        input.dispatchEvent(new Event("input", { bubbles: true }));
+        input.blur();
+      }
+    });
+    setSearch(false);
+  }
+
+  // ── Size / Style 玻璃選單 ──
+  const pickers = Array.from(form.querySelectorAll(".flt-select"));
+  function toggle(p, open) {
+    const btn = p.querySelector(".flt-btn");
+    const menu = p.querySelector(".flt-menu");
+    const chev = p.querySelector(".flt-chev");
+    if (menu) menu.classList.toggle("is-open", open);
+    if (btn) {
+      btn.classList.toggle("is-open", open);
+      btn.setAttribute("aria-expanded", open ? "true" : "false");
+    }
+    if (chev) chev.classList.toggle("is-open", open);
+  }
+  function closeAll(except) {
+    pickers.forEach((p) => {
+      if (p !== except) toggle(p, false);
+    });
+  }
+
+  pickers.forEach((p) => {
+    const sel = document.getElementById(p.getAttribute("data-flt-target") || "");
+    const btn = p.querySelector(".flt-btn");
+    const menu = p.querySelector(".flt-menu");
+    const val = p.querySelector(".flt-value");
+    if (!sel || !btn || !menu) {
+      p.style.display = "none";
+      return;
+    }
+    const isSize = sel.id === "size-select";
+    const attr = isSize ? "data-size" : "data-category";
+    const allText = isSize ? "All sizes" : "All styles";
+    btn.removeAttribute("href");
+    btn.setAttribute("role", "button");
+    btn.setAttribute("tabindex", "0");
+
+    const sync = () => {
+      const o = sel.options[sel.selectedIndex];
+      if (val) val.textContent = !o || o.value === "All" ? allText : o.textContent;
+      Array.from(menu.children).forEach((b) => {
+        const on = b.getAttribute("data-value") === sel.value;
+        b.classList.toggle("is-active", on);
+        b.setAttribute("aria-selected", on ? "true" : "false");
+      });
+    };
+    menu.innerHTML = "";
+    Array.from(sel.options).forEach((o) => {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "flt-opt";
+      b.setAttribute("role", "option");
+      b.setAttribute("data-value", o.value);
+      const n =
+        o.value === "All"
+          ? items.length
+          : items.filter((it) => (it.getAttribute(attr) || "").trim() === o.value).length;
+      const t = document.createElement("span");
+      t.textContent = o.value === "All" ? allText : o.textContent;
+      const c = document.createElement("span");
+      c.className = "flt-count";
+      c.textContent = String(n);
+      b.appendChild(t);
+      b.appendChild(c);
+      b.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        sel.value = o.value;
+        sel.dispatchEvent(new Event("change", { bubbles: true }));
+        sync();
+        toggle(p, false);
+      });
+      menu.appendChild(b);
+    });
+    sync();
+
+    const tap = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const open = !menu.classList.contains("is-open");
+      closeAll(p);
+      if (input && document.activeElement === input) input.blur();
+      toggle(p, open);
+    };
+    btn.addEventListener("click", tap);
+    btn.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") tap(e);
+    });
+  });
+
+  document.addEventListener("click", (e) => {
+    if (!form.contains(e.target)) closeAll();
+  });
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") closeAll();
+  });
+});
+
+// =====================================================
 // =====================================================
 // 24. Featured Projects — Reveal & Hover Effects
 // 功能：首頁 Featured Projects 入場動畫 + Hover 互動
