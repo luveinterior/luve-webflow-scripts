@@ -1,0 +1,3196 @@
+/* =============================================================================
+   LUVÉ Furniture — shop.css
+   Page-level CSS for /furniture and the Furniture template page only.
+   Every selector is prefixed .shop- / [data-shop-*], so no other page is affected.
+
+   Layout + motion follow willettspace.com/catalogue.
+   Typography + colour follow the LUVÉ Webflow variables.
+
+   TABLE OF CONTENTS
+     00. Tokens
+     01. Base / utilities
+     02. Hero + toolbar (view switch, list button)
+     03. Default view (sticky side columns, active row)
+     04. Grid view
+     05. Index view (row wipe)
+     06. Spec table, swatches, buttons
+     07. Product page (gallery, info, options, technical drawings, more)
+     08. Enquiry drawer + floating list pill
+     09. Tablet  (≤ 991px)
+     10. Mobile  (≤ 767px)
+   ============================================================================= */
+
+/* 00. Tokens ---------------------------------------------------------------- */
+.body-shop {
+  --shop-ink: var(--brand-color-dark, #795e49);
+  --shop-light: var(--brand-color-light, #f0e8dd);
+  --shop-mid: var(--brand-color-middle, #cfbea6);
+  --shop-bg: #f4ebe2;
+  --shop-panel: #f0e8dd;
+  --shop-photo: #e4e0da; /* studio backdrop of the catalogue photos */
+  --shop-line: rgba(121, 94, 73, 0.35);
+  --shop-muted: rgba(121, 94, 73, 0.6);
+
+  --shop-display: var(
+    --_typography---display-font-family,
+    "Bauer Bodoni",
+    Georgia,
+    serif
+  );
+  --shop-text: var(
+    --_typography---text-main-font-family,
+    "Helvetica Neue",
+    Arial,
+    sans-serif
+  );
+
+  --shop-gutter: 2.5rem;
+  --shop-gap: 1.25rem;
+  --shop-sticky-top: 8.5rem;
+  --shop-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --shop-fade: 0.3s ease;
+
+  background-color: var(--shop-bg);
+}
+
+/* 01. Base / utilities ------------------------------------------------------ */
+.shop-main {
+  color: var(--shop-ink);
+  font-family: var(--shop-text);
+  padding: 0 var(--shop-gutter) 10rem;
+}
+.shop-main *,
+.shop-drawer * {
+  box-sizing: border-box;
+}
+/* Neutralise site-wide tag styles that don't suit this page
+   (Webflow: h1 { position: relative; top: 548px }, p { height: 50%; font-size: 1.25rem },
+   label { font-weight: bold; margin-bottom: 5px }).
+   :where() keeps these at tag-level specificity so every .shop- class still wins. */
+:where(.shop-main, .shop-drawer) h1,
+:where(.shop-main, .shop-drawer) h2,
+:where(.shop-main, .shop-drawer) h3,
+:where(.shop-main, .shop-drawer) p {
+  position: static;
+  top: auto;
+  height: auto;
+  font-size: inherit;
+  line-height: inherit;
+  margin-top: 0;
+  margin-bottom: 0;
+}
+/* Webflow mobile breakpoint: img { position: absolute; padding-bottom: .5rem } */
+:where(.shop-main, .shop-drawer) img {
+  position: relative;
+  padding-bottom: 0;
+}
+:where(.shop-main, .shop-drawer) label {
+  margin-bottom: 0;
+  font-weight: inherit;
+}
+.shop-sr {
+  position: absolute !important;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+.shop-main a,
+.shop-drawer a {
+  color: inherit;
+  text-decoration: none;
+}
+:where(.shop-main, .shop-drawer) button {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: 0;
+  padding: 0;
+}
+
+/* Small uppercase label (same recipe as .luve-more-label / btn-text) */
+.shop-back,
+.shop-product__crumb,
+.shop-btn,
+.shop-drawer__close,
+.shop-drawer__count,
+.shop-list-pill {
+  font-family: var(--shop-text);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.2;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+/* 02. Hero + toolbar -------------------------------------------------------- */
+.shop-hero {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 2rem;
+  padding: 15rem 0 6rem;
+}
+.shop-hero__heading {
+  margin: 0;
+  font-family: var(--shop-display);
+  font-size: var(--_size---size-8rem, clamp(4.5rem, 3.5rem + 5vw, 9.5rem));
+  font-weight: 400;
+  line-height: 0.95;
+  letter-spacing: -0.03em;
+  color: var(--shop-ink);
+  text-transform: none;
+}
+
+.shop-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 2.5rem;
+  padding-bottom: 0.75rem;
+}
+.shop-views {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+/* "view:" — same typography as .shop-rule-title (Willett: bold "view:") */
+.shop-views__label {
+  margin-right: 0.35rem;
+  font-family: var(--shop-text);
+  font-size: 1.25rem;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+  text-transform: none;
+}
+.shop-view-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px;
+  opacity: 0.35;
+  transition: opacity var(--shop-fade);
+}
+.shop-view-btn:hover,
+.shop-view-btn[aria-pressed="true"] {
+  opacity: 1;
+}
+.shop-ico {
+  display: flex;
+  gap: 2px;
+  width: 20px;
+  height: 16px;
+}
+.shop-ico i {
+  flex: 1;
+  background: var(--shop-ink);
+}
+.shop-ico--default i + i {
+  display: none;
+}
+.shop-ico--index {
+  flex-direction: column;
+  gap: 2px;
+}
+.shop-ico--index i {
+  flex: 0 0 4px;
+}
+/* Panels (default/grid list vs index list) */
+.shop-panel[hidden] {
+  display: none !important;
+}
+/* Intro: list fades in once the page loader has gone (shop.js adds .is-ready).
+   View switch (Willett, measured): fade out ≈ 250ms → swap layout → fade in ≈ 300ms. */
+.shop-catalogue {
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+.shop-catalogue.is-ready {
+  opacity: 1;
+}
+.shop-catalogue.is-ready.is-switching {
+  opacity: 0;
+  transition-duration: 0.25s;
+}
+
+/* 03. Default view ---------------------------------------------------------- */
+.shop-items {
+  display: flex;
+  flex-direction: column;
+  gap: var(--shop-gap);
+}
+.shop-item__row {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  column-gap: var(--shop-gap);
+  position: relative;
+}
+.shop-item__head {
+  grid-column: 1 / 4;
+  grid-row: 1;
+  align-self: start;
+  position: sticky;
+  top: var(--shop-sticky-top);
+  display: flex;
+  flex-direction: column;
+}
+/* Name + price side by side, on one baseline (Willett) */
+.shop-item__line {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+}
+.shop-item__specs {
+  grid-column: 10 / 13;
+  grid-row: 1;
+  align-self: start;
+  position: sticky;
+  top: var(--shop-sticky-top);
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+.shop-item__media {
+  grid-column: 4 / 10;
+  grid-row: 1;
+  display: flex;
+  justify-content: center;
+  position: relative;
+}
+
+/* Only the row nearest the viewport centre shows its side columns */
+[data-view="default"] .shop-item__head,
+[data-view="default"] .shop-item__specs {
+  opacity: 0;
+  transition: opacity var(--shop-fade);
+}
+[data-view="default"] .shop-item.is-active .shop-item__head,
+[data-view="default"] .shop-item.is-active .shop-item__specs {
+  opacity: 1;
+}
+
+/* Active row: a soft full-width tint fades in behind the whole row.
+   Rows carry their own vertical padding (instead of a gap), so the content
+   has breathing room inside the tint and neighbouring tints never touch. */
+.shop-item {
+  position: relative;
+}
+.shop-item__row {
+  z-index: 1;
+}
+[data-view="default"] .shop-items {
+  gap: 0;
+}
+[data-view="default"] .shop-item {
+  padding: var(--shop-row-pad, 2rem) 0;
+}
+[data-view="default"] .shop-item::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: calc(var(--shop-gutter) * -1);
+  right: calc(var(--shop-gutter) * -1);
+  background: linear-gradient(
+    90deg,
+    rgba(121, 94, 73, 0.075),
+    rgba(121, 94, 73, 0.04) 50%,
+    rgba(121, 94, 73, 0.075)
+  );
+  opacity: 0;
+  transition: opacity 0.6s ease;
+  pointer-events: none;
+}
+[data-view="default"] .shop-item.is-active::before {
+  opacity: 1;
+}
+
+.shop-item__no {
+  display: block;
+  margin-bottom: 0.35rem;
+  font-family: var(--shop-text);
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  color: var(--shop-muted);
+}
+.shop-item__name {
+  margin: 0;
+  font-family: var(--shop-display);
+  font-size: var(--_size---size-2rem, 1.85rem);
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: -0.04em;
+  color: var(--shop-ink);
+}
+.shop-item__price {
+  flex-shrink: 0;
+  font-family: var(--shop-text);
+  font-size: var(--_typography---text-main-font-size, 1rem);
+  font-weight: 500;
+  line-height: 1.2;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.shop-media {
+  position: relative;
+  width: 75%;
+  aspect-ratio: 4 / 5;
+  overflow: hidden;
+  background: var(--shop-photo);
+}
+.shop-media__img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.shop-media__img--hover {
+  opacity: 0;
+  transition: opacity var(--shop-fade);
+}
+@media (hover: hover) {
+  .shop-item__media:hover .shop-media__img--hover {
+    opacity: 1;
+  }
+}
+.shop-item__overlay {
+  display: none;
+}
+
+/* 04. Grid view ------------------------------------------------------------- */
+[data-view="grid"] .shop-items {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1.5rem var(--shop-gap);
+}
+[data-view="grid"] .shop-item__row {
+  display: block;
+}
+[data-view="grid"] .shop-item__head,
+[data-view="grid"] .shop-item__specs {
+  display: none;
+}
+[data-view="grid"] .shop-media {
+  width: 100%;
+}
+[data-view="grid"] .shop-item__overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  /* Bottom-left rather than centred (Willett) so the 100px VIEW cursor never covers it */
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-start;
+  padding: 1.25rem 1.5rem;
+  font-family: var(--shop-display);
+  font-size: var(--_size---size-3rem, 2.6rem);
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.04em;
+  text-align: left;
+  color: var(--shop-ink);
+  mix-blend-mode: multiply;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.25s ease;
+}
+@media (hover: hover) {
+  [data-view="grid"] .shop-item__media:hover .shop-item__overlay {
+    opacity: 1;
+  }
+}
+
+/* 05. Index view ------------------------------------------------------------ */
+.shop-index {
+  font-family: var(--shop-text);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.3;
+}
+.shop-index__head,
+.shop-row__link {
+  display: grid;
+  grid-template-columns: repeat(24, minmax(0, 1fr));
+  column-gap: var(--shop-gap);
+}
+.shop-index__head {
+  padding-bottom: 0.75rem;
+  color: var(--shop-muted);
+  text-transform: lowercase;
+}
+.shop-index__head > :nth-child(1),
+.shop-row__img {
+  grid-column: 1 / 4;
+}
+.shop-index__head > :nth-child(2),
+.shop-row__no {
+  grid-column: 4 / 6;
+}
+.shop-index__head > :nth-child(3),
+.shop-row__name {
+  grid-column: 6 / 11;
+}
+.shop-index__head > :nth-child(4),
+.shop-row__size {
+  grid-column: 11 / 16;
+}
+.shop-index__head > :nth-child(5),
+.shop-row__material {
+  grid-column: 16 / 22;
+}
+.shop-index__head > :nth-child(6),
+.shop-row__price {
+  grid-column: 22 / 25;
+}
+
+.shop-row {
+  position: relative;
+  overflow: hidden;
+  margin: 0 calc(var(--shop-gutter) * -1);
+  padding: 0 var(--shop-gutter);
+}
+.shop-row::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: var(--shop-gutter);
+  right: var(--shop-gutter);
+  height: 1px;
+  background: var(--shop-ink);
+  z-index: 1;
+}
+.shop-row__fill {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background: var(--shop-ink);
+  transform: translateY(-101%);
+  will-change: transform;
+}
+.shop-row__link {
+  position: relative;
+  z-index: 1;
+  padding: 0.75rem 0;
+  transition: color 0.4s ease;
+}
+.shop-row.is-hover .shop-row__link {
+  color: var(--shop-light);
+}
+.shop-row__img {
+  width: 95px;
+  max-width: 100%;
+  aspect-ratio: 4 / 5;
+  overflow: hidden;
+  background: var(--shop-photo);
+}
+.shop-row__img img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.shop-row__name {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+.shop-row__type {
+  font-weight: 400;
+  opacity: 0.75;
+}
+.shop-row__material {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-weight: 400;
+  max-width: 22rem;
+}
+.shop-row__size {
+  font-weight: 400;
+}
+
+/* 06. Spec table, swatches, buttons ---------------------------------------- */
+.shop-spec {
+  margin: 0;
+  border-top: 1.5px solid var(--shop-ink);
+  padding-top: 2px;
+  font-family: var(--shop-text);
+  font-size: 13px;
+  line-height: 1.3;
+}
+.shop-spec__row {
+  display: grid;
+  grid-template-columns: 2fr 4fr;
+  gap: 0.5rem;
+  padding: 0.45rem 0;
+  border-bottom: 1px solid var(--shop-line);
+}
+.shop-spec dt {
+  font-weight: 500;
+}
+.shop-spec dd {
+  margin: 0;
+  font-weight: 400;
+}
+/* Upholstery / Finish: one option per line, swatch(es) in front.
+   Max 3 options shown here; "+N more" + the "Custom …" line follow. */
+.shop-opts,
+.shop-opts__list {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.shop-opt {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+.shop-opts__list > .shop-opt:nth-child(n + 4) {
+  display: none;
+}
+.shop-opt--more {
+  padding-left: 22px;
+  color: var(--shop-muted);
+}
+.shop-opt--custom {
+  color: var(--shop-muted);
+}
+.shop-swatches {
+  display: flex;
+  flex-shrink: 0;
+  gap: 3px;
+  padding-top: 1px;
+}
+.shop-swatch {
+  position: relative;
+  display: block;
+  flex-shrink: 0;
+  width: 14px;
+  height: 14px;
+  overflow: hidden;
+  outline: 1px solid rgba(121, 94, 73, 0.2);
+}
+.shop-swatch img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* Enlarged 1:1 swatch that fades in above the cursor (shop.js S9) */
+.shop-swatch-preview {
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 99998; /* LUVÉ .cursor is 99999 */
+  width: 150px;
+  padding: 6px 6px 0;
+  background: var(--shop-panel);
+  box-shadow: 0 10px 30px rgba(60, 40, 25, 0.18);
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+}
+.shop-swatch-preview img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  object-fit: cover;
+}
+.shop-swatch-preview span {
+  display: block;
+  padding: 6px 0 7px;
+  font-family: var(--shop-text);
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.25;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--shop-ink);
+}
+
+/* Pill buttons — same recipe as the GET IN TOUCH buttons (NEXT / BACK / SUBMIT):
+   999px radius, 1px dark border, 12px 32px, 14px uppercase. Hover motion (dot +
+   text slide, colour sweep) is shop.js S11, copied from the enquiry component. */
+.shop-btn,
+.shop-list-pill {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: auto;
+  max-width: max-content;
+  min-height: 42px;
+  padding: 12px 32px;
+  border: 1px solid var(--shop-ink) !important;
+  border-radius: 999px;
+  overflow: hidden;
+  text-align: center;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.shop-btn--dark,
+.shop-list-pill {
+  background-color: var(--shop-ink);
+  color: var(--shop-light) !important;
+}
+.shop-btn--line {
+  background-color: var(--shop-light);
+  color: var(--shop-ink) !important;
+}
+/* No-JS / before S11 binds: plain colour hover */
+.shop-btn--dark:not([data-shop-btn-bound]):hover,
+.shop-list-pill:not([data-shop-btn-bound]):hover {
+  background-color: var(--shop-light);
+  color: var(--shop-ink) !important;
+}
+.shop-btn--line:not([data-shop-btn-bound]):hover {
+  background-color: var(--shop-ink);
+  color: var(--shop-light) !important;
+}
+.shop-btn [data-shop-btn-text],
+.shop-list-pill [data-shop-btn-text] {
+  position: relative;
+  z-index: 2;
+  display: inline-block;
+  color: inherit;
+}
+.shop-btn .btn-arrow,
+.shop-list-pill .btn-arrow {
+  position: absolute !important;
+  top: 50% !important;
+  left: 20px !important;
+  right: auto !important;
+  bottom: auto !important;
+  z-index: 1;
+  display: block !important;
+  width: 10px !important;
+  height: 10px !important;
+  margin: -5px 0 0 !important;
+  padding: 0 !important;
+  border: 1px solid currentColor;
+  border-radius: 50% !important;
+  background: transparent;
+  opacity: 0;
+  transform: translateX(-9px) scale(0.65);
+  pointer-events: none !important;
+}
+.shop-btn.is-done {
+  background-color: #cfbea6 !important;
+  color: var(--shop-ink) !important;
+}
+.shop-btn.is-done [data-shop-btn-text] {
+  color: var(--shop-ink) !important;
+}
+@media screen and (max-width: 991px) {
+  .shop-btn,
+  .shop-list-pill {
+    min-height: 0;
+    padding: 8px 18px;
+  }
+}
+
+/* 07. Product page ---------------------------------------------------------- */
+.shop-main--product {
+  padding-top: 9.5rem;
+}
+.shop-product__top {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+.shop-back {
+  position: relative;
+}
+.shop-product__crumb {
+  color: var(--shop-muted);
+}
+
+/* Gallery — endless marquee (Willett: Embla + AutoScroll, ≈ 27px/s, no gaps).
+   shop.js clones the slides and moves the track with translate3d. */
+.shop-gallery {
+  position: relative;
+  overflow: hidden;
+  margin: 0 calc(var(--shop-gutter) * -1);
+  height: 70vh;
+  min-height: 400px;
+  max-height: 860px;
+  touch-action: pan-y;
+  cursor: grab;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.shop-gallery.is-dragging {
+  cursor: grabbing;
+}
+.shop-gallery__track {
+  display: flex;
+  width: max-content;
+  height: 100%;
+  will-change: transform;
+}
+.shop-gallery__slide {
+  position: relative;
+  flex: 0 0 auto;
+  height: 100%;
+  margin-right: 12px; /* 相與相之間嘅間距（shop.js 會計埋） */
+  background: var(--shop-photo);
+}
+@media (max-width: 767px) {
+  .shop-gallery__slide {
+    margin-right: 8px;
+  }
+}
+.shop-gallery__slide img {
+  display: block;
+  height: 100%;
+  width: auto;
+  max-width: none;
+  pointer-events: none;
+}
+
+/* Info: name + price on one line (Willett), short description, then "Details" */
+.shop-product__info {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  column-gap: var(--shop-gap);
+  margin-top: 4rem;
+  align-items: start;
+}
+.shop-product__main {
+  grid-column: 1 / 9;
+  padding-right: 3rem;
+}
+.shop-product__head {
+  display: grid;
+  grid-template-columns: repeat(8, minmax(0, 1fr));
+  column-gap: var(--shop-gap);
+  align-items: baseline;
+}
+.shop-product__name,
+.shop-product__price {
+  margin: 0;
+  font-family: var(--shop-text);
+  font-size: var(--_size---size-1-5rem, 1.5rem);
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+  color: var(--shop-ink);
+  text-transform: none;
+}
+/* Trial: name uses the catalogue .shop-item__name typography (Bauer Bodoni 700) */
+.shop-product__name {
+  grid-column: 1 / 6;
+  font-family: var(--shop-display);
+  font-size: var(--_size---size-2rem, 1.85rem);
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: -0.04em;
+}
+.shop-product__price {
+  grid-column: 6 / 9;
+}
+.shop-product__tagline {
+  max-width: 46rem;
+  text-wrap: pretty;
+  margin: 2rem 0 0;
+  font-family: var(--shop-text);
+  font-size: var(--_size---size-1-5rem, 1.5rem);
+  font-weight: 600;
+  line-height: 1.3;
+  letter-spacing: -0.01em;
+}
+.shop-product__story {
+  max-width: 40rem;
+  margin: 0;
+  font-family: var(--shop-text);
+  font-size: var(--_typography---text-main-font-size, 1rem);
+  font-weight: 400;
+  line-height: 1.45;
+}
+
+/* Rule title — Willett "More Products": heavy rule + bold label */
+.shop-rule-title {
+  display: block;
+  width: 100%;
+  margin: 0;
+  padding: 0.6rem 0 0;
+  border-top: 2px solid var(--shop-ink);
+  font-family: var(--shop-text);
+  font-size: 1.25rem;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+  text-align: left;
+  text-transform: none;
+  color: var(--shop-ink);
+}
+
+/* Details toggle */
+.shop-details {
+  margin-top: 3rem;
+}
+.shop-details__btn {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+}
+.shop-details__icon {
+  position: relative;
+  width: 14px;
+  height: 14px;
+}
+.shop-details__icon::before,
+.shop-details__icon::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 50%;
+  width: 100%;
+  height: 2px;
+  margin-top: -1px;
+  background: currentColor;
+  transition: transform 0.45s var(--shop-ease);
+}
+.shop-details__icon::after {
+  transform: rotate(90deg);
+}
+.shop-details.is-open .shop-details__icon::after {
+  transform: rotate(0deg);
+}
+.shop-details__panel {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.6s var(--shop-ease);
+}
+.shop-details.is-open .shop-details__panel {
+  grid-template-rows: 1fr;
+}
+.shop-details__inner {
+  min-height: 0;
+  overflow: hidden;
+}
+.shop-details__inner > :first-child {
+  padding-top: 1.25rem;
+}
+.shop-product__buy {
+  grid-column: 9 / 13;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+.shop-options {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+.shop-options__fields {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+.shop-select {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-family: var(--shop-text);
+  font-size: 13px;
+}
+.shop-select > span {
+  font-weight: 500;
+}
+/* Custom dropdown (shop.js S8): a native <select> can't show images in its
+   open list, so the visible control is a button + listbox; a hidden <select>
+   keeps the chosen value. Every option has its swatch in front. */
+.shop-select__control {
+  position: relative;
+}
+.shop-select__control::after {
+  content: "";
+  position: absolute;
+  right: 14px;
+  top: 20px;
+  width: 7px;
+  height: 7px;
+  border-right: 1px solid var(--shop-ink);
+  border-bottom: 1px solid var(--shop-ink);
+  transform: translateY(-70%) rotate(45deg);
+  transition: transform 0.3s var(--shop-ease);
+  pointer-events: none;
+}
+.shop-select__control.is-open::after {
+  transform: translateY(-20%) rotate(-135deg);
+}
+.shop-select__button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  height: 40px;
+  padding: 0 34px 0 12px !important;
+  border: 1px solid var(--shop-ink) !important;
+  background: transparent;
+  color: var(--shop-ink);
+  font-family: var(--shop-text) !important;
+  font-size: 14px !important;
+  text-align: left;
+  cursor: pointer;
+}
+.shop-select__value {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.shop-select__list {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(100% - 1px);
+  z-index: 20;
+  max-height: 264px;
+  margin: 0;
+  padding: 4px 0;
+  overflow-y: auto;
+  list-style: none;
+  border: 1px solid var(--shop-ink);
+  background: var(--shop-panel);
+  box-shadow: 0 12px 30px rgba(60, 40, 25, 0.12);
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-4px);
+  transition: opacity 0.2s ease, transform 0.25s var(--shop-ease),
+    visibility 0.2s;
+}
+.shop-select__control.is-open .shop-select__list {
+  opacity: 1;
+  visibility: visible;
+  transform: none;
+}
+.shop-select__option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  font-family: var(--shop-text);
+  font-size: 14px;
+  line-height: 1.25;
+  color: var(--shop-ink);
+  cursor: pointer;
+}
+.shop-select__option.is-active {
+  background: rgba(121, 94, 73, 0.08);
+}
+.shop-select__option[aria-selected="true"] {
+  font-weight: 600;
+}
+.shop-select__control .shop-swatch {
+  width: 16px;
+  height: 16px;
+}
+.shop-swatch.is-custom {
+  outline: 1px dashed var(--shop-ink);
+  background: transparent;
+}
+.shop-qty {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-family: var(--shop-text);
+  font-size: 13px;
+}
+.shop-qty__label {
+  font-weight: 500;
+  margin-right: auto;
+}
+.shop-qty__btn {
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--shop-ink) !important;
+  font-size: 16px !important;
+  line-height: 1;
+}
+.shop-qty__input {
+  width: 44px;
+  height: 32px;
+  border: 0;
+  background: transparent;
+  color: var(--shop-ink);
+  font: inherit;
+  font-size: 14px;
+  text-align: center;
+  -moz-appearance: textfield;
+}
+.shop-qty__input::-webkit-outer-spin-button,
+.shop-qty__input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.shop-note {
+  margin: 0;
+  font-family: var(--shop-text);
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--shop-muted);
+}
+
+.shop-tech,
+.shop-more {
+  margin-top: 9rem;
+}
+.shop-tech .shop-rule-title,
+.shop-more .shop-rule-title {
+  margin-bottom: 2rem;
+}
+.shop-tech__grid {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  column-gap: var(--shop-gap);
+  align-items: start;
+}
+.shop-tech__fig {
+  grid-column: span 4;
+  margin: 0;
+  padding: 2rem;
+  background: var(--shop-panel);
+}
+.shop-tech__fig img {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1 / 1;
+  object-fit: contain;
+  mix-blend-mode: multiply;
+}
+.shop-tech__fig figcaption {
+  margin-top: 1rem;
+  font-family: var(--shop-text);
+  font-size: 13px;
+  font-weight: 500;
+}
+.shop-tech__dims {
+  grid-column: 9 / 13;
+}
+
+/* 08. Enquiry drawer + floating pill ---------------------------------------- */
+.shop-drawer {
+  position: fixed;
+  inset: 0;
+  z-index: 20000; /* above nav (10000) + floating pills, below side menu (30000) */
+  visibility: hidden;
+  pointer-events: none;
+}
+.shop-drawer.is-open {
+  visibility: visible;
+  pointer-events: auto;
+}
+/* Open / close motion = the site's GET IN TOUCH panel (shop.js S6, GSAP):
+   panel wipes in from the right with clip-path (1s power4.inOut), backdrop fades;
+   closing wipes back (0.8s) and the backdrop fades out after 0.25s.
+   The CSS transitions below are only the no-GSAP fallback. */
+.shop-drawer__backdrop {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.2) !important;
+  opacity: 0;
+  transition: opacity 0.45s ease-out;
+  cursor: pointer;
+}
+.shop-drawer.is-open .shop-drawer__backdrop {
+  opacity: 1;
+}
+.shop-drawer__panel {
+  position: absolute;
+  top: 0;
+  right: 0;
+  display: flex;
+  flex-direction: column;
+  width: calc(100% / 12 * 5);
+  min-width: 420px;
+  height: 100%;
+  background: var(--shop-panel);
+  color: var(--shop-ink);
+  font-family: var(--shop-text);
+  clip-path: inset(0 0 0 100%);
+  transition: clip-path 1s cubic-bezier(0.76, 0, 0.24, 1);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.shop-drawer.is-open .shop-drawer__panel {
+  clip-path: inset(0 0 0 0%);
+}
+.shop-drawer.has-gsap .shop-drawer__backdrop,
+.shop-drawer.has-gsap .shop-drawer__panel {
+  transition: none;
+}
+.shop-drawer__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 2rem 2rem 0;
+}
+.shop-drawer__close {
+  position: relative;
+  font-size: 15px !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.3px !important;
+  transition: color 0.35s var(--shop-ease);
+}
+.shop-drawer__close::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -3px;
+  height: 1px;
+  background: #b58c67;
+  transform: scaleX(0);
+  transform-origin: right center;
+  transition: transform 0.45s var(--shop-ease);
+}
+.shop-drawer__close:hover {
+  color: #b58c67 !important;
+}
+.shop-drawer__close:hover::after {
+  transform: scaleX(1);
+  transform-origin: left center;
+}
+.shop-drawer__count {
+  color: var(--shop-muted);
+}
+.shop-drawer__title {
+  margin: 2.5rem 2rem 1.5rem;
+  font-family: var(--shop-display);
+  font-size: var(--_size---size-3rem, 2.6rem);
+  font-weight: 400;
+  line-height: 1;
+  letter-spacing: -0.03em;
+  color: var(--shop-ink);
+}
+.shop-drawer__body {
+  flex: 1;
+  padding: 0 2rem 2rem;
+}
+.shop-drawer__empty {
+  margin: 0;
+  font-size: var(--_typography---text-main-font-size, 1rem);
+}
+.shop-drawer.has-items .shop-drawer__empty,
+.shop-drawer:not(.has-items) .shop-lines {
+  display: none;
+}
+.shop-lines {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border-top: 1.5px solid var(--shop-ink);
+}
+.shop-line {
+  display: grid;
+  grid-template-columns: 72px 1fr auto;
+  gap: 1rem;
+  padding: 1rem 0;
+  border-bottom: 1px solid var(--shop-line);
+  font-size: 13px;
+  line-height: 1.35;
+}
+.shop-line__img {
+  width: 72px;
+  aspect-ratio: 4 / 5;
+  object-fit: cover;
+  background: var(--shop-photo);
+  display: block;
+}
+.shop-line__name {
+  font-family: var(--shop-display);
+  font-size: 1.35rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+}
+.shop-line__sku {
+  margin-left: 0.4rem;
+  font-family: var(--shop-text);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--shop-muted);
+  letter-spacing: 0;
+}
+.shop-line__opts {
+  margin: 0.35rem 0 0.6rem;
+  padding: 0;
+  list-style: none;
+}
+.shop-line__qty {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+.shop-line__qty button {
+  width: 24px;
+  height: 24px;
+  border: 1px solid var(--shop-ink) !important;
+  line-height: 1;
+}
+.shop-line__qty span {
+  min-width: 1.5rem;
+  text-align: center;
+}
+.shop-line__remove {
+  align-self: start;
+  font-size: 12px !important;
+  text-decoration: underline !important;
+  text-underline-offset: 3px;
+  opacity: 0.7;
+}
+.shop-line__remove:hover {
+  opacity: 1;
+}
+.shop-enquiry {
+  display: none;
+  margin-top: 2rem;
+}
+.shop-drawer.has-items .shop-enquiry {
+  display: block;
+}
+.shop-enquiry__lead {
+  margin: 0 0 1.25rem;
+  font-size: 14px;
+  line-height: 1.4;
+}
+.shop-enquiry__form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+.shop-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 13px;
+  font-weight: 500;
+}
+.shop-field input,
+.shop-field textarea {
+  width: 100%;
+  padding: 0.45rem 0;
+  border: 0;
+  border-bottom: 1px solid var(--shop-ink);
+  border-radius: 0;
+  background: transparent;
+  color: var(--shop-ink);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 400;
+  resize: vertical;
+}
+.shop-field input:focus,
+.shop-field textarea:focus {
+  border-bottom-width: 2px;
+}
+.shop-enquiry__form .shop-btn {
+  margin-top: 0.5rem;
+}
+.shop-drawer.is-sent .shop-lines,
+.shop-drawer.is-sent .shop-enquiry__lead,
+.shop-drawer.is-sent .shop-enquiry__form,
+.shop-enquiry__done[hidden] {
+  display: none;
+}
+.shop-enquiry__done-title {
+  margin: 0 0 0.5rem;
+  font-family: var(--shop-display);
+  font-size: 1.75rem;
+}
+.shop-drawer__foot {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  justify-content: flex-end;
+  padding: 1.25rem 2rem;
+  background: var(--shop-panel);
+}
+.shop-drawer__foot .shop-btn {
+  width: auto;
+}
+
+/* Bottom-right, just left of the site's back-to-top arrow (.anchor-scroll, 80px,
+   9px from the bottom / 14px from the right) and centred on it vertically. */
+.shop-list-pill {
+  position: fixed;
+  right: 106px;
+  bottom: 28px;
+  z-index: 10001;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(12px);
+  transition: opacity 0.5s var(--shop-ease), transform 0.5s var(--shop-ease),
+    visibility 0.5s;
+}
+body.shop-has-items .shop-list-pill {
+  opacity: 1;
+  visibility: visible;
+  transform: none;
+}
+body.shop-drawer-open .shop-list-pill,
+body.side-menu-open .shop-list-pill {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* 09. Tablet (≤ 991px) ------------------------------------------------------ */
+@media screen and (max-width: 991px) {
+  .body-shop {
+    --shop-gutter: 1.5rem;
+    --shop-sticky-top: 7rem;
+  }
+  .shop-hero {
+    padding-top: 11rem;
+    padding-bottom: 4rem;
+  }
+  .shop-item__head {
+    grid-column: 1 / 5;
+  }
+  .shop-item__media {
+    grid-column: 5 / 10;
+  }
+  .shop-media {
+    width: 90%;
+  }
+  .shop-item__line {
+    flex-wrap: wrap;
+    row-gap: 0.35rem;
+  }
+  [data-view="grid"] .shop-items {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .shop-index__head > :nth-child(4),
+  .shop-row__size {
+    display: none;
+  }
+  .shop-index__head > :nth-child(1),
+  .shop-row__img {
+    grid-column: 1 / 5;
+  }
+  .shop-index__head > :nth-child(2),
+  .shop-row__no {
+    grid-column: 5 / 8;
+  }
+  .shop-index__head > :nth-child(3),
+  .shop-row__name {
+    grid-column: 8 / 15;
+  }
+  .shop-index__head > :nth-child(5),
+  .shop-row__material {
+    grid-column: 15 / 21;
+  }
+  .shop-index__head > :nth-child(6),
+  .shop-row__price {
+    grid-column: 21 / 25;
+  }
+
+  .shop-product__info {
+    row-gap: 3rem;
+  }
+  .shop-product__main {
+    grid-column: 1 / 7;
+    padding-right: 1.5rem;
+  }
+  .shop-product__head {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+  .shop-product__buy {
+    grid-column: 7 / 13;
+  }
+  .shop-tech__fig {
+    grid-column: span 6;
+  }
+  .shop-tech__dims {
+    grid-column: 1 / 13;
+    margin-top: 2rem;
+  }
+  .shop-drawer__panel {
+    width: 70%;
+  }
+}
+
+/* 10. Mobile (≤ 767px) ------------------------------------------------------ */
+@media screen and (max-width: 767px) {
+  .body-shop {
+    --shop-gutter: 1.25rem;
+    --shop-gap: 0.625rem;
+  }
+  .shop-hero {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 3rem;
+    padding-top: 9rem;
+    padding-bottom: 2.5rem;
+  }
+  .shop-toolbar {
+    width: 100%;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+
+  /* Default view: both photos side by side, then title, then specs (always visible) */
+  .shop-items {
+    gap: 4.5rem;
+  }
+  .shop-item__row {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+  .shop-item__media {
+    order: 1;
+  }
+  .shop-item__head {
+    order: 2;
+    position: static;
+    align-self: stretch;
+  }
+  .shop-item__specs {
+    order: 3;
+    position: static;
+    align-self: stretch;
+  }
+  [data-view="default"] .shop-item__head,
+  [data-view="default"] .shop-item__specs {
+    opacity: 1;
+  }
+  [data-view="default"] .shop-item::before {
+    display: none;
+  }
+  [data-view="default"] .shop-items {
+    gap: 4.5rem;
+  }
+  [data-view="default"] .shop-item {
+    padding: 0;
+  }
+  .shop-item__price {
+    text-align: right;
+  }
+  [data-view="default"] .shop-media {
+    width: 100%;
+    aspect-ratio: auto;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--shop-gap);
+    background: none;
+    overflow: visible;
+  }
+  [data-view="default"] .shop-media__img {
+    position: relative;
+    inset: auto;
+    aspect-ratio: 4 / 5;
+    height: auto;
+    opacity: 1;
+    background: var(--shop-photo);
+  }
+
+  /* Grid view: two columns, name under the photo */
+  [data-view="grid"] .shop-items {
+    gap: 2rem var(--shop-gap);
+  }
+  [data-view="grid"] .shop-item__row {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+  }
+  [data-view="grid"] .shop-item__head {
+    display: block;
+    position: static;
+  }
+  [data-view="grid"] .shop-item__line {
+    display: block;
+  }
+  [data-view="grid"] .shop-item__no {
+    display: none;
+  }
+  [data-view="grid"] .shop-item__name {
+    font-size: 1.25rem;
+  }
+  [data-view="grid"] .shop-item__price {
+    padding-top: 0.25rem;
+    text-align: left;
+    font-size: 13px;
+  }
+  [data-view="grid"] .shop-item__overlay {
+    display: none;
+  }
+
+  /* Index view: name left, photo right */
+  .shop-index__head {
+    display: none;
+  }
+  .shop-row__link {
+    display: flex;
+    flex-direction: row-reverse;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+  .shop-row__img {
+    width: 70px;
+    flex-shrink: 0;
+  }
+  .shop-row__no,
+  .shop-row__size,
+  .shop-row__material {
+    display: none;
+  }
+  .shop-row__name {
+    flex: 1;
+  }
+  .shop-row__price {
+    position: absolute;
+    left: 0;
+    bottom: 0.75rem;
+    font-weight: 400;
+  }
+
+  .shop-main--product {
+    padding-top: 7.5rem;
+  }
+  .shop-gallery {
+    height: 56vh;
+    min-height: 320px;
+  }
+  .shop-product__info {
+    display: flex;
+    flex-direction: column;
+    gap: 2.5rem;
+    margin-top: 2.5rem;
+  }
+  .shop-product__main {
+    padding-right: 0;
+  }
+  .shop-product__tagline {
+    margin-top: 1.25rem;
+  }
+  .shop-details {
+    margin-top: 2rem;
+  }
+  .shop-tech__grid {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--shop-gap);
+  }
+  .shop-tech__dims {
+    margin-top: 1rem;
+  }
+  .shop-tech,
+  .shop-more {
+    margin-top: 5rem;
+  }
+
+  .shop-drawer__panel {
+    width: 100%;
+    min-width: 0;
+  }
+  .shop-drawer__head {
+    padding: 1.25rem 1.25rem 0;
+  }
+  .shop-drawer__title {
+    margin: 2rem 1.25rem 1.25rem;
+  }
+  .shop-drawer__body {
+    padding: 0 1.25rem 1.5rem;
+  }
+  .shop-drawer__foot {
+    padding: 1rem 1.25rem;
+  }
+  /* arrow is 48px on mobile, 8px from the bottom / 4px from the right */
+  .shop-list-pill {
+    right: 60px;
+    bottom: 18px;
+    font-size: 11px;
+  }
+}
+
+/* ===========================================================================
+   Webflow CMS output (Collection Lists, bound fields, native form).
+   The prototype renders the same markup without these wrappers; on Webflow the
+   lists add .w-dyn-list / .w-dyn-items wrappers, so they are made layout-neutral.
+   =========================================================================== */
+[data-shop-panel] > .w-dyn-list,
+.shop-index > .w-dyn-list,
+.shop-index__list,
+.shop-opts > .w-dyn-list,
+.shop-gallery > .w-dyn-list {
+  display: contents;
+}
+:where(.shop-main, .shop-drawer) .w-dyn-empty {
+  display: none;
+}
+.shop-row__material .w-dyn-list,
+.shop-row__material .w-dyn-items {
+  display: inline;
+}
+.shop-row__material .w-dyn-item {
+  display: inline;
+}
+.shop-row__material .w-dyn-item + .w-dyn-item::before {
+  content: " / ";
+}
+/* Webflow form defaults (.w-form, .w-input, .w-button, .w-form-done / -fail) */
+.shop-drawer .w-form {
+  margin: 0;
+}
+.shop-field .w-input,
+.shop-field .w-select {
+  height: auto;
+  margin: 0;
+  box-shadow: none;
+}
+.shop-drawer .w-form-done {
+  padding: 0;
+  background: none;
+  text-align: left;
+}
+.shop-drawer .w-form-fail {
+  margin-top: 1rem;
+  padding: 0;
+  background: none;
+  color: #9b3b2a;
+  font-size: 13px;
+}
+.shop-enquiry__form .w-button {
+  border-radius: 0;
+}
+/* Product page "More pieces": Webflow can't nest a Collection List inside the
+   row link, so there is no materials data here — keep the column, hide it */
+.shop-more .shop-index__head > :nth-child(5),
+.shop-more .shop-row__material {
+  visibility: hidden;
+}
+/* The enquiry summary field is filled by shop.js; Webflow's .w-input would show it */
+[data-shop-lines-field] {
+  display: none !important;
+}
+
+/* Enquiry form validation — same look as the site's GET IN TOUCH form */
+.shop-enquiry__form input::placeholder,
+.shop-enquiry__form textarea::placeholder {
+  color: rgba(121, 94, 73, 0.55);
+  opacity: 1;
+}
+.shop-field {
+  position: relative;
+}
+.shop-field .field-error-msg {
+  position: absolute;
+  top: 0;
+  right: 0;
+  max-width: 60%;
+  color: #d9534f;
+  font-weight: 700;
+  line-height: 1.2;
+  text-align: right;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(-5px);
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+.shop-field.has-error .field-error-msg {
+  opacity: 1;
+  transform: translateY(0);
+}
+@media (max-width: 479px) {
+  .shop-field .field-error-msg {
+    font-size: 11px;
+  }
+}
+
+/* 12. Technical Specifications — dimension lines -------------------------- */
+/* Lines run the full extent of the piece (positioned by shop.js S12):
+   thin rule, short end ticks, value centred on a gap in the line. */
+.shop-tech__fig.has-dims {
+  position: relative;
+  padding: 2rem 3.75rem 2rem;
+}
+.shop-tech__fig.has-dims figcaption {
+  margin-top: 3.25rem;
+  text-align: center;
+}
+.shop-tech__dim {
+  position: absolute;
+  color: var(--shop-ink);
+  pointer-events: none;
+}
+.shop-tech__dim--w,
+.shop-tech__dim--d {
+  height: 0;
+  border-top: 1px solid rgba(121, 94, 73, 0.55);
+}
+.shop-tech__dim--h {
+  width: 0;
+  border-left: 1px solid rgba(121, 94, 73, 0.55);
+}
+.shop-tech__dim::before,
+.shop-tech__dim::after {
+  content: "";
+  position: absolute;
+  background: rgba(121, 94, 73, 0.55);
+}
+.shop-tech__dim--w::before,
+.shop-tech__dim--w::after,
+.shop-tech__dim--d::before,
+.shop-tech__dim--d::after {
+  top: -4px;
+  width: 1px;
+  height: 7px;
+}
+.shop-tech__dim--w::before,
+.shop-tech__dim--d::before {
+  left: 0;
+}
+.shop-tech__dim--w::after,
+.shop-tech__dim--d::after {
+  right: 0;
+}
+.shop-tech__dim--h::before,
+.shop-tech__dim--h::after {
+  left: -4px;
+  width: 7px;
+  height: 1px;
+}
+.shop-tech__dim--h::before {
+  top: 0;
+}
+.shop-tech__dim--h::after {
+  bottom: 0;
+}
+.shop-tech__dim-val {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  padding: 0 0.5rem;
+  background: var(--shop-panel);
+  transform: translate(-50%, -50%);
+  font-family: var(--shop-text);
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1;
+  white-space: nowrap;
+}
+.shop-tech__dim--h .shop-tech__dim-val {
+  top: 50%;
+  left: 0;
+  padding: 0.4rem 0;
+}
+
+/* 13. 3D configurator --------------------------------------------------------- */
+.shop-cfg {
+  margin-top: 9rem;
+}
+.shop-cfg .shop-rule-title {
+  margin-bottom: 2rem;
+}
+.shop-cfg__wrap {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  column-gap: var(--shop-gap);
+  align-items: stretch;
+}
+.shop-cfg__stage {
+  grid-column: 1 / 9;
+  position: relative;
+  height: clamp(440px, 72vh, 780px);
+  background: radial-gradient(
+    120% 90% at 50% 40%,
+    #efebe5 0%,
+    var(--shop-photo) 60%,
+    #d9d3cb 100%
+  );
+  overflow: hidden;
+}
+.shop-cfg__stage.is-full {
+  height: 100vh;
+}
+.shop-cfg__stage model-viewer {
+  width: 100%;
+  height: 100%;
+  background: transparent;
+  --poster-color: transparent;
+  outline: none;
+}
+.shop-cfg__progress {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+}
+.shop-cfg__progress span {
+  display: block;
+  height: 100%;
+  width: 0;
+  background: var(--shop-ink);
+  transition: width 0.2s, opacity 0.4s;
+}
+.shop-cfg__progress.is-done span {
+  opacity: 0;
+}
+.shop-cfg__loading {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  margin: 0;
+  font-family: var(--shop-text);
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--shop-muted);
+  pointer-events: none;
+  transition: opacity 0.4s;
+}
+.shop-cfg.is-ready .shop-cfg__loading {
+  opacity: 0;
+}
+.shop-cfg__tools {
+  position: absolute;
+  left: 50%;
+  bottom: 1.5rem;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.shop-cfg__views {
+  display: flex;
+  padding: 4px;
+  border: 1px solid var(--shop-line);
+  border-radius: 999px;
+  background: rgba(244, 235, 226, 0.85);
+  backdrop-filter: blur(6px);
+}
+.shop-cfg__views button,
+.shop-cfg__icon {
+  font-family: var(--shop-text);
+  color: var(--shop-ink);
+  cursor: pointer;
+  transition: background-color 0.3s var(--shop-ease),
+    color 0.3s var(--shop-ease);
+}
+.shop-cfg__views button {
+  padding: 7px 14px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.shop-cfg__icon {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 1px solid var(--shop-line);
+  border-radius: 50%;
+  background: rgba(244, 235, 226, 0.85);
+  font-size: 18px;
+  line-height: 1;
+}
+.shop-cfg__icon svg {
+  width: 18px;
+  height: 18px;
+}
+@media (hover: hover) {
+  .shop-cfg__views button:hover,
+  .shop-cfg__icon:hover {
+    background: rgba(207, 190, 166, 0.5);
+  }
+}
+.shop-cfg__views button[aria-pressed="true"],
+.shop-cfg__icon[aria-pressed="true"] {
+  background: var(--shop-ink);
+  color: var(--shop-light);
+}
+.shop-cfg__hint {
+  position: absolute;
+  right: 1.25rem;
+  bottom: 2.1rem;
+  margin: 0;
+  font-family: var(--shop-text);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  color: var(--shop-muted);
+}
+.shop-cfg__ar {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  padding: 10px 22px;
+  border: 1px solid var(--shop-ink);
+  border-radius: 999px;
+  background: var(--shop-ink);
+  color: var(--shop-light);
+  font-family: var(--shop-text);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.shop-cfg__panel {
+  grid-column: 9 / 13;
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  font-family: var(--shop-text);
+  color: var(--shop-ink);
+}
+.shop-cfg__group-head {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+  margin-bottom: 0.9rem;
+}
+.shop-cfg__step {
+  font-size: 12px;
+  color: var(--shop-muted);
+}
+.shop-cfg__title {
+  margin: 0;
+  font-family: var(--shop-text);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  line-height: 1.2;
+  text-transform: uppercase;
+}
+.shop-cfg__picked {
+  margin-left: auto;
+  font-size: 12px;
+  color: var(--shop-muted);
+  text-align: right;
+}
+.shop-cfg__swatches {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(52px, 1fr));
+  gap: 24px 10px;
+  padding-bottom: 12px;
+}
+.shop-cfg__swatch {
+  position: relative;
+  aspect-ratio: 1;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: var(--shop-panel) center / cover no-repeat;
+  background-origin: border-box;
+  box-shadow: inset 0 0 0 1px rgba(121, 94, 73, 0.18);
+  cursor: pointer;
+  transition: transform 0.35s var(--shop-ease),
+    box-shadow 0.35s var(--shop-ease);
+}
+@media (hover: hover) {
+  .shop-cfg__swatch:hover {
+    transform: scale(1.06);
+  }
+}
+.shop-cfg__swatch[aria-checked="true"] {
+  box-shadow: inset 0 0 0 1px rgba(121, 94, 73, 0.18), 0 0 0 2px var(--shop-bg),
+    0 0 0 3px var(--shop-ink);
+}
+.shop-cfg__swatch.is-loading::after {
+  content: "";
+  position: absolute;
+  inset: -4px;
+  border: 1px solid transparent;
+  border-top-color: var(--shop-ink);
+  border-radius: 50%;
+  animation: shop-cfg-spin 0.8s linear infinite;
+}
+@keyframes shop-cfg-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.shop-cfg__tag {
+  position: absolute;
+  left: 50%;
+  bottom: -15px;
+  transform: translateX(-50%);
+  padding: 2px 7px;
+  line-height: 1.3;
+  pointer-events: none;
+  border-radius: 999px;
+  background: var(--shop-ink);
+  color: var(--shop-light);
+  font-size: 9px;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+.shop-cfg__summary {
+  margin-top: auto;
+  padding: 1.25rem;
+  background: var(--shop-panel);
+}
+.shop-cfg__summary-label {
+  margin: 0;
+  font-size: 12px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--shop-muted);
+}
+.shop-cfg__summary-text {
+  margin: 0.4rem 0 1rem;
+  font-family: var(--shop-text);
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 1.4;
+}
+.shop-cfg__jump {
+  margin-top: 0.75rem;
+}
+
+@media screen and (max-width: 991px) {
+  .shop-cfg__stage {
+    grid-column: 1 / 13;
+    height: 64vh;
+  }
+  .shop-cfg__panel {
+    grid-column: 1 / 13;
+    margin-top: 2rem;
+  }
+  .shop-cfg__hint {
+    display: none;
+  }
+}
+@media screen and (max-width: 767px) {
+  .shop-cfg {
+    margin-top: 5rem;
+  }
+  .shop-cfg__wrap {
+    display: block;
+  }
+  .shop-cfg__stage {
+    height: 62svh;
+    min-height: 380px;
+    margin: 0 calc(-1 * var(--shop-gutter));
+  }
+  .shop-cfg__tools {
+    bottom: 0.75rem;
+    gap: 0.35rem;
+  }
+  .shop-cfg__views button {
+    padding: 6px 9px;
+    font-size: 11px;
+  }
+  .shop-cfg__icon {
+    width: 34px;
+    height: 34px;
+  }
+  .shop-cfg__icon[data-cfg-zoom],
+  .shop-cfg__icon[data-cfg-full] {
+    display: none;
+  }
+  .shop-cfg__ar {
+    top: 0.75rem;
+    right: 0.75rem;
+    padding: 8px 16px;
+    font-size: 12px;
+  }
+  .shop-tech__fig.has-dims {
+    padding: 1.25rem 2.75rem 1.25rem;
+  }
+  .shop-tech__fig.has-dims figcaption {
+    margin-top: 2.5rem;
+  }
+  .shop-tech__dim-val {
+    font-size: 12px;
+  }
+}
+
+/* Enquiry drawer: collection notice above SEND ENQUIRY */
+.shop-enquiry__privacy {
+  margin: 0 0 1rem;
+  font-family: var(--shop-text);
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--shop-muted);
+}
+.shop-enquiry__privacy a {
+  color: var(--shop-ink);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+/* 15. Downloads + dimension note ------------------------------------------- */
+.shop-tech__note {
+  margin: 1rem 0 0;
+  font-family: var(--shop-text);
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--shop-muted);
+}
+.shop-tech__dl dd {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.45rem;
+}
+.shop-tech__dl-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: var(--shop-ink);
+  text-align: left;
+  cursor: pointer;
+}
+.shop-tech__dl-btn svg {
+  width: 13px;
+  height: 13px;
+  flex: none;
+}
+.shop-tech__dl-btn span {
+  text-decoration: underline;
+  text-decoration-color: rgba(121, 94, 73, 0.35);
+  text-underline-offset: 3px;
+  transition: text-decoration-color 0.3s;
+}
+@media (hover: hover) {
+  .shop-tech__dl-btn:not(.is-off):hover span {
+    text-decoration-color: currentColor;
+  }
+}
+.shop-tech__dl-btn.is-off {
+  color: var(--shop-muted);
+  cursor: default;
+}
+.shop-tech__dl-btn.is-busy,
+.shop-cfg__dl.is-busy {
+  opacity: 0.45;
+  cursor: progress;
+}
+
+.shop-cfg__downloads {
+  position: absolute;
+  left: 1.25rem;
+  bottom: 1.6rem;
+  display: flex;
+  gap: 0.4rem;
+}
+.shop-cfg__dl {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  min-width: 34px;
+  padding: 4px 2px;
+  border: 0;
+  background: none;
+  font-family: var(--shop-text);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--shop-ink);
+  cursor: pointer;
+  transition: opacity 0.3s;
+}
+.shop-cfg__dl svg {
+  width: 14px;
+  height: 14px;
+}
+@media (hover: hover) {
+  .shop-cfg__dl:not(:disabled):hover {
+    opacity: 0.6;
+  }
+}
+.shop-cfg__dl:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+@media screen and (max-width: 991px) {
+  .shop-cfg__downloads {
+    top: 0.9rem;
+    bottom: auto;
+    left: 0.9rem;
+  }
+}
+
+/* 15b. Technical Sheet link + left panel (Willett "Construction & Care") ---- */
+.shop-sheet-links {
+  margin-top: 2rem;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.25rem;
+}
+.shop-sheet-links button {
+  padding: 0;
+  border: 0;
+  background: none;
+  font-family: var(--shop-text);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--shop-ink);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+html.shop-sheet-lock,
+html.shop-sheet-lock body {
+  overflow: hidden;
+}
+/* close = open reversed (same timing as GET IN TOUCH / Enquiry list): panel wipes back
+   .8s, backdrop fades from .25s; the layer stays visible until both are done */
+.shop-sheet {
+  position: fixed;
+  inset: 0;
+  z-index: 20000;
+  visibility: hidden;
+  pointer-events: none;
+  transition: visibility 0s linear 0.9s;
+}
+.shop-sheet.is-open {
+  visibility: visible;
+  pointer-events: auto;
+  transition-delay: 0s;
+}
+.shop-sheet__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(36, 28, 22, 0.32);
+  opacity: 0;
+  transition: opacity 0.4s cubic-bezier(0.55, 0, 1, 0.45) 0.25s;
+}
+.shop-sheet.is-open .shop-sheet__backdrop {
+  opacity: 1;
+  transition: opacity 0.45s cubic-bezier(0, 0.55, 0.45, 1);
+}
+.shop-sheet__panel {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: min(52vw, 820px);
+  display: flex;
+  flex-direction: column;
+  padding: 1.5rem 2.5rem 2rem;
+  background: var(--shop-bg);
+  color: var(--shop-ink);
+  font-family: var(--shop-text);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  clip-path: inset(0 100% 0 0);
+  transition: clip-path 0.8s cubic-bezier(0.77, 0, 0.175, 1);
+}
+.shop-sheet.is-open .shop-sheet__panel {
+  clip-path: inset(0 0 0 0);
+  transition-duration: 1s;
+}
+.shop-sheet__head,
+.shop-sheet__body {
+  opacity: 0;
+  transform: translateY(16px);
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+.shop-sheet.is-open .shop-sheet__head,
+.shop-sheet.is-open .shop-sheet__body {
+  opacity: 1;
+  transform: none;
+  transition: opacity 0.75s ease 0.82s,
+    transform 0.75s cubic-bezier(0.22, 1, 0.36, 1) 0.82s;
+}
+.shop-sheet.is-open .shop-sheet__body {
+  transition-delay: 0.9s;
+}
+.shop-sheet__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+.shop-sheet__tabs {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.35rem;
+}
+.shop-sheet__tabs button {
+  padding: 0;
+  border: 0;
+  background: none;
+  font-family: var(--shop-text);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--shop-muted);
+  cursor: pointer;
+  transition: color 0.3s;
+}
+.shop-sheet__tabs button[aria-selected="true"] {
+  color: var(--shop-ink);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+@media (hover: hover) {
+  .shop-sheet__tabs button:hover {
+    color: var(--shop-ink);
+  }
+}
+.shop-sheet__close {
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--shop-ink);
+  cursor: pointer;
+}
+.shop-sheet__close svg {
+  width: 16px;
+  height: 16px;
+}
+.shop-sheet__body {
+  margin-top: auto;
+  padding-top: 2rem;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1.25rem;
+}
+.shop-sheet__preview {
+  display: block;
+  width: min(100%, 420px);
+  padding: 10px;
+  background: #2b2522;
+  box-shadow: 0 18px 50px rgba(36, 28, 22, 0.25);
+}
+.shop-sheet__preview img {
+  position: static !important;
+  display: block;
+  width: 100% !important;
+  max-width: none;
+  height: auto !important;
+  aspect-ratio: 210 / 297;
+  object-fit: cover;
+  transform: none !important;
+}
+.shop-sheet__dl {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0;
+  border: 0;
+  background: none;
+  font-family: var(--shop-text);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--shop-ink);
+  cursor: pointer;
+}
+.shop-sheet__dl svg {
+  width: 13px;
+  height: 13px;
+}
+.shop-sheet__dl.is-busy {
+  opacity: 0.45;
+  cursor: progress;
+}
+@media (hover: hover) {
+  .shop-sheet__dl:hover span,
+  .shop-sheet-links button:hover {
+    opacity: 0.65;
+  }
+}
+@media screen and (max-width: 767px) {
+  .shop-sheet__panel {
+    width: 100%;
+    padding: 1.25rem 1.25rem 2rem;
+  }
+  .shop-sheet__preview {
+    width: 100%;
+  }
+  .shop-sheet__body {
+    margin-top: 2rem;
+    padding-top: 0;
+  }
+}
+
+/* hidden CMS holder for the Technical Sheet link / preview */
+[data-shop-sheet-data] {
+  display: none !important;
+}
+
+/* 16. Product tabs (Poliform-style) --------------------------------------- */
+.shop-tabs {
+  margin-top: 9rem;
+}
+.shop-tabs__bar {
+  display: flex;
+  gap: 0.25rem 3rem;
+  padding: 0 1.5rem;
+  background: var(--shop-panel);
+  border-top: 2px solid var(--shop-ink);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.shop-tabs__bar::-webkit-scrollbar {
+  display: none;
+}
+.shop-tabs__bar button {
+  position: relative;
+  flex: none;
+  padding: 1.1rem 0;
+  border: 0;
+  background: none;
+  font-family: var(--shop-text);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--shop-muted);
+  cursor: pointer;
+  transition: color 0.3s var(--shop-ease);
+}
+.shop-tabs__bar button::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0.7rem;
+  height: 1px;
+  background: currentColor;
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.45s var(--shop-ease);
+}
+.shop-tabs__bar button[aria-selected="true"] {
+  color: var(--shop-ink);
+  font-weight: 700;
+}
+.shop-tabs__bar button[aria-selected="true"]::after {
+  transform: scaleX(1);
+}
+@media (hover: hover) {
+  .shop-tabs__bar button:hover {
+    color: var(--shop-ink);
+  }
+}
+.shop-tabs__panel {
+  padding-top: 2.5rem;
+}
+.shop-tabs__panel.is-in {
+  animation: shop-tab-in 0.5s var(--shop-ease);
+}
+@keyframes shop-tab-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.shop-tabs .shop-cfg,
+.shop-tabs .shop-tech {
+  margin-top: 0;
+}
+.shop-tabs .shop-cfg > .shop-rule-title,
+.shop-tabs .shop-tech > .shop-rule-title {
+  display: none;
+}
+
+/* Description */
+.shop-desc {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  column-gap: var(--shop-gap);
+  font-family: var(--shop-text);
+  color: var(--shop-ink);
+}
+.shop-desc__media {
+  grid-column: 1 / 8;
+  margin: 0;
+  aspect-ratio: 4 / 3;
+  background: var(--shop-photo);
+  overflow: hidden;
+}
+.shop-desc__media img {
+  position: static !important;
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover;
+}
+.shop-desc__text {
+  grid-column: 8 / 13;
+  max-width: 34rem;
+  padding-left: 1rem;
+}
+.shop-desc__media + .shop-desc__text {
+  grid-column: 8 / 13;
+}
+.shop-desc__text:first-child {
+  grid-column: 1 / 9;
+  padding-left: 0;
+}
+/* same type as .shop-product__name */
+.shop-desc__name {
+  margin: 0 0 1.5rem;
+  font-family: var(--shop-display);
+  font-size: var(--_size---size-2rem, 1.85rem);
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: -0.04em;
+  color: var(--shop-ink);
+  text-align: left;
+  text-transform: none;
+}
+.shop-desc__text p {
+  margin: 0 0 1rem;
+  font-size: 15px;
+  line-height: 1.6;
+}
+.shop-desc__text .shop-desc__by {
+  margin-top: 1.5rem;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+/* Finishes */
+.shop-fin {
+  font-family: var(--shop-text);
+  color: var(--shop-ink);
+}
+.shop-fin__group + .shop-fin__group {
+  margin-top: 3rem;
+}
+.shop-fin__head {
+  display: flex;
+  align-items: baseline;
+  gap: 1rem;
+  padding-bottom: 0.75rem;
+  margin-bottom: 1.25rem;
+  border-bottom: 1px solid var(--shop-line);
+}
+.shop-fin__head h3 {
+  margin: 0;
+  font-family: var(--shop-text);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.shop-fin__head span {
+  font-size: 12px;
+  color: var(--shop-muted);
+}
+.shop-fin__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(118px, 1fr));
+  gap: 1.75rem 1.25rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.shop-fin__item {
+  margin: 0;
+  padding: 0;
+}
+.shop-fin__ph {
+  aspect-ratio: 1;
+  background: var(--shop-photo);
+  overflow: hidden;
+}
+.shop-fin__ph img {
+  position: static !important;
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover;
+  transition: transform 0.8s var(--shop-ease);
+}
+@media (hover: hover) {
+  .shop-fin__item:hover .shop-fin__ph img {
+    transform: scale(1.06);
+  }
+}
+.shop-fin__name {
+  display: block;
+  margin-top: 0.6rem;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.35;
+}
+.shop-fin__own {
+  display: block;
+  margin-top: 0.15rem;
+  font-size: 11px;
+  color: var(--shop-muted);
+}
+.shop-fin__note {
+  margin: 2.5rem 0 0;
+  font-family: var(--shop-text);
+  font-size: 13px;
+  color: var(--shop-muted);
+}
+.shop-fin__note a {
+  color: var(--shop-ink);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* Downloads */
+.shop-dl {
+  max-width: 40rem;
+  border-top: 1px solid var(--shop-line);
+  font-family: var(--shop-text);
+}
+.shop-dl .shop-tech__dl-btn {
+  display: flex;
+  flex-direction: row-reverse;
+  justify-content: space-between;
+  width: 100%;
+  padding: 1.1rem 0;
+  border-bottom: 1px solid var(--shop-line);
+  background-color: rgba(121, 94, 73, 0);
+  font-size: 15px;
+  transition: padding 0.45s var(--shop-ease), background-color 0.45s ease,
+    color 0.45s ease;
+}
+.shop-dl .shop-tech__dl-btn svg {
+  width: 16px;
+  height: 16px;
+}
+.shop-dl .shop-tech__dl-btn span {
+  text-decoration: none;
+}
+@media (hover: hover) {
+  .shop-dl .shop-tech__dl-btn:not(.is-off):hover {
+    padding-left: 1rem;
+    padding-right: 1rem;
+    background-color: var(--shop-ink);
+    color: var(--shop-light);
+  }
+}
+
+@media screen and (max-width: 991px) {
+  .shop-desc__media,
+  .shop-desc__text,
+  .shop-desc__media + .shop-desc__text {
+    grid-column: 1 / 13;
+  }
+  .shop-desc__text {
+    padding-left: 0;
+    margin-top: 2rem;
+    max-width: none;
+  }
+}
+@media screen and (max-width: 767px) {
+  .shop-tabs {
+    margin-top: 5rem;
+  }
+  .shop-tabs__bar {
+    gap: 1.75rem;
+    padding: 0 1rem;
+    margin: 0 calc(-1 * var(--shop-gutter));
+  }
+  .shop-tabs__bar button {
+    font-size: 11px;
+  }
+  .shop-fin__grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 1.25rem 0.75rem;
+  }
+}
+
+/* product name: same size as the grid-view hover title (desktop) */
+@media screen and (min-width: 768px) {
+  .shop-product__name {
+    font-size: var(--_size---size-3rem, 2.6rem);
+    line-height: 1;
+  }
+}
+
+/* Construction & Care (left panel) */
+.shop-sheet__body.shop-care {
+  margin-top: 2.5rem;
+  padding-top: 0;
+  display: block;
+  max-width: 34rem;
+}
+.shop-care__block + .shop-care__block {
+  margin-top: 2.25rem;
+}
+.shop-care__h {
+  margin: 0 0 0.75rem;
+  padding-top: 0.6rem;
+  border-top: 2px solid var(--shop-ink);
+  font-family: var(--shop-text);
+  font-size: 15px;
+  font-weight: 700;
+}
+.shop-care__fam {
+  margin-top: 1.25rem;
+}
+.shop-care__fam h4 {
+  margin: 0 0 0.4rem;
+  font-family: var(--shop-text);
+  font-size: 13px;
+  font-weight: 700;
+}
+.shop-care__fam h4 span {
+  margin-left: 0.4rem;
+  font-weight: 400;
+  color: var(--shop-muted);
+}
+.shop-care__tips {
+  margin: 0;
+  padding-left: 1.05rem;
+}
+.shop-care__tips li {
+  margin: 0 0 0.3rem;
+  padding: 0;
+  font-size: 13px;
+  line-height: 1.5;
+}
+.shop-care__more {
+  margin-top: 1.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--shop-line);
+}
+.shop-care__more > span {
+  display: block;
+  margin-bottom: 0.6rem;
+  font-size: 12px;
+  color: var(--shop-muted);
+}
+.shop-care__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+.shop-care__chips button {
+  padding: 0.35rem 0.8rem;
+  border: 1px solid var(--shop-line);
+  border-radius: 999px;
+  background: transparent;
+  font-family: var(--shop-text);
+  font-size: 12px;
+  color: var(--shop-ink);
+  cursor: pointer;
+  transition: background-color 0.3s, color 0.3s;
+}
+.shop-care__chips button[aria-pressed="true"] {
+  background: var(--shop-ink);
+  color: var(--shop-light);
+  border-color: var(--shop-ink);
+}
+@media (hover: hover) {
+  .shop-care__chips button:hover {
+    border-color: var(--shop-ink);
+  }
+}
+.shop-care__other {
+  margin-top: 0.9rem;
+}
+.shop-care__note {
+  margin: 1.5rem 0 0;
+  font-size: 12px;
+  color: var(--shop-muted);
+}
+.shop-care__note a {
+  color: var(--shop-ink);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.shop-sheet [data-sheet-pane][hidden] {
+  display: none !important;
+}
+.shop-care h3,
+.shop-care h4 {
+  text-align: left;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+@media screen and (min-width: 768px) {
+  .shop-desc__name {
+    font-size: var(--_size---size-3rem, 2.6rem);
+    line-height: 1;
+  }
+}
+/* left panel: Willett-style fade when switching Construction & Care / Technical Sheet */
+.shop-sheet [data-sheet-pane].is-out {
+  animation: shop-pane-out 0.22s ease forwards;
+}
+.shop-sheet [data-sheet-pane].is-in {
+  animation: shop-pane-in 0.4s ease both;
+}
+@keyframes shop-pane-out {
+  to {
+    opacity: 0;
+  }
+}
+@keyframes shop-pane-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+/* still shown while the 3D view renders a large image */
+.shop-cfg__cover {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  pointer-events: none;
+}
+
+/* 2026-10-08: description type, tab bar colour + hover (fill wipe + footer-style underline) */
+.shop-desc__text p {
+  font-weight: 500;
+}
+.shop-desc__text .shop-desc__by {
+  font-family: var(--shop-display);
+  font-size: 1.2em;
+  font-weight: 400;
+  letter-spacing: 0;
+  line-height: 1.2;
+}
+.shop-tabs__bar {
+  background: var(--shop-panel);
+  padding: 0;
+  gap: 0;
+}
+.shop-tabs__bar button {
+  padding: 1.1rem 1.5rem;
+  color: var(--shop-ink);
+  background: linear-gradient(var(--shop-ink), var(--shop-ink)) left / 0% 100%
+    no-repeat;
+  transition: background-size 0.5s var(--shop-ease),
+    color 0.35s var(--shop-ease);
+}
+.shop-tabs__bar button::after {
+  left: 1.5rem;
+  right: 1.5rem;
+  bottom: 0.8rem;
+  transform-origin: right center;
+}
+.shop-tabs__bar button[aria-selected="true"] {
+  font-weight: 700;
+}
+@media (hover: hover) {
+  .shop-tabs__bar button:hover {
+    background-size: 100% 100%;
+    color: var(--shop-light);
+  }
+  .shop-tabs__bar button:hover::after {
+    transform: scaleX(1);
+    transform-origin: left center;
+  }
+}
+/* < ALL FURNITURE: same underline hover as the drawer CLOSE */
+.shop-back {
+  display: inline-block;
+  transition: color 0.35s var(--shop-ease);
+}
+.shop-back::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -3px;
+  height: 1px;
+  background: #b58c67;
+  transform: scaleX(0);
+  transform-origin: right center;
+  transition: transform 0.45s var(--shop-ease);
+}
+@media (hover: hover) {
+  .shop-back:hover {
+    color: #b58c67 !important;
+  }
+  .shop-back:hover::after {
+    transform: scaleX(1);
+    transform-origin: left center;
+  }
+}
+
+/* 2026-10-08 (b) ------------------------------------------------------------ */
+/* Text links: one underline hover everywhere (same as the drawer CLOSE / GET IN
+   TOUCH panel CLOSE): 1px #b58c67 line draws in from the left, out to the right */
+.shop-sheet-links button,
+.shop-fin__note a,
+.shop-care__note a,
+.shop-enquiry__privacy a,
+.shop-line__remove {
+  position: relative;
+  display: inline-block;
+  text-decoration: none !important;
+  transition: color 0.35s var(--shop-ease);
+}
+.shop-sheet-links button::after,
+.shop-fin__note a::after,
+.shop-care__note a::after,
+.shop-enquiry__privacy a::after,
+.shop-line__remove::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -2px;
+  height: 1px;
+  background: #b58c67;
+  transform: scaleX(0);
+  transform-origin: right center;
+  transition: transform 0.45s var(--shop-ease);
+}
+/* links inside a sentence keep a faint resting line so they read as links */
+.shop-fin__note a,
+.shop-care__note a,
+.shop-enquiry__privacy a {
+  color: var(--shop-ink);
+  font-weight: 500;
+  background: linear-gradient(rgba(121, 94, 73, 0.35), rgba(121, 94, 73, 0.35))
+    left bottom -2px / 100% 1px no-repeat;
+}
+.shop-line__remove {
+  opacity: 1;
+  color: var(--shop-muted);
+}
+@media (hover: hover) {
+  .shop-sheet-links button:hover,
+  .shop-fin__note a:hover,
+  .shop-care__note a:hover,
+  .shop-enquiry__privacy a:hover,
+  .shop-line__remove:hover {
+    color: #b58c67 !important;
+    opacity: 1;
+  }
+  .shop-sheet-links button:hover::after,
+  .shop-fin__note a:hover::after,
+  .shop-care__note a:hover::after,
+  .shop-enquiry__privacy a:hover::after,
+  .shop-line__remove:hover::after {
+    transform: scaleX(1);
+    transform-origin: left center;
+  }
+}
+.shop-fin__note a {
+  margin-left: 0.25rem;
+}
+
+/* Tabs: Brand Middle bar; dark fill wipes in sideways from where the pointer
+   enters (shop.js initTabWipe); label turns Brand Light; footer-style underline */
+.shop-tabs__bar button {
+  background: none;
+  overflow: hidden;
+  isolation: isolate;
+}
+.shop-tabs__bar button::after {
+  content: none;
+}
+.shop-tabs__fill {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: var(--shop-ink);
+  transform: translateX(-101%);
+  pointer-events: none;
+}
+.shop-tabs__label {
+  position: relative;
+  display: inline-block;
+}
+.shop-tabs__label::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -4px;
+  height: 2px;
+  background: currentColor;
+  transform: scaleX(0);
+  transform-origin: right center;
+  transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.shop-tabs__bar button[aria-selected="true"] .shop-tabs__label::after {
+  transform: scaleX(1);
+}
+.shop-tabs__bar button.is-hover {
+  color: var(--shop-light);
+}
+.shop-tabs__bar button.is-hover .shop-tabs__label::after {
+  transform: scaleX(1);
+  transform-origin: left center;
+}
+@media (hover: hover) {
+  .shop-tabs__bar button:hover {
+    background: none;
+  }
+}
+
+/* Description pictures: 5 s crossfade + thin progress lines */
+.shop-desc__media {
+  position: relative;
+}
+.shop-desc__media img {
+  position: absolute !important;
+  inset: 0;
+  opacity: 0;
+  transform: scale(1.04);
+  transition: opacity 1.2s ease, transform 6s linear;
+}
+.shop-desc__media img.is-on {
+  opacity: 1;
+  transform: scale(1);
+}
+.shop-desc__dots {
+  position: absolute;
+  left: 1.25rem;
+  right: 1.25rem;
+  bottom: 1.1rem;
+  z-index: 2;
+  display: flex;
+  gap: 0.4rem;
+}
+.shop-desc__dots button {
+  flex: 1;
+  height: 14px;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+}
+.shop-desc__dots i {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 2px;
+  background: rgba(240, 232, 221, 0.45);
+  overflow: hidden;
+}
+.shop-desc__dots i::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--shop-light);
+  transform: scaleX(0);
+  transform-origin: left center;
+}
+.shop-desc__dots button.is-on i::after {
+  transform: scaleX(1);
+}
+.shop-desc__media.is-playing .shop-desc__dots button.is-on i::after {
+  animation: shop-desc-progress 5s linear both;
+}
+@keyframes shop-desc-progress {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .shop-desc__media img {
+    transition: opacity 0.6s ease;
+    transform: none !important;
+  }
+}
+
+/* Enquiry drawer header = GET IN TOUCH panel header (24px 25px, 15px / 600 /
+   uppercase Helvetica Neue, line under the row); title (count) left, CLOSE right */
+.shop-drawer__head {
+  align-items: flex-start;
+  margin: 24px 25px 0;
+  padding: 0 0 16px;
+  border-bottom: 1px solid rgba(121, 94, 73, 0.4);
+}
+.shop-drawer__title {
+  margin: 0;
+  font-family: "Helvetica Neue", Arial, sans-serif;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--shop-ink);
+}
+.shop-drawer__count {
+  margin-left: 0.3em;
+  color: inherit;
+}
+.shop-drawer__close {
+  font-size: 15px !important;
+  font-weight: 600 !important;
+  line-height: 1.2;
+  letter-spacing: 0.02em !important;
+  text-transform: uppercase;
+}
+.shop-drawer__body {
+  padding: 1.75rem 25px 2rem;
+}
+.shop-drawer__foot {
+  display: none !important;
+}
+.shop-drawer.is-general .shop-enquiry {
+  display: block;
+}
+.shop-drawer.is-general .shop-drawer__empty {
+  display: none;
+}
+@media screen and (max-width: 479px) {
+  .shop-drawer__head {
+    margin: 14px 16px 0;
+    padding-bottom: 12px;
+  }
+  .shop-drawer__body {
+    padding: 1.25rem 16px 1.5rem;
+  }
+}
+/* CLOSE gets focus when the drawer opens (keyboard users land on it): no box
+   for mouse users, a thin brand ring for keyboard focus */
+.shop-drawer__close:focus {
+  outline: none;
+}
+.shop-drawer__close:focus-visible {
+  outline: 1px solid #b58c67;
+  outline-offset: 4px;
+}
+/* the header rule already separates the list: no second line on top of it */
+.shop-drawer .shop-lines {
+  border-top: 0;
+}
+.shop-drawer__body {
+  padding-top: 0.5rem;
+}
+.shop-drawer__empty {
+  margin-top: 1.5rem;
+}
+.shop-drawer.is-general .shop-enquiry {
+  margin-top: 1.5rem;
+}

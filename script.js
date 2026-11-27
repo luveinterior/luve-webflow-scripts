@@ -254,7 +254,7 @@ window.__luveTouchWide = function () {
         continue;
       }
       if (/jquery/i.test(f)) continue;
-      if ((SRC && f.indexOf(SRC) > -1) || f.indexOf("luve-webflow-scripts") > -1 || /csb\.app\/shop\.js/.test(f)) return true;
+      if ((SRC && f.indexOf(SRC) > -1) || f.indexOf("luve-webflow-scripts") > -1 || /(csb\.app|luve-webflow-scripts@[0-9a-f]+\/furniture)\/shop(\.min)?\.js/.test(f)) return true;
       return f.indexOf(location.origin + "/") > -1 && !/\.js[?:]/.test(f);
     }
     return false;
@@ -446,7 +446,7 @@ window.__luveTouchWide = function () {
         // Furniture 頁嘅 shop.js（CodeSandbox）：每次入 Furniture / 產品頁都要行，
         // 而且要喺全站 script 啟動之後先行（同正常載入一樣嘅次序）。
         // 之前冇行 → 目錄一直等 shop.js 加 is-ready → 撳完密碼入去成頁空白。
-        if (/csb\.app\/shop\.js/.test(abs)) L.late.push(abs);
+        if (/(csb\.app|\/furniture)\/shop(\.min)?\.js/.test(abs)) L.late.push(abs);
         else if (ours) ext.push(abs);
         else if (
           !loaded.has(abs) &&
@@ -615,6 +615,10 @@ window.__luveTouchWide = function () {
     // iPad / 觸控：Contact 頁用 Mobile 版（另一個 viewport），入出 Contact 要正常載入
     if (window.__LUVE_TOUCH__ && (/^\/contact\/?$/.test(u.pathname) || /^\/contact\/?$/.test(location.pathname)))
       return false;
+    // Furniture（/furniture、/furniture/產品、舊 /catalogue/產品）：頁面有自己一大份 shop.js，
+    // 係為正常載入而寫（相片 gallery、目錄淡入等）。入出呢幾頁改用正常載入，
+    // 都係 Brand Light 淡入淡出（冇 slogan），但每次都係乾淨嘅一頁，唔會空白或者唔郁。
+    if (L.isShop(u.pathname) || L.isShop(location.pathname)) return false;
     return true;
   }
 
@@ -670,6 +674,9 @@ window.__luveTouchWide = function () {
       });
   }
 
+  L.isShop = function (path) {
+    return /^\/(furniture|catalogue)(\/|$)/.test(path || "");
+  };
   // Password page（00p）：密碼啱之後用同一套轉頁入去（唔使成頁 reload / slogan loader）
   L.go = function (url, opt) {
     try {
@@ -829,6 +836,13 @@ window.__luveTouchWide = function () {
   oAdd.call(document, "touchstart", warm, { passive: true });
   oAdd.call(window, "popstate", function (e) {
     if (busy) return location.reload();
+    if (L.isShop(location.pathname) || document.body.classList.contains("body-shop")) {
+      // 返去 / 離開 Furniture：正常載入（理由見 eligible）
+      try {
+        sessionStorage.setItem("internal-transition", "true");
+      } catch (err) {}
+      return location.reload();
+    }
     go(location.href, { pop: true, y: e.state && e.state.y });
   });
   try {
@@ -1091,7 +1105,15 @@ if (window.__luveSameLogo) window.__luveSameLogo();
         }
         // 密碼啱：cookie 已經寫好 → 用網站轉頁入去（同 Home → Projects 一樣）
         const life = window.__luveLife;
-        if (life && life.enabled && life.go) {
+        const abs = new URL(target, location.href);
+        if (life && life.isShop && life.isShop(abs.pathname)) {
+          // Furniture：正常載入，但用內部轉頁嗰種 Brand Light 淡入（唔出 slogan）
+          try {
+            sessionStorage.setItem("internal-transition", "true");
+          } catch (err) {}
+          document.documentElement.style.backgroundColor = "#f0e8dd";
+          location.replace(abs.href);
+        } else if (life && life.enabled && life.go) {
           busy = false;
           life.go(new URL(target, location.href).href, { replace: true });
         } else {
